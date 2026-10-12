@@ -69,10 +69,28 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
 - `lines`: `id`, `from_bus`, `to_bus`, `length_km`, `r1_ohm_per_km`,
   `x1_ohm_per_km`, `r0_ohm_per_km`, `x0_ohm_per_km`, `end_temperature_c`
   (temperatura a fine guasto per il caso minimo), `parallel`
-- `generators`: `id`, `bus`, `sr_mva`, `ur_kv`, `xd2_percent`, `cos_phi`, `rg_ohm`
-  (se assente: R_Gf = 0,05/0,07/0,15 · X"d)
+- `generators` (anche motori sincroni): `id`, `bus`, `sr_mva`, `ur_kv`,
+  `xd2_percent`, `cos_phi`, `rg_ohm` (se assente: R_Gf = 0,05/0,07/0,15 · X"d),
+  `x2_percent` (sequenza inversa, default X"d), `x0_percent` e `zn_ohm`
+  (centro stella a terra; senza `x0_percent` il neutro è isolato)
 - `motors`: `id`, `bus`, `pr_mw`, `ur_kv`, `efficiency`, `cos_phi`, `ilr_ir`,
-  `pole_pairs` (obbligatorio per motori MT), `rx` (facoltativo), `count`
+  `pole_pairs` (obbligatorio per motori MT), `rx` (facoltativo), `count`,
+  `x2_percent` e `rx2` (sequenza inversa da dati di targa, default Z2 = Z1)
+
+## Confronto con ETAP
+
+Gli studi di cortocircuito IEC di ETAP sono database SQLite (`.SI2S`) che
+contengono dati di rete e risultati. Il modulo `iec60909.etap` converte la rete
+e confronta i risultati nodo per nodo:
+
+```bash
+python -m iec60909.etap "C:\ETAP Demo\Example-IEC\SC_909.SI2S"            # tabella di confronto
+python -m iec60909.etap studio.SI2S --json rete.json                       # salva la rete convertita
+```
+
+Sullo studio di esempio `SC_909` di ETAP 2024 lo scarto massimo è 0,025 %
+(dettagli in [`../analisi/04_confronto_etap_sc909.md`](../analisi/04_confronto_etap_sc909.md)).
+I file di ETAP non vanno mai aggiunti al repository.
 
 ## Test
 
