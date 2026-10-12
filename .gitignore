@@ -1,0 +1,23 @@
+# Dipendenze e build
+node_modules/
+dist/
+build/
+
+# Output di analisi REA (evidenze pesanti, snapshot, catture)
+*.rea-evidence/
+rea-output/
+
+# Binari e archivi da analizzare: non versionarli per errore
+*.exe
+*.dll
+*.so
+*.dylib
+*.apk
+*.asar
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
