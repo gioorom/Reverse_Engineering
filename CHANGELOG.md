@@ -11,6 +11,13 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Coordinamento delle protezioni in `iec60909.coordination`, riga di comando
+  `python -m iec60909.coordinamento`: relè IEC 60255-151/IEEE C37.112 con
+  soglie a tempo definito, interruttori BT L-S-I, fusibili per punti;
+  correnti di guasto nei rami (`fault_currents`), sequenza di intervento,
+  selettività anche sull'intero campo di correnti, sensibilità, correnti di
+  carico dal flusso di potenza, curve tempo-corrente in SVG; arc flash con il
+  tempo di intervento dei dispositivi.
 - Arc flash secondo IEEE 1584-2018 in `iec60909.arcflash`, riga di comando
   `python -m iec60909.arco`: corrente d'arco piena e ridotta, fattore
   dell'involucro, energia incidente e confine dell'arco, Ibf dal cortocircuito

@@ -284,8 +284,13 @@ class _Builder:
             y[self.idx[bus], self.idx[bus]] += 1.0 / scale(z)
             grounded[self.idx[bus]] = True
 
-        def branch(i_bus: str, j_bus: str, z: complex, ratio: float = 1.0) -> None:
+        if seq == 1:
+            self.branches: list[tuple[str, str, str, complex, float]] = []
+
+        def branch(i_bus: str, j_bus: str, z: complex, ratio: float = 1.0, name: str = "") -> None:
             yy = 1.0 / scale(z)
+            if seq == 1:
+                self.branches.append((name, i_bus, j_bus, yy, ratio))
             i, j = self.idx[i_bus], self.idx[j_bus]
             y[i, i] += yy / ratio**2
             y[j, j] += yy
@@ -311,7 +316,7 @@ class _Builder:
         for t in self.net.transformers:
             z1, z0, ratio = self._transformer_data(t)
             if seq in (1, 2):
-                branch(t.hv_bus, t.lv_bus, z1 / t.parallel, ratio)
+                branch(t.hv_bus, t.lv_bus, z1 / t.parallel, ratio, t.id)
                 continue
             hv, lv = _parse_vector_group(t.vector_group)
             zn_hv = 3.0 * complex(t.zn_hv_ohm) / self.zbase(t.hv_bus)
@@ -350,7 +355,7 @@ class _Builder:
                 z_w = z_star[w] * (ur_w / t.ur_hv_kv) ** 2 / self.zbase(bus)
                 ratio = self.un[bus] / ur_w
                 if seq in (1, 2):
-                    branch(star, bus, z_w, ratio)
+                    branch(star, bus, z_w, ratio, f"{t.id}:{w}")
                 elif connections[w] == "YN":
                     zn = 3.0 * complex(getattr(t, f"zn_{w}_ohm")) / self.zbase(bus)
                     branch(star, bus, z_w + zn, ratio)
@@ -379,7 +384,7 @@ class _Builder:
                     continue
                 r, x = ln.r0_ohm_per_km, ln.x0_ohm_per_km
             z = complex(r * k_theta, x) * ln.length_km / ln.parallel
-            branch(ln.from_bus, ln.to_bus, z / self.zbase(ln.from_bus))
+            branch(ln.from_bus, ln.to_bus, z / self.zbase(ln.from_bus), name=ln.id)
 
         if seq == 0:
             for g in self.net.generators:
@@ -709,3 +714,45 @@ def _steady_state(
             continue
         out.append((lam_max if b.case == "max" else lam_min) * ir)
     return out
+
+
+@dataclass
+class FaultCurrents:
+    """Correnti iniziali per un guasto trifase in un nodo (metodo della IEC 60909).
+
+    `branch_ka[(ramo, nodo)]`: corrente complessa (kA, alla tensione del nodo)
+    che dal nodo entra nel ramo; per i trasformatori a tre avvolgimenti i rami
+    sono `<id>:hv`, `<id>:mv`, `<id>:lv` (dal centro stella al nodo).
+    """
+
+    bus: str
+    ikss_ka: complex
+    branch_ka: dict[tuple[str, str], complex]
+
+
+def fault_currents(net: Network, fault_bus: str, case: str = "max", zf_ohm: complex = 0j) -> FaultCurrents:
+    """Correnti nei rami per un guasto trifase nel nodo `fault_bus`.
+
+    Sovrapposizione della sola sorgente equivalente c·Un/√3 nel punto di
+    guasto (variazioni di tensione ΔV = −Z_kf·I"k); stesse impedenze e fattori
+    di correzione del calcolo di I"k. I contributi dei convertitori pieni (PF)
+    e il calcolo dedicato dei guasti interni ai gruppi di generazione non sono
+    considerati.
+    """
+    net.validate()
+    b = _Builder(net, case, [])
+    z = _full_z(b.build(1))
+    f = b.idx[fault_bus]
+    zf = complex(zf_ohm) / b.zbase(fault_bus)
+    i_f = b.c_case(fault_bus) / (z[f, f] + zf)
+    dv = np.where(np.isfinite(z[:, f]), -z[:, f] * i_f, 0.0)
+
+    def ibase(bus: str) -> float:
+        return S_BASE_MVA / (math.sqrt(3.0) * b.un[bus])
+
+    out: dict[tuple[str, str], complex] = {}
+    for name, i_bus, j_bus, yy, ratio in b.branches:
+        vi, vj = dv[b.idx[i_bus]], dv[b.idx[j_bus]]
+        out[(name, i_bus)] = (yy / ratio**2 * vi - yy / ratio * vj) * ibase(i_bus)
+        out[(name, j_bus)] = (yy * vj - yy / ratio * vi) * ibase(j_bus)
+    return FaultCurrents(fault_bus, i_f * ibase(fault_bus), out)

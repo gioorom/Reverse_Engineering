@@ -18,6 +18,7 @@ from .network import (
     Load,
     Motor,
     Network,
+    ProtectiveDevice,
     Shunt,
     StaticGenerator,
     Transformer,
@@ -37,6 +38,7 @@ _SECTIONS = {
     "loads": Load,
     "shunts": Shunt,
     "arc_flash": ArcFlashPoint,
+    "protective_devices": ProtectiveDevice,
 }
 
 

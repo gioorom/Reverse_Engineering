@@ -239,6 +239,41 @@ class Shunt:
 
 
 @dataclass
+class ProtectiveDevice:
+    """Dispositivo di protezione installato all'estremo `bus` del ramo `branch`.
+
+    `protects`: "branch" (default: protegge il ramo, corrente dal nodo verso il
+    ramo, es. partenza) oppure "bus" (protegge il nodo, corrente dal ramo verso
+    il nodo, es. interruttore generale BT di arrivo dal trasformatore).
+    Dati per tipo (`kind`): vedi `iec60909.coordination`.
+    """
+
+    id: str
+    branch: str
+    bus: str
+    kind: str
+    protects: str = "branch"
+    cti_s: Optional[float] = None
+    # relè (correnti primarie in A)
+    curve: Optional[str] = None
+    pickup_a: Optional[float] = None
+    tms: float = 1.0
+    stages: list = field(default_factory=list)
+    breaker_time_s: float = 0.0
+    # interruttore BT: In [A], Ir = ir·In, tr a 6·Ir, Isd = isd·Ir, Ii = ii·In
+    in_a: Optional[float] = None
+    ir: float = 1.0
+    tr_s: Optional[float] = None
+    isd: Optional[float] = None
+    tsd_s: Optional[float] = None
+    i2t_sd: bool = False
+    ii: Optional[float] = None
+    ti_s: float = 0.02
+    # fusibile o curva per punti: [[I_A, t_s], …]
+    points: list = field(default_factory=list)
+
+
+@dataclass
 class ArcFlashPoint:
     """Punto di calcolo dell'arc flash (IEEE 1584-2018) su un nodo.
 
@@ -319,6 +354,7 @@ class Network:
     loads: list[Load] = field(default_factory=list)
     shunts: list[Shunt] = field(default_factory=list)
     arc_flash: list[ArcFlashPoint] = field(default_factory=list)
+    protective_devices: list[ProtectiveDevice] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}
@@ -421,6 +457,8 @@ class Network:
             check(sh.bus, sh.id)
         for af in self.arc_flash:
             check(af.bus, af.id)
+        for pd in self.protective_devices:
+            check(pd.bus, pd.id)
         for t in self.transformers:
             if t.tap_side not in ("hv", "lv"):
                 raise ValueError(f"{t.id}: tap_side deve essere 'hv' o 'lv'")

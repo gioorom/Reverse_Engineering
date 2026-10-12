@@ -1,13 +1,15 @@
-# iec60909 — cortocircuito, flusso di potenza e arc flash
+# iec60909 — cortocircuito, flusso di potenza, arc flash e coordinamento
 
-Pacchetto Python di Electrical Power Simulator Software con tre calcoli sulla
-stessa descrizione della rete:
+Pacchetto Python di Electrical Power Simulator Software con quattro calcoli
+sulla stessa descrizione della rete:
 
 - **cortocircuito** secondo la **IEC 60909-0:2016**, scritto dalle formule
   della norma;
 - **flusso di potenza** (load flow) con il metodo di Newton-Raphson;
 - **arc flash** (energia incidente e confine dell'arco) secondo
-  **IEEE 1584-2018**.
+  **IEEE 1584-2018**;
+- **coordinamento delle protezioni**: sequenza di intervento, selettività,
+  sensibilità e curve tempo-corrente di relè, interruttori BT e fusibili.
 
 Cortocircuito e flusso di potenza sono verificati contro
 [pandapower](https://www.pandapower.org/), implementazione open source
@@ -83,6 +85,25 @@ print(r.e_cal_cm2, r.afb_mm, r.ppe_category)
 
 Ibf è la I"k trifase IEC 60909 del nodo. Procedura, campo di validità e
 limiti sono in [`../analisi/08_arc_flash_ieee1584.md`](../analisi/08_arc_flash_ieee1584.md).
+
+### Coordinamento delle protezioni
+
+```bash
+python -m iec60909.coordinamento esempi/coordinamento_cabina.json            # Markdown
+python -m iec60909.coordinamento rete.json --svg tcc --nodi QD1 --json      # curve SVG, JSON
+```
+
+```python
+from iec60909 import coordination_study, fault_currents, load_network
+
+rete = load_network("rete.json")
+studio = coordination_study(rete, max_time_s=5.0)
+print(studio.issues)                                      # problemi trovati
+print(fault_currents(rete, "QD1").branch_ka)               # correnti nei rami (kA)
+```
+
+Il codice di uscita della riga di comando è 1 se ci sono problemi. Dispositivi,
+verifiche e limiti: [`../analisi/09_coordinamento_protezioni.md`](../analisi/09_coordinamento_protezioni.md).
 
 ## Risultati per nodo (cortocircuito)
 
@@ -170,7 +191,18 @@ Sezione dell'arc flash (esempio in `esempi/arc_flash_cabina.json`):
   `protection`: `time_ms` fisso oppure relè IEC 60255-151 con `curve` (`SI`,
   `VI`, `EI`, `LTI`), `pickup_ka`, `tms`, `inst_pickup_ka`, `inst_time_ms`,
   `breaker_time_ms`, `current_ratio` (corrente vista dal relè / corrente
-  d'arco), `max_time_ms` (default 2000)
+  d'arco), `max_time_ms` (default 2000), oppure `device` (id di un
+  dispositivo di `protective_devices`)
+
+Sezione del coordinamento (esempio in `esempi/coordinamento_cabina.json`):
+
+- `protective_devices`: `id`, `branch` (linea, trasformatore o `<id>:hv|mv|lv`),
+  `bus` (estremo di installazione), `kind` (`relay`, `breaker`, `fuse`),
+  `protects` (`branch` o `bus`), `cti_s`; relè: `curve` (`IEC_SI`, `IEC_VI`,
+  `IEC_EI`, `IEC_LTI`, `IEEE_MI`, `IEEE_VI`, `IEEE_EI`), `pickup_a`, `tms`,
+  `stages` (`[{"pickup_a", "time_s"}]`), `breaker_time_s`; interruttore BT:
+  `in_a`, `ir`, `tr_s`, `isd`, `tsd_s`, `i2t_sd`, `ii`, `ti_s`; fusibile:
+  `points` (`[[I_A, t_s], …]`)
 
 ## Confronto con ETAP
 
@@ -204,5 +236,7 @@ python -m pytest
   `tests/test_loadflow_ieee14.py`: rete di prova IEEE a 14 nodi.
 - `tests/test_arcflash.py`: arc flash, esempi svolti dell'allegato D della
   IEEE 1584-2018 e confronto con arcflash-calc su 864 casi.
+- `tests/test_coordinamento.py`: coordinamento, curve dei dispositivi,
+  correnti nei rami, verifiche di selettività, sensibilità e carico.
 
 Dettagli delle formule, ipotesi e limiti: [`../analisi/01_iec60909_formule.md`](../analisi/01_iec60909_formule.md).

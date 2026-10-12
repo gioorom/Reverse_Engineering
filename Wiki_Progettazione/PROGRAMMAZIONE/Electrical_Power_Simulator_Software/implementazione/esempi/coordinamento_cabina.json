@@ -1,0 +1,136 @@
+{
+  "name": "Cabina MT/BT 20/0,4 kV — coordinamento delle protezioni",
+  "f_hz": 50,
+  "lv_tolerance_percent": 6,
+  "buses": [
+    {
+      "id": "MT",
+      "un_kv": 20.0
+    },
+    {
+      "id": "QGBT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "QD1",
+      "un_kv": 0.4
+    }
+  ],
+  "external_grids": [
+    {
+      "id": "Rete_ENEL",
+      "bus": "MT",
+      "skq_max_mva": 500,
+      "rx_max": 0.1,
+      "skq_min_mva": 250,
+      "rx_min": 0.1
+    }
+  ],
+  "transformers": [
+    {
+      "id": "TR1",
+      "hv_bus": "MT",
+      "lv_bus": "QGBT",
+      "sr_mva": 0.63,
+      "ur_hv_kv": 20.0,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 6.0,
+      "urr_percent": 1.03,
+      "vector_group": "Dyn11"
+    }
+  ],
+  "lines": [
+    {
+      "id": "C1",
+      "from_bus": "QGBT",
+      "to_bus": "QD1",
+      "length_km": 0.05,
+      "r1_ohm_per_km": 0.0754,
+      "x1_ohm_per_km": 0.072,
+      "r0_ohm_per_km": 0.3016,
+      "x0_ohm_per_km": 0.288,
+      "end_temperature_c": 160,
+      "parallel": 1
+    }
+  ],
+  "motors": [
+    {
+      "id": "M1",
+      "bus": "QD1",
+      "pr_mw": 0.075,
+      "ur_kv": 0.4,
+      "efficiency": 0.94,
+      "cos_phi": 0.86,
+      "ilr_ir": 7.0
+    }
+  ],
+  "loads": [
+    {
+      "id": "Carichi_QGBT",
+      "bus": "QGBT",
+      "p_mw": 0.35,
+      "q_mvar": 0.15
+    }
+  ],
+  "protective_devices": [
+    {
+      "id": "R_MT",
+      "branch": "TR1",
+      "bus": "MT",
+      "kind": "relay",
+      "curve": "IEC_VI",
+      "pickup_a": 40,
+      "tms": 0.55,
+      "stages": [
+        {
+          "pickup_a": 450,
+          "time_s": 0.05
+        }
+      ],
+      "breaker_time_s": 0.06
+    },
+    {
+      "id": "QF_gen",
+      "branch": "TR1",
+      "bus": "QGBT",
+      "kind": "breaker",
+      "protects": "bus",
+      "in_a": 1000,
+      "ir": 0.95,
+      "tr_s": 12,
+      "isd": 2,
+      "tsd_s": 0.3
+    },
+    {
+      "id": "QF1",
+      "branch": "C1",
+      "bus": "QGBT",
+      "kind": "breaker",
+      "in_a": 160,
+      "ir": 1.0,
+      "tr_s": 6,
+      "ii": 10,
+      "ti_s": 0.02
+    }
+  ],
+  "arc_flash": [
+    {
+      "id": "QGBT_sbarre",
+      "bus": "QGBT",
+      "configuration": "VCB",
+      "equipment_class": "quadro_bt",
+      "protection": {
+        "device": "QF_gen"
+      }
+    },
+    {
+      "id": "QD1",
+      "bus": "QD1",
+      "configuration": "VCBB",
+      "equipment_class": "pannello_bt",
+      "protection": {
+        "device": "QF1"
+      }
+    }
+  ]
+}

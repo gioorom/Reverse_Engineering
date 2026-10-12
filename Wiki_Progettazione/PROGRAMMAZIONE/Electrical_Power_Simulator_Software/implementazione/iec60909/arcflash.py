@@ -340,9 +340,16 @@ class Protection:
     breaker_time_ms: float = 0.0
     max_time_ms: float = 2000.0
     current_ratio: float = 1.0
+    # dispositivo della sezione protective_devices (impostato da arc_flash_study)
+    device: Optional[object] = None
 
     def clearing_time_ms(self, i_arc_ka: float) -> float:
         i_ka = i_arc_ka * self.current_ratio
+        if self.device is not None:
+            from .coordination import trip_time_s
+
+            t = trip_time_s(self.device, i_ka * 1000.0)
+            return self.max_time_ms if t is None else min(t * 1000.0, self.max_time_ms)
         if self.time_ms is not None:
             return min(self.time_ms, self.max_time_ms)
         times = []
@@ -441,10 +448,26 @@ def arc_flash_study(net: "Network", case: str = "max", **sc_options) -> list[Arc
     for point in net.arc_flash:
         bus = sc.bus(point.bus)
         enc = enclosure_for(point, bus.un_kv)
+        prot = dict(point.protection)
+        device_id = prot.pop("device", None)
         try:
-            protection = Protection(**point.protection)
+            protection = Protection(**prot)
         except TypeError as exc:
             raise ValueError(f"{point.id}: dati di protezione non validi: {exc}") from None
+        if device_id is not None:
+            # dispositivo del coordinamento: vede la quota della corrente di guasto
+            # che lo attraversa (rapporto dalle correnti nei rami del guasto trifase)
+            from .calc import fault_currents
+            from .coordination import validate_device
+
+            devs = {d.id: d for d in net.protective_devices}
+            if device_id not in devs:
+                raise ValueError(f"{point.id}: dispositivo inesistente {device_id!r}")
+            dev = devs[device_id]
+            validate_device(dev)
+            fc = fault_currents(net, point.bus, case, sc_options.get("zf_ohm", 0j))
+            protection.device = dev
+            protection.current_ratio = abs(fc.branch_ka[(dev.branch, dev.bus)]) / abs(fc.ikss_ka)
         if protection.curve is not None and protection.curve not in IEC_CURVES:
             raise ValueError(f"{point.id}: curva sconosciuta {protection.curve!r} ({sorted(IEC_CURVES)})")
         out.append(arc_flash(enc, bus.ikss3_ka, protection, location=point.id))
