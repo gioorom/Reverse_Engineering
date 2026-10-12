@@ -161,3 +161,14 @@ def test_impedenza_di_guasto_resistiva_metodo_c():
     ref = run(data, "3ph", "max", ip=True, kappa_method="C", r_fault_ohm=0.5)
     for b in result.buses:
         assert b.ip3_ka == pytest.approx(ref[b.bus].ip_ka, rel=REL), b.bus
+
+
+def test_convertitore_pieno():
+    """Un convertitore pieno (sorgente di corrente): I"k e ip identici a pandapower."""
+    data = _no_generators()
+    data["static_generators"] = [{"id": "PV", "bus": "B", "kind": "PF", "ikss_ka": 0.17}]
+    result = calculate(network_from_dict(data), "max", "C")
+    ref = run(data, "3ph", "max", ip=True, kappa_method="C")
+    for b in result.buses:
+        assert b.ikss3_ka == pytest.approx(ref[b.bus].ikss_ka, rel=REL), b.bus
+        assert b.ip3_ka == pytest.approx(ref[b.bus].ip_ka, rel=REL), b.bus

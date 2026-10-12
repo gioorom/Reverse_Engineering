@@ -83,6 +83,29 @@ Codice: [`../implementazione/iec60909/`](../implementazione/iec60909/).
 Le correnti nelle fasi guaste del bifase a terra sono calcolate con le
 componenti simmetriche.
 
+### Generatori statici
+
+- **Convertitore pieno** (fotovoltaico, eolico full converter, accumuli;
+  `kind = "PF"`): sorgente di corrente di sequenza diretta con I"k_PF
+  massima data dal costruttore. Nel punto di guasto k la tensione
+  equivalente diventa E = c·Un/√3 + Σ |Z(1)ik|·I"k_PF,i (somma in modulo,
+  cautelativa) e tutte le correnti iniziali usano E al posto di c·Un/√3.
+  - ip = √2·(κ·I"k,rete + I"k,PF): il convertitore non ha componente continua;
+    anche i_DC riguarda la sola quota della rete;
+  - Ib e Ik: la quota dei convertitori non decade;
+  - correnti minime: contributo trascurato.
+- **Eolico a doppia alimentazione** (`kind = "WD"`): impedenza
+  Z_WD = √2·κ_WD·Ur/(√3·i_WDmax) con κ_WD, i_WDmax (valore istantaneo
+  massimo) e R/X dati dal costruttore, in sequenza diretta e inversa; nessun
+  contributo omopolare.
+- I generatori eolici con generatore asincrono (WA) si rappresentano come
+  motori asincroni (`motors`).
+
+Verifica: il convertitore pieno coincide con pandapower (I"k e ip). Per WD
+pandapower 3.5.6 dà un contributo circa 10 volte inferiore a quello della
+formula (≈ c·i_WDmax/(√2·κ_WD)) e usa κ_WD come fattore di picco del nodo:
+il modello è verificato con calcoli a mano.
+
 ### Impedenza di guasto Z_F
 
 Guasto non franco (arco, resistenza di contatto o di terra): Z_F è in serie a
@@ -173,5 +196,4 @@ per bifase e monofase.
 - Gruppi di generazione: trasformatori ausiliari e guasti sul lato dei
   servizi ausiliari.
 - Fattore n della corrente termica per guasti vicini ai generatori (n = 1).
-- Contributo di inverter ed eolico (generatori statici).
 - Metodo B senza la deroga per R/X < 0,3 in tutti i rami.

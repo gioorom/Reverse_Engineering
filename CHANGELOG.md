@@ -11,6 +11,8 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Generatori statici in `iec60909`: convertitori pieni (sorgenti di corrente,
+  confronto con pandapower) ed eolico a doppia alimentazione (Z_WD).
 - Impedenza di guasto Z_F in `iec60909` (in serie a ogni fase guasta) per
   tutte le grandezze; opzioni `--rf`/`--xf`; confronto con pandapower.
 - Componente continua i_DC (frequenza equivalente in base a f·t) e corrente

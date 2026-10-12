@@ -85,6 +85,14 @@ def to_pandapower(data):
             cos_phi_n=m["cos_phi"], efficiency_n_percent=m["efficiency"] * 100,
             vn_kv=m["ur_kv"], scaling=m.get("count", 1),
         )
+    for sg in data.get("static_generators", []):
+        if sg.get("kind", "PF") != "PF":
+            raise ValueError("pp_ref: solo i convertitori pieni (PF) sono confrontabili")
+        # sorgente di corrente: I"k = k·Sn/(√3·Un), con Sn = 1 MVA di riferimento
+        un = next(b["un_kv"] for b in data["buses"] if b["id"] == sg["bus"])
+        ik = sg["ikss_ka"] * sg.get("count", 1)
+        pp.create_sgen(net, ids[sg["bus"]], p_mw=0, sn_mva=1.0, k=ik * math.sqrt(3) * un,
+                       generator_type="current_source", current_source=True)
     return net, ids
 
 

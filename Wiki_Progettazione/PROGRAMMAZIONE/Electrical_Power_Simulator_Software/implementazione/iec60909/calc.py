@@ -18,7 +18,7 @@ from typing import Optional
 import numpy as np
 
 from . import factors
-from .network import Generator, Motor, Network, Transformer, Transformer3W
+from .network import Generator, Motor, Network, StaticGenerator, Transformer, Transformer3W
 
 S_BASE_MVA = 100.0
 _A = cmath.exp(2j * math.pi / 3)
@@ -207,6 +207,27 @@ class _Builder:
             rx = m.rx2 if m.rx2 is not None else rx
         return complex(rx * xm, xm) / self.zbase(m.bus)
 
+    def wd_z(self, sg: StaticGenerator) -> complex:
+        """Impedenza dell'eolico a doppia alimentazione Z_WD = √2·κ_WD·Ur/(√3·i_WDmax), in p.u."""
+        ur = sg.ur_kv if sg.ur_kv is not None else self.un[sg.bus]
+        z = math.sqrt(2.0) * sg.kappa_wd * ur / (math.sqrt(3.0) * sg.i_wd_max_ka) / sg.count
+        x = z / math.sqrt(1.0 + sg.rx**2)
+        return complex(sg.rx * x, x) / self.zbase(sg.bus)
+
+    def pf_sources(self) -> list[tuple[int, float]]:
+        """Sorgenti di corrente dei convertitori pieni: (nodo, I"k_PF in p.u.).
+
+        Escluse dal calcolo delle correnti minime.
+        """
+        if self.case != "max":
+            return []
+        out = []
+        for sg in self.net.static_generators:
+            if sg.kind == "PF":
+                ibase = S_BASE_MVA / (math.sqrt(3.0) * self.un[sg.bus])
+                out.append((self.idx[sg.bus], sg.ikss_ka * sg.count / ibase))
+        return out
+
     def rated_current_pu(self, bus: str, sr_mva: float, ur_kv: float) -> float:
         """Corrente nominale di una macchina in p.u. della base del nodo."""
         return sr_mva * self.un[bus] / (S_BASE_MVA * ur_kv)
@@ -346,6 +367,10 @@ class _Builder:
             if motors and self.case == "max":
                 for m in self.net.motors:
                     shunt(m.bus, self.motor_z(m, seq))
+            # eolico a doppia alimentazione: impedenza in sequenza diretta e inversa
+            for sg in self.net.static_generators:
+                if sg.kind == "WD":
+                    shunt(sg.bus, self.wd_z(sg))
         return y, grounded
 
 
@@ -448,6 +473,8 @@ def _calculate(
     machines = _machines(b, warnings)
     zf_pu = [zf_ohm / b.zbase(bus.id) for bus in net.buses]
     steady = _steady_state(net, b, warnings, zf_pu)
+    pf = b.pf_sources()
+    zs_full = _full_z(b.build(1, motors=False)) if pf else None
 
     results = []
     for i, bus in enumerate(net.buses):
@@ -462,17 +489,24 @@ def _calculate(
         def scaled(z: complex, k: float) -> complex:
             return complex(z.real, z.imag * k)
 
-        ik3 = c / abs(z1i) * ibase
-        ik2 = math.sqrt(3.0) * c / abs(z1i + z2i) * ibase
+        # Convertitori pieni (sorgenti di corrente di sequenza diretta): aumentano la
+        # tensione equivalente nel punto di guasto, E = c + Σ |Z_ik|·I"k_PF,k
+        # (somma in modulo, cautelativa). La quota c/E delle correnti è della rete.
+        e_pf = sum(abs(z1_full[k, i]) * i_pf for k, i_pf in pf if cmath.isfinite(z1_full[k, i]))
+        e = c + e_pf
+        share = c / e
+
+        ik3 = e / abs(z1i) * ibase
+        ik2 = math.sqrt(3.0) * e / abs(z1i + z2i) * ibase
         if zero_open:
             # senza percorso verso terra il guasto bifase a terra equivale al bifase isolato
             ik1 = ike = 0.0
             ikl2 = ikl3 = ik2
         else:
-            ik1 = 3.0 * c / abs(z1i + z2i + z0i) * ibase
+            ik1 = 3.0 * e / abs(z1i + z2i + z0i) * ibase
             den = z1i * z2i + z1i * z0i + z2i * z0i
-            ike = 3.0 * c * abs(z2i) / abs(den) * ibase
-            i1 = c / (z1i + z2i * z0i / (z2i + z0i))
+            ike = 3.0 * e * abs(z2i) / abs(den) * ibase
+            i1 = e / (z1i + z2i * z0i / (z2i + z0i))
             i2 = -i1 * z0i / (z2i + z0i)
             i0 = -i1 * z2i / (z2i + z0i)
             ikl2 = abs(i0 + _A**2 * i1 + _A * i2) * ibase
@@ -484,13 +518,21 @@ def _calculate(
         else:
             k_limit = 1.8 if bus.un_kv <= factors.LV_LIMIT_KV else 2.0
             k = min(1.15 * factors.kappa(z1i.real / z1i.imag), k_limit)
-        ip3 = k * math.sqrt(2.0) * ik3
+        # picco: κ solo sulla quota della rete, i convertitori non hanno componente continua
+        peak = math.sqrt(2.0) * (k * share + (1.0 - share))
+        ip3 = peak * ik3
         m = factors.thermal_m(k, net.f_hz, tk_s)
         ith = ik3 * math.sqrt(m + 1.0)
-        ib = _breaking_current(i, c, z1_full, machines, tmin_s, zf) * ibase
+        i_pf3 = e_pf / abs(z1i) * ibase  # quota dei convertitori, senza decadimento
+        ib = _breaking_current(i, c, z1_full, machines, tmin_s, zf) * ibase + i_pf3
         zdci = zdc[i] + scaled(zf, fc_dc)
-        idc = factors.dc_component(ik3, net.f_hz, tmin_s, zdci.real / zdci.imag * fc_dc)
+        idc = factors.dc_component(ik3 * share, net.f_hz, tmin_s, zdci.real / zdci.imag * fc_dc)
         ik = None if steady[i] is None else steady[i] * ibase
+        if ik is not None and zs_full is not None:
+            zss = zs_full[i, i] + zf
+            ik += sum(
+                abs(zs_full[kk, i]) * i_pf for kk, i_pf in pf if cmath.isfinite(zs_full[kk, i])
+            ) / abs(zss) * ibase
 
         results.append(
             BusResult(
@@ -509,8 +551,8 @@ def _calculate(
                 ikss2e_l3_ka=ikl3,
                 kappa=k,
                 ip3_ka=ip3,
-                ip2_ka=k * math.sqrt(2.0) * ik2,
-                ip1_ka=k * math.sqrt(2.0) * ik1,
+                ip2_ka=peak * ik2,
+                ip1_ka=peak * ik1,
                 ib_ka=ib,
                 ik_ka=ik,
                 ith_ka=ith,

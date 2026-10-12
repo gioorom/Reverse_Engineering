@@ -82,6 +82,10 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
   generazione: `unit_transformer` (id del trasformatore elevatore, lato BT sul
   nodo del generatore), `oltc` (variatore sotto carico, default vero),
   `pg_percent`, `pt_percent`
+- `static_generators`: `id`, `bus`, `kind` (`PF` convertitore pieno con
+  `ikss_ka`, corrente iniziale massima riferita alla tensione del nodo; `WD`
+  eolico a doppia alimentazione con `kappa_wd`, `i_wd_max_ka`, `rx`, `ur_kv`),
+  `count`
 - `motors`: `id`, `bus`, `pr_mw`, `ur_kv`, `efficiency`, `cos_phi`, `ilr_ir`,
   `pole_pairs` (obbligatorio per motori MT), `rx` (facoltativo), `count`,
   `x2_percent` e `rx2` (sequenza inversa da dati di targa, default Z2 = Z1)

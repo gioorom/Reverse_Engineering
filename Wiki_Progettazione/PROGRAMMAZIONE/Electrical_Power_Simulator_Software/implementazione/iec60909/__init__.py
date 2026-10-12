@@ -9,6 +9,7 @@ from .network import (
     Line,
     Motor,
     Network,
+    StaticGenerator,
     Transformer,
     Transformer3W,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "Line",
     "Motor",
     "Network",
+    "StaticGenerator",
     "StudyResult",
     "Transformer",
     "Transformer3W",

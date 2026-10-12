@@ -15,6 +15,7 @@ from .network import (
     Line,
     Motor,
     Network,
+    StaticGenerator,
     Transformer,
     Transformer3W,
 )
@@ -27,6 +28,7 @@ _SECTIONS = {
     "lines": Line,
     "generators": Generator,
     "motors": Motor,
+    "static_generators": StaticGenerator,
 }
 
 

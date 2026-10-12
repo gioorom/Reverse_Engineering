@@ -169,6 +169,30 @@ class Motor:
 
 
 @dataclass
+class StaticGenerator:
+    """Generatore statico (IEC 60909-0, 6.9).
+
+    kind = "PF": unità con convertitore pieno (fotovoltaico, eolico full
+    converter, accumuli): sorgente di corrente di sequenza diretta con
+    corrente iniziale massima `ikss_ka` (valore efficace, riferito alla
+    tensione del nodo), indicata dal costruttore.
+    kind = "WD": eolico con generatore asincrono a doppia alimentazione:
+    impedenza Z_WD = √2·κ_WD·Ur/(√3·i_WDmax), con `kappa_wd` e `i_wd_max_ka`
+    (valore istantaneo massimo) dati dal costruttore e rapporto R/X `rx`.
+    """
+
+    id: str
+    bus: str
+    kind: str = "PF"
+    ikss_ka: Optional[float] = None
+    kappa_wd: Optional[float] = None
+    i_wd_max_ka: Optional[float] = None
+    ur_kv: Optional[float] = None
+    rx: float = 0.1
+    count: int = 1
+
+
+@dataclass
 class Network:
     name: str = "rete"
     f_hz: float = 50.0
@@ -180,6 +204,7 @@ class Network:
     lines: list[Line] = field(default_factory=list)
     generators: list[Generator] = field(default_factory=list)
     motors: list[Motor] = field(default_factory=list)
+    static_generators: list[StaticGenerator] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}
@@ -241,7 +266,20 @@ class Network:
             units.add(t.id)
         for m in self.motors:
             check(m.bus, m.id)
-        if not (self.external_grids or self.generators):
+        for sg in self.static_generators:
+            check(sg.bus, sg.id)
+            if sg.kind == "PF":
+                if sg.ikss_ka is None or sg.ikss_ka <= 0:
+                    raise ValueError(f"{sg.id}: per un generatore PF serve ikss_ka > 0")
+            elif sg.kind == "WD":
+                if not (sg.kappa_wd and sg.i_wd_max_ka and sg.kappa_wd > 0 and sg.i_wd_max_ka > 0):
+                    raise ValueError(f"{sg.id}: per un generatore WD servono kappa_wd e i_wd_max_ka")
+            else:
+                raise ValueError(f"{sg.id}: tipo di generatore statico non valido {sg.kind!r} (PF o WD)")
+            if sg.count < 1:
+                raise ValueError(f"{sg.id}: count deve essere almeno 1")
+        if not (self.external_grids or self.generators
+                or any(sg.kind == "WD" for sg in self.static_generators)):
             raise ValueError("la rete non ha sorgenti (reti esterne o generatori)")
         if self.f_hz not in (50.0, 60.0):
             raise ValueError("la frequenza deve essere 50 o 60 Hz")
