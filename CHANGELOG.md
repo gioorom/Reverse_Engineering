@@ -11,6 +11,8 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Impedenza di guasto Z_F in `iec60909` (in serie a ogni fase guasta) per
+  tutte le grandezze; opzioni `--rf`/`--xf`; confronto con pandapower.
 - Componente continua i_DC (frequenza equivalente in base a f·t) e corrente
   di interruzione asimmetrica in `iec60909`; confronto con ETAP.
 - Gruppi di generazione con trasformatore dedicato in `iec60909`: K_S/K_SO

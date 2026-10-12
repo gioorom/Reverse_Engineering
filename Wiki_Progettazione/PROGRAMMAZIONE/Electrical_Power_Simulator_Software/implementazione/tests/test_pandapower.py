@@ -134,3 +134,30 @@ def test_gruppo_di_generazione_guasti_esterni(case, oltc, pg, pt):
         b = result.bus(bus)
         assert b.ikss3_ka == pytest.approx(ref3[bus].ikss_ka, rel=REL), bus
         assert b.ikss1_ka == pytest.approx(ref1[bus].ikss_ka, rel=REL), bus
+
+
+@pytest.mark.parametrize("case", ["max", "min"])
+@pytest.mark.parametrize("zf", [complex(0.5, 0.0), complex(1.0, 2.0)])
+def test_impedenza_di_guasto(case, zf):
+    """Z_F in serie a ogni fase: I"k trifase, bifase, monofase e ip (metodo B)."""
+    data = _no_generators()
+    kw = dict(r_fault_ohm=zf.real, x_fault_ohm=zf.imag)
+    result = calculate(network_from_dict(data), case, "B", zf_ohm=zf)
+    ref3 = run(data, "3ph", case, ip=True, kappa_method="B", **kw)
+    ref2 = run(data, "2ph", case, **kw)
+    ref1 = run(data, "1ph", case, **kw)
+    for b in result.buses:
+        assert b.ikss3_ka == pytest.approx(ref3[b.bus].ikss_ka, rel=REL), b.bus
+        assert b.ip3_ka == pytest.approx(ref3[b.bus].ip_ka, rel=REL), b.bus
+        assert b.ikss2_ka == pytest.approx(ref2[b.bus].ikss_ka, rel=REL), b.bus
+        assert b.ikss1_ka == pytest.approx(ref1[b.bus].ikss_ka, rel=REL), b.bus
+
+
+def test_impedenza_di_guasto_resistiva_metodo_c():
+    # con Z_F reattiva pandapower non riporta X_F alla frequenza equivalente;
+    # con Z_F resistiva i due metodi coincidono
+    data = _no_generators()
+    result = calculate(network_from_dict(data), "max", "C", zf_ohm=0.5)
+    ref = run(data, "3ph", "max", ip=True, kappa_method="C", r_fault_ohm=0.5)
+    for b in result.buses:
+        assert b.ip3_ka == pytest.approx(ref[b.bus].ip_ka, rel=REL), b.bus

@@ -22,6 +22,7 @@ python -m iec60909 esempi/cabina_mt_bt.json              # correnti massime, Mar
 python -m iec60909 esempi/cabina_mt_bt.json --caso min   # correnti minime
 python -m iec60909 rete.json --kappa B --tk 0.5 --json   # metodo B, Tk = 0,5 s, JSON
 python -m iec60909 rete.json --tmin 0.05                  # Ib con tempo minimo di interruzione 50 ms
+python -m iec60909 rete.json --rf 0.01 --xf 0.005         # guasto attraverso Z_F = 0,01 + j0,005 Ω
 ```
 
 Da Python:
@@ -29,7 +30,8 @@ Da Python:
 ```python
 from iec60909 import load_network, calculate
 
-risultato = calculate(load_network("rete.json"), case="max", kappa_method="C", tk_s=1.0, tmin_s=0.1)
+risultato = calculate(load_network("rete.json"), case="max", kappa_method="C", tk_s=1.0,
+                      tmin_s=0.1, zf_ohm=0j)
 print(risultato.bus("QGBT").ikss3_ka)
 ```
 

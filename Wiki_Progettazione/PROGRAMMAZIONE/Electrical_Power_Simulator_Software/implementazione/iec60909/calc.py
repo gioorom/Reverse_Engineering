@@ -64,6 +64,7 @@ class StudyResult:
     buses: list[BusResult]
     warnings: list[str] = field(default_factory=list)
     tmin_s: float = 0.1
+    zf_ohm: complex = 0j
 
     def bus(self, bus_id: str) -> BusResult:
         for b in self.buses:
@@ -383,6 +384,7 @@ def calculate(
     kappa_method: str = "C",
     tk_s: float = 1.0,
     tmin_s: float = 0.1,
+    zf_ohm: complex = 0j,
 ) -> StudyResult:
     """Calcola le correnti di cortocircuito in tutti i nodi della rete.
 
@@ -393,18 +395,24 @@ def calculate(
     tk_s: durata del cortocircuito per la corrente termica equivalente Ith.
     tmin_s: tempo minimo di interruzione per Ib (fattori μ e q; valori
     tabellati 0,02 / 0,05 / 0,10 / ≥ 0,25 s, interpolazione lineare).
+    zf_ohm: impedenza di guasto Z_F (Ω) in serie a ciascuna fase guasta: si
+    somma a Z1, Z2 e Z0 nel punto di guasto, quindi Z1 + Z_F (trifase),
+    Z1 + Z2 + 2·Z_F (bifase), Z1 + Z2 + Z0 + 3·Z_F (monofase).
     """
+    zf_ohm = complex(zf_ohm)
+    if zf_ohm.real < 0.0:
+        raise ValueError("la resistenza di guasto non può essere negativa")
     net.validate()
     kappa_method = kappa_method.upper()
     if kappa_method not in ("B", "C"):
         raise ValueError("kappa_method deve essere 'B' o 'C'")
-    result = _calculate(net, case, kappa_method, tk_s, tmin_s, None)
+    result = _calculate(net, case, kappa_method, tk_s, tmin_s, None, zf_ohm)
     # Guasti all'interno dei gruppi di generazione (nodo del generatore):
     # fattori K_G,S e K_T,S invece di K_S/K_SO.
     for g in net.generators:
         if g.unit_transformer is None:
             continue
-        inside = _calculate(net, case, kappa_method, tk_s, tmin_s, g.id)
+        inside = _calculate(net, case, kappa_method, tk_s, tmin_s, g.id, zf_ohm)
         k = next(i for i, r in enumerate(result.buses) if r.bus == g.bus)
         result.buses[k] = inside.bus(g.bus)
         result.warnings += [w for w in inside.warnings if w not in result.warnings]
@@ -418,6 +426,7 @@ def _calculate(
     tk_s: float,
     tmin_s: float,
     inside_unit: Optional[str],
+    zf_ohm: complex = 0j,
 ) -> StudyResult:
     warnings: list[str] = []
     b = _Builder(net, case, warnings, inside_unit)
@@ -432,22 +441,26 @@ def _calculate(
     if kappa_method == "C":
         fc = 20.0 if net.f_hz == 50.0 else 24.0
         zc = _diag_z(b.build(1, x_scale=fc / net.f_hz))
-        rx_c = zc.real / zc.imag * fc / net.f_hz
     # componente continua all'istante tmin: R/X con la frequenza equivalente
     # fc = f·(fc/f), con fc/f scelto in base a f·t (metodo C della norma)
     fc_dc = factors.dc_frequency_ratio(net.f_hz * tmin_s)
     zdc = _diag_z(b.build(1, x_scale=fc_dc))
-    rx_dc = zdc.real / zdc.imag * fc_dc
     machines = _machines(b, warnings)
-    steady = _steady_state(net, b, warnings)
+    zf_pu = [zf_ohm / b.zbase(bus.id) for bus in net.buses]
+    steady = _steady_state(net, b, warnings, zf_pu)
 
     results = []
     for i, bus in enumerate(net.buses):
         c = b.c_case(bus.id)
         zb = b.zbase(bus.id)
         ibase = S_BASE_MVA / (math.sqrt(3.0) * bus.un_kv)
-        z1i, z2i, z0i = z1[i], z2[i], z0[i]
+        zf = zf_pu[i]
+        # impedenza di guasto in serie a ogni fase guasta: entra in tutte le sequenze
+        z1i, z2i, z0i = z1[i] + zf, z2[i] + zf, z0[i] + zf
         zero_open = not cmath.isfinite(z0i)
+
+        def scaled(z: complex, k: float) -> complex:
+            return complex(z.real, z.imag * k)
 
         ik3 = c / abs(z1i) * ibase
         ik2 = math.sqrt(3.0) * c / abs(z1i + z2i) * ibase
@@ -466,15 +479,17 @@ def _calculate(
             ikl3 = abs(i0 + _A * i1 + _A**2 * i2) * ibase
 
         if kappa_method == "C":
-            k = factors.kappa(rx_c[i])
+            zci = zc[i] + scaled(zf, fc / net.f_hz)
+            k = factors.kappa(zci.real / zci.imag * fc / net.f_hz)
         else:
             k_limit = 1.8 if bus.un_kv <= factors.LV_LIMIT_KV else 2.0
             k = min(1.15 * factors.kappa(z1i.real / z1i.imag), k_limit)
         ip3 = k * math.sqrt(2.0) * ik3
         m = factors.thermal_m(k, net.f_hz, tk_s)
         ith = ik3 * math.sqrt(m + 1.0)
-        ib = _breaking_current(i, c, z1_full, machines, tmin_s) * ibase
-        idc = factors.dc_component(ik3, net.f_hz, tmin_s, rx_dc[i])
+        ib = _breaking_current(i, c, z1_full, machines, tmin_s, zf) * ibase
+        zdci = zdc[i] + scaled(zf, fc_dc)
+        idc = factors.dc_component(ik3, net.f_hz, tmin_s, zdci.real / zdci.imag * fc_dc)
         ik = None if steady[i] is None else steady[i] * ibase
 
         results.append(
@@ -482,9 +497,9 @@ def _calculate(
                 bus=bus.id,
                 un_kv=bus.un_kv,
                 c=c,
-                z1_ohm=z1i * zb,
-                z2_ohm=z2i * zb,
-                z0_ohm=None if zero_open else z0i * zb,
+                z1_ohm=z1[i] * zb,
+                z2_ohm=z2[i] * zb,
+                z0_ohm=None if zero_open else z0[i] * zb,
                 ikss3_ka=ik3,
                 skss3_mva=math.sqrt(3.0) * bus.un_kv * ik3,
                 ikss2_ka=ik2,
@@ -503,7 +518,7 @@ def _calculate(
                 ib_asym_ka=math.hypot(ib, idc),
             )
         )
-    return StudyResult(net.name, case, kappa_method, tk_s, results, warnings, tmin_s)
+    return StudyResult(net.name, case, kappa_method, tk_s, results, warnings, tmin_s, zf_ohm)
 
 
 @dataclass
@@ -536,7 +551,7 @@ def _machines(b: _Builder, warnings: list[str]) -> list[_Machine]:
 
 
 def _breaking_current(
-    f: int, c: float, z_full: np.ndarray, machines: list[_Machine], tmin_s: float
+    f: int, c: float, z_full: np.ndarray, machines: list[_Machine], tmin_s: float, zf: complex = 0j
 ) -> float:
     """Corrente di interruzione simmetrica Ib (p.u.) per guasto trifase nel nodo f.
 
@@ -546,7 +561,7 @@ def _breaking_current(
     sola macchina si riduce a Ib = μ·q·I"k. Le macchine con I"k_i ≤ 2·Ir non
     decadono (μ = q = 1); per tmin < 0,02 s Ib = I"k.
     """
-    zff = z_full[f, f]
+    zff = z_full[f, f] + zf  # con impedenza di guasto
     ib = c / abs(zff)
     if tmin_s < factors.T_MIN_IB:
         # sotto 0,02 s la norma non dà μ e q: nessun decadimento (cautelativo)
@@ -565,7 +580,9 @@ def _breaking_current(
     return ib
 
 
-def _steady_state(net: Network, b: _Builder, warnings: list[str]) -> list[Optional[float]]:
+def _steady_state(
+    net: Network, b: _Builder, warnings: list[str], zf: list[complex]
+) -> list[Optional[float]]:
     """Corrente permanente Ik (p.u.) per guasto trifase in ogni nodo.
 
     Guasto alimentato da un solo generatore (nessuna rete esterna, un solo
@@ -577,7 +594,7 @@ def _steady_state(net: Network, b: _Builder, warnings: list[str]) -> list[Option
     system = b.build(1, motors=False)
     if net.external_grids or len(net.generators) != 1:
         z = _diag_z(system)
-        return [b.c_case(bus.id) / abs(z[i]) for i, bus in enumerate(net.buses)]
+        return [b.c_case(bus.id) / abs(z[i] + zf[i]) for i, bus in enumerate(net.buses)]
     g = net.generators[0]
     z_full = _full_z(system)
     gi = b.idx[g.bus]
@@ -586,7 +603,7 @@ def _steady_state(net: Network, b: _Builder, warnings: list[str]) -> list[Option
     out: list[Optional[float]] = []
     for i, bus in enumerate(net.buses):
         c = b.c_case(bus.id)
-        ratio = c * abs(z_full[gi, i] / z_full[i, i]) / abs(zg) / ir
+        ratio = c * abs(z_full[gi, i] / (z_full[i, i] + zf[i])) / abs(zg) / ir
         if g.lambda_max is not None and g.lambda_min is not None:
             lam_max, lam_min = g.lambda_max, g.lambda_min
         elif g.xd_sat_percent is not None:

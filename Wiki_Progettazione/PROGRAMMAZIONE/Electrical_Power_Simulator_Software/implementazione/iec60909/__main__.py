@@ -1,4 +1,4 @@
-"""Uso: python -m iec60909 rete.json [--caso max|min] [--kappa B|C] [--tk 1] [--tmin 0.1] [--json]"""
+"""Uso: python -m iec60909 rete.json [--caso max|min] [--kappa B|C] [--tk 1] [--tmin 0.1] [--rf 0] [--xf 0] [--json]"""
 
 from __future__ import annotations
 
@@ -21,10 +21,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--tmin", type=float, default=0.1, help="tempo minimo di interruzione per Ib [s]"
     )
+    parser.add_argument("--rf", type=float, default=0.0, help="resistenza di guasto R_F [Ω]")
+    parser.add_argument("--xf", type=float, default=0.0, help="reattanza di guasto X_F [Ω]")
     parser.add_argument("--json", action="store_true", help="output JSON invece di Markdown")
     args = parser.parse_args(argv)
 
-    result = calculate(load_network(args.rete), args.caso, args.kappa, args.tk, args.tmin)
+    result = calculate(
+        load_network(args.rete), args.caso, args.kappa, args.tk, args.tmin, complex(args.rf, args.xf)
+    )
     if args.json:
         json.dump(result_to_dict(result), sys.stdout, indent=2, ensure_ascii=False)
         print()

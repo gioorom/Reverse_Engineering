@@ -79,6 +79,7 @@ def result_to_dict(result: StudyResult) -> dict[str, Any]:
         "kappa_method": result.kappa_method,
         "tk_s": result.tk_s,
         "tmin_s": result.tmin_s,
+        "zf_ohm": [result.zf_ohm.real, result.zf_ohm.imag],
         "warnings": result.warnings,
         "buses": [
             {k: conv(v) for k, v in dataclasses.asdict(b).items()} for b in result.buses
@@ -96,7 +97,9 @@ def result_to_markdown(result: StudyResult) -> str:
         f"# Cortocircuito IEC 60909-0 — {result.network}",
         "",
         f"Correnti {caso}, fattore di picco con metodo {result.kappa_method}, "
-        f"Tk = {result.tk_s:g} s, tmin = {result.tmin_s:g} s. Correnti in kA, impedenze in Ω.",
+        f"Tk = {result.tk_s:g} s, tmin = {result.tmin_s:g} s"
+        + (f", Z_F = {result.zf_ohm.real:g} + j{result.zf_ohm.imag:g} Ω" if result.zf_ohm else "")
+        + ". Correnti in kA, impedenze di rete in Ω.",
         "",
         "| Nodo | Un [kV] | c | Zk1 [Ω] | R/X | I\"k3 | S\"k3 [MVA] | ip3 | Ib | i_DC | Ib asim "
         "| Ik | Ith | I\"k2 | I\"k1 | I\"kE2E |",

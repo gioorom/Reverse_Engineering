@@ -83,6 +83,26 @@ Codice: [`../implementazione/iec60909/`](../implementazione/iec60909/).
 Le correnti nelle fasi guaste del bifase a terra sono calcolate con le
 componenti simmetriche.
 
+### Impedenza di guasto Z_F
+
+Guasto non franco (arco, resistenza di contatto o di terra): Z_F è in serie a
+ciascuna fase guasta, quindi si somma alle impedenze di sequenza del punto di
+guasto (Z1 + Z_F, Z2 + Z_F, Z0 + Z_F):
+
+| Guasto | Formula |
+|---|---|
+| Trifase | I"k3 = c·Un / (√3·\|Z1 + Z_F\|) |
+| Bifase isolato | I"k2 = c·Un / \|Z1 + Z2 + 2·Z_F\| |
+| Monofase a terra | I"k1 = √3·c·Un / \|Z1 + Z2 + Z0 + 3·Z_F\| |
+| Bifase a terra | formule del guasto franco con Z1 + Z_F, Z2 + Z_F, Z0 + Z_F |
+
+Z_F entra anche in ip (R/X di Z1 + Z_F; nel metodo C anche X_F è riportata
+alla frequenza equivalente), Ib, i_DC e Ik. È la stessa convenzione di
+pandapower (identico su I"k e su ip con il metodo B; con il metodo C
+pandapower non scala X_F, quindi coincide solo per Z_F resistiva). La norma
+IEC 60909-0 tratta i guasti franchi: Z_F serve per valutazioni con arco o
+resistenza di terra.
+
 ## Corrente di picco ip
 
 ip = κ·√2·I"k, con κ = 1,02 + 0,98·e^(−3R/X). Lo stesso κ del trifase è usato
@@ -153,5 +173,5 @@ per bifase e monofase.
 - Gruppi di generazione: trasformatori ausiliari e guasti sul lato dei
   servizi ausiliari.
 - Fattore n della corrente termica per guasti vicini ai generatori (n = 1).
-- Impedenza di guasto, contributo di inverter/eolico.
+- Contributo di inverter ed eolico (generatori statici).
 - Metodo B senza la deroga per R/X < 0,3 in tutti i rami.
