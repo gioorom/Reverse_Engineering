@@ -35,7 +35,7 @@ Sezione `cable_ratings`: `id`, `cable` (costruzione), `installation` (posa).
 | `depth_m`, `soil_temperature_c`, `soil_rho_t` | profondità dell'asse (trifoglio: baricentro), terreno |
 | `bonding`, `eddy_both_ends` | collegamento degli schermi `both_ends`, `single_point`, `cross_bonded`; perdite parassite anche con collegamento alle due estremità (scelta del WG CIGRE B1.56) |
 | `duct_inner_mm`, `duct_outer_mm`, `duct_type`, `duct_rho_t` | tubi (costanti U, V, Y della tabella 4 per i tubi in plastica) |
-| `air_temperature_c`, `air_z`, `air_e`, `air_g`, `trough_perimeter_m` | posa in aria: coefficienti della tabella 2 della IEC 60287-2-1 per la disposizione; canaletta chiusa non riempita |
+| `air_temperature_c`, `air_arrangement`, `air_z`, `air_e`, `air_g`, `trough_perimeter_m` | posa in aria: coefficienti Z, E, g della tabella 2 della IEC 60287-2-1 (default `trefoil` 0,96/1,25/0,20 e `flat_touching` 0,62/1,95/0,25, confermati da due fonti; per le altre disposizioni vanno indicati); canaletta chiusa non riempita |
 | `other_cables_m` | posizioni (x, y) di altri cavi uguali e ugualmente caricati (mutuo riscaldamento) |
 | `u0_kv`, `frequency_hz` | tensione verso terra e frequenza |
 
@@ -44,8 +44,8 @@ Sezione `cable_ratings`: `id`, `cable` (costruzione), `installation` (posa).
 I = √{[Δθ − Wd·(0,5·T1 + T2 + T3 + T4)] / [R·T1 + R·(1 + λ1)·T2 + R·(1 + λ1)·(T3 + T4)]}
 
 - **Resistenza in c.a.:** R = R'·(1 + ys + yp), con R' alla temperatura
-  massima. Effetto pelle e di prossimità secondo la 2.1, con s = √(s1·s2) in
-  piano.
+  massima. Effetto pelle nei tre campi di xs (fino a 2,8, fino a 3,8, oltre)
+  ed effetto di prossimità secondo la 2.1, con s = √(s1·s2) in piano.
 - **Perdite dielettriche:** Wd = ω·C·U0²·tanδ, con C = ε/(18·ln(Di/dc)).
 - **Perdite nello schermo:** λ1 = λ1' + λ1''.
   - **Circolazione (λ1')**, solo con schermi collegati alle due estremità:
@@ -111,13 +111,23 @@ da 15,5 mm, guaina di alluminio da 0,8 mm, posato a 1 m con terreno a 20 °C e
     schermo: CIGRE ne considera la cordatura, il cui passo non è nelle fonti
     aperte. Con `screen_lay_factor` si può indicare.
 
+Le formule e le costanti sono state confrontate con più implementazioni
+aperte indipendenti della norma (Alliander cable-thermal-model, DiTuS,
+C4_open, CableDesign, IEC_Power_Cable_tools e i notebook TB 880). La raccolta,
+con le concordanze, è nelle note di lavoro del progetto. Due eccezioni hanno
+una sola conferma e sono segnalate:
+- il fattore 1,07 su T1 per gli schermi a fili, ricavato dal caso 4 della
+  brochure;
+- la reattanza X1 della formazione in piano trasposta.
+
 ## Limiti
 
 - **Cavi:** solo unipolari con isolante estruso. Mancano i cavi tripolari,
   l'armatura (λ2) e i conduttori Milliken (perdite parassite con schermi
   collegati alle due estremità e coefficienti ks/kp da indicare a mano).
 - **Posa in aria:** senza irraggiamento solare. I coefficienti Z, E, g della
-  tabella 2 vanno indicati per la disposizione.
+  tabella 2 sono predefiniti solo per trifoglio e piano a contatto; per le
+  altre disposizioni vanno indicati.
 - **Tubi:** costanti U, V, Y solo per i tubi in plastica; niente blocchi di
   calcestruzzo o letti di posa con resistività diversa (fattore Gb).
 - **Cross-bonding:** i tratti si suppongono perfettamente bilanciati, con

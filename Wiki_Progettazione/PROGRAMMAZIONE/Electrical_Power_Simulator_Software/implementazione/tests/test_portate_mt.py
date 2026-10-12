@@ -148,3 +148,21 @@ def test_cigre_tb880_caso_4_schermo_a_fili():
     # senza i fattori dell'edizione 2023 la portata sale
     c.t1_factor, c.t3_factor = 1.0, 1.6
     assert rating(c, Installation(u0_kv=33 / math.sqrt(3))).current_a > r.current_a
+
+
+def test_effetto_pelle_nei_tre_campi_e_aria():
+    """ys quasi continuo ai confini dei tre campi di xs (le formule della norma saltano di
+    qualche millesimo: 0,001 a 2,8 e 0,0025 a 3,8); coefficienti Z, E, g di default
+    per trifoglio e piano a contatto (IEC 60287-2-1, tabella 2)."""
+    from iec60909.iec60287 import skin_factor
+
+    for xs in (2.8, 3.8):
+        assert skin_factor((xs - 1e-9) ** 2) == pytest.approx(skin_factor((xs + 1e-9) ** 2), abs=3e-3)
+    c = CableConstruction(**CAVO_132)
+    piano = rating(c, Installation(kind="air", formation="flat", air_temperature_c=25, u0_kv=U0))
+    esplicito = rating(c, Installation(kind="air", formation="flat", air_temperature_c=25, u0_kv=U0,
+                                       air_z=0.62, air_e=1.95, air_g=0.25))
+    assert piano.current_a == esplicito.current_a
+    assert rating(c, Installation(kind="air", air_temperature_c=25, u0_kv=U0)).current_a > 0
+    with pytest.raises(ValueError, match="air_arrangement"):
+        rating(c, Installation(kind="air", formation="flat", spacing_mm=300, u0_kv=U0))

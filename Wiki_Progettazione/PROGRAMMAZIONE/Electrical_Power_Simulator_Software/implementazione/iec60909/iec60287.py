@@ -22,10 +22,16 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 # IEC 60287-1-1 tabella 1: resistività a 20 °C [Ω·m] e coefficiente di temperatura [1/K]
+# dei materiali degli schermi (alluminio: valore per guaine e armature)
 RHO_20 = {"cu": 1.7241e-8, "al": 2.84e-8, "lead": 21.4e-8, "steel": 13.8e-8, "bronze": 3.5e-8}
 ALPHA_20 = {"cu": 3.93e-3, "al": 4.03e-3, "lead": 4.0e-3, "steel": 4.5e-3, "bronze": 3.0e-3}
 # IEC 60287-2-1 tabella 4: costanti U, V, Y per T4' (aria tra cavo e tubo)
 DUCT_CONSTANTS = {"plastic": (1.87, 0.312, 0.0037)}
+# IEC 60287-2-1 tabella 2 (tabella 3 nell'edizione 2023): Z, E, g per la posa in aria
+AIR_ARRANGEMENTS = {
+    "trefoil": (0.96, 1.25, 0.20),  # tre cavi a trifoglio
+    "flat_touching": (0.62, 1.95, 0.25),  # tre cavi orizzontali a contatto
+}
 
 
 @dataclass
@@ -97,6 +103,7 @@ class Installation:
     # posa in aria (IEC 60287-2-1, 4.2.1): temperatura dell'aria e coefficienti Z, E, g della
     # tabella 2 per la disposizione; canaletta chiusa non riempita: perimetro utile p [m]
     air_temperature_c: float = 30.0
+    air_arrangement: Optional[str] = None  # chiave di AIR_ARRANGEMENTS (default: dalla formazione)
     air_z: Optional[float] = None
     air_e: Optional[float] = None
     air_g: Optional[float] = None
@@ -131,6 +138,16 @@ def _y(x2: float) -> float:
     return x4 / (192.0 + 0.8 * x4)
 
 
+def skin_factor(xs2: float) -> float:
+    """ys nei tre campi di xs (IEC 60287-1-1, 2.1.2)."""
+    xs = math.sqrt(xs2)
+    if xs <= 2.8:
+        return _y(xs2)
+    if xs <= 3.8:
+        return -0.136 - 0.0177 * xs + 0.0563 * xs * xs
+    return 0.354 * xs - 0.733
+
+
 def _r0(c: CableConstruction) -> float:
     if c.r20_ohm_per_km is not None:
         return c.r20_ohm_per_km / 1000.0
@@ -153,9 +170,9 @@ def ac_resistance(c: CableConstruction, inst: Installation, theta_c: float) -> t
     f = inst.frequency_hz
     xs2 = 8.0 * math.pi * f / r1 * 1e-7 * c.ks
     xp2 = 8.0 * math.pi * f / r1 * 1e-7 * c.kp
-    if xs2 > 2.8**2:
-        raise ValueError("effetto pelle: xs > 2,8 fuori dal campo della formula")
-    ys = _y(xs2)
+    if xp2 > 2.8**2:
+        raise ValueError("effetto di prossimità: xp > 2,8 fuori dal campo della formula")
+    ys = skin_factor(xs2)
     s = _axis_spacing_m(c, inst)
     if inst.formation == "flat":
         s = s * math.sqrt(2.0)  # s = √(s1·s2), s2 = 2·s1 (IEC 60287-1-1, 2.1.4)
@@ -235,7 +252,10 @@ def screen_loss_factors(c: CableConstruction, inst: Installation, r_ac: float,
             beta1 = math.sqrt(4.0 * math.pi * omega / (1e7 * rho_s))  # [1/m]
             m = omega / r * 1e-7
             gs = 1.0 + (ts / ds) ** 1.74 * (beta1 * ds * 1e-3 - 1.6)
-            if inst.formation == "trefoil":
+            if m <= 0.1:  # Δ1 = Δ2 = 0 (2.3.6.1)
+                lam0 = (3.0 if inst.formation == "trefoil" else 6.0 if k == 1 else 1.5) * (m * m / (1.0 + m * m)) * r_**2
+                d1 = d2 = 0.0
+            elif inst.formation == "trefoil":
                 lam0 = 3.0 * (m * m / (1.0 + m * m)) * r_**2
                 d1, d2 = (1.14 * m**2.45 + 0.33) * r_ ** (0.92 * m + 1.66), 0.0
             elif k == 1:  # centrale
@@ -364,7 +384,13 @@ def rating(c: CableConstruction, inst: Installation, max_iter: int = 500, tol: f
     if inst.kind == "ducts" and (inst.duct_inner_mm is None or inst.duct_outer_mm is None):
         raise ValueError("per la posa in tubo servono duct_inner_mm e duct_outer_mm")
     if inst.kind == "air" and None in (inst.air_z, inst.air_e, inst.air_g):
-        raise ValueError("per la posa in aria servono air_z, air_e, air_g (IEC 60287-2-1, tabella 2)")
+        key = inst.air_arrangement or ("trefoil" if inst.formation == "trefoil"
+                                       else "flat_touching" if inst.spacing_mm is None else None)
+        if key not in AIR_ARRANGEMENTS:
+            raise ValueError("posa in aria: indicare air_z, air_e, air_g (IEC 60287-2-1, tabella 2) o "
+                             f"air_arrangement tra {', '.join(AIR_ARRANGEMENTS)}")
+        z, e, g = AIR_ARRANGEMENTS[key]
+        inst = Installation(**{**inst.__dict__, "air_z": z, "air_e": e, "air_g": g})
     theta = c.max_temperature_c
     ambient = inst.air_temperature_c if inst.kind == "air" else inst.soil_temperature_c
     r, ys, yp = ac_resistance(c, inst, theta)
