@@ -1,0 +1,44 @@
+"""Reti di prova condivise dai test."""
+
+RETE_MAGLIATA = {
+    "name": "Rete magliata di prova",
+    "f_hz": 50,
+    "buses": [
+        {"id": "AT", "un_kv": 110.0},
+        {"id": "A", "un_kv": 20.0},
+        {"id": "B", "un_kv": 20.0},
+        {"id": "C", "un_kv": 20.0},
+        {"id": "BT", "un_kv": 0.4},
+    ],
+    "external_grids": [
+        {"id": "Q", "bus": "AT", "skq_max_mva": 3000, "rx_max": 0.1,
+         "skq_min_mva": 2000, "rx_min": 0.12, "x0x1": 1.2, "r0x0": 0.1}
+    ],
+    "transformers": [
+        {"id": "T1", "hv_bus": "AT", "lv_bus": "A", "sr_mva": 40, "ur_hv_kv": 115,
+         "ur_lv_kv": 21, "ukr_percent": 12, "urr_percent": 0.4, "vector_group": "Dyn5"},
+        {"id": "T2", "hv_bus": "AT", "lv_bus": "A", "sr_mva": 40, "ur_hv_kv": 115,
+         "ur_lv_kv": 21, "ukr_percent": 12, "urr_percent": 0.4, "vector_group": "Dyn5"},
+        {"id": "T3", "hv_bus": "C", "lv_bus": "BT", "sr_mva": 1.0, "ur_hv_kv": 20,
+         "ur_lv_kv": 0.4, "ukr_percent": 6, "urr_percent": 1.0, "vector_group": "Dyn11"},
+    ],
+    "lines": [
+        {"id": "L_AB", "from_bus": "A", "to_bus": "B", "length_km": 5,
+         "r1_ohm_per_km": 0.125, "x1_ohm_per_km": 0.112, "r0_ohm_per_km": 0.5,
+         "x0_ohm_per_km": 0.45, "end_temperature_c": 90},
+        {"id": "L_BC", "from_bus": "B", "to_bus": "C", "length_km": 3,
+         "r1_ohm_per_km": 0.206, "x1_ohm_per_km": 0.118, "r0_ohm_per_km": 0.8,
+         "x0_ohm_per_km": 0.47, "end_temperature_c": 90},
+        {"id": "L_AC", "from_bus": "A", "to_bus": "C", "length_km": 8,
+         "r1_ohm_per_km": 0.125, "x1_ohm_per_km": 0.112, "r0_ohm_per_km": 0.5,
+         "x0_ohm_per_km": 0.45, "end_temperature_c": 90},
+    ],
+    "generators": [
+        {"id": "G1", "bus": "B", "sr_mva": 10, "ur_kv": 21, "xd2_percent": 15,
+         "cos_phi": 0.8}
+    ],
+    "motors": [
+        {"id": "M1", "bus": "C", "pr_mw": 2.0, "ur_kv": 20, "efficiency": 0.96,
+         "cos_phi": 0.88, "ilr_ir": 5.5, "pole_pairs": 2}
+    ],
+}

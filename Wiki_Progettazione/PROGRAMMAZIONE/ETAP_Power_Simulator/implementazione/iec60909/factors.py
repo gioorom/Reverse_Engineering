@@ -35,6 +35,8 @@ def thermal_m(kappa_value: float, f_hz: float, tk_s: float) -> float:
     if kappa_value <= 1.0:
         return 0.0
     ln = math.log(kappa_value - 1.0)
+    if abs(ln) < 1e-12:
+        return 2.0  # limite per κ → 2 (componente continua senza smorzamento)
     return (math.exp(4.0 * f_hz * tk_s * ln) - 1.0) / (2.0 * f_hz * tk_s * ln)
 
 

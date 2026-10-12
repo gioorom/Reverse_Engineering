@@ -1,0 +1,82 @@
+"""Confronto con pandapower, implementazione indipendente della IEC 60909-0."""
+
+import copy
+import warnings
+
+import pytest
+
+from iec60909 import calculate, network_from_dict
+
+from .reti import RETE_MAGLIATA
+
+pytest.importorskip("pandapower")
+from .pp_ref import run  # noqa: E402
+
+REL = 1e-6
+
+
+def _no_generators():
+    data = copy.deepcopy(RETE_MAGLIATA)
+    data["generators"] = []
+    return data
+
+
+@pytest.fixture(autouse=True)
+def _quiet():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        yield
+
+
+@pytest.mark.parametrize("case", ["max", "min"])
+def test_correnti_iniziali(case):
+    result = calculate(network_from_dict(RETE_MAGLIATA), case)
+    ref3 = run(RETE_MAGLIATA, "3ph", case)
+    ref2 = run(RETE_MAGLIATA, "2ph", case)
+    ref1 = run(RETE_MAGLIATA, "1ph", case)
+    for b in result.buses:
+        assert b.ikss3_ka == pytest.approx(ref3[b.bus].ikss_ka, rel=REL), b.bus
+        assert b.ikss2_ka == pytest.approx(ref2[b.bus].ikss_ka, rel=REL), b.bus
+        # pandapower lascia nella sequenza zero un'impedenza molto grande (~1 MΩ) per
+        # il generatore; qui il generatore ha neutro isolato: scarto di pochi ppm.
+        assert b.ikss1_ka == pytest.approx(ref1[b.bus].ikss_ka, rel=1e-5), b.bus
+
+
+@pytest.mark.parametrize("case", ["max", "min"])
+def test_corrente_monofase_senza_generatori(case):
+    data = _no_generators()
+    result = calculate(network_from_dict(data), case)
+    ref = run(data, "1ph", case)
+    for b in result.buses:
+        assert b.ikss1_ka == pytest.approx(ref[b.bus].ikss_ka, rel=REL), b.bus
+
+
+@pytest.mark.parametrize("case", ["max", "min"])
+@pytest.mark.parametrize("method", ["B", "C"])
+def test_corrente_di_picco(case, method):
+    result = calculate(network_from_dict(RETE_MAGLIATA), case, method)
+    ref = run(RETE_MAGLIATA, "3ph", case, ip=True, kappa_method=method)
+    for b in result.buses:
+        assert b.ip3_ka == pytest.approx(ref[b.bus].ip_ka, rel=REL), b.bus
+
+
+def test_corrente_termica_metodo_c():
+    data = _no_generators()
+    result = calculate(network_from_dict(data), "max", "C", tk_s=0.5)
+    ref = run(data, "3ph", "max", ip=True, ith=True, tk_s=0.5, kappa_method="C")
+    for b in result.buses:
+        assert b.ith_ka == pytest.approx(ref[b.bus].ith_ka, rel=REL), b.bus
+
+
+def test_corrente_termica_metodo_b_sotto_il_limite():
+    # Con κ al limite 2,0 pandapower azzera m (0/0); qui si confrontano solo i nodi
+    # con κ < 2, il limite è verificato in test_formule.
+    data = _no_generators()
+    result = calculate(network_from_dict(data), "max", "B", tk_s=0.5)
+    ref = run(data, "3ph", "max", ip=True, ith=True, tk_s=0.5, kappa_method="B")
+    checked = 0
+    for b in result.buses:
+        if b.kappa < 2.0:
+            assert b.ith_ka == pytest.approx(ref[b.bus].ith_ka, rel=REL), b.bus
+            checked += 1
+    assert checked >= 3

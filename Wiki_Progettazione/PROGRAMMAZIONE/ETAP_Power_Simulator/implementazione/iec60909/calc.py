@@ -20,11 +20,6 @@ from . import factors
 from .network import Network, Transformer
 
 S_BASE_MVA = 100.0
-# Ammettenza verso terra trascurabile aggiunta a ogni nodo: rende invertibile la
-# matrice anche per parti di rete senza percorso verso terra (es. sequenza zero
-# a valle di un triangolo), che risultano così con impedenza praticamente infinita.
-_Y_LEAK = 1e-9
-_Z_OPEN = 1e6
 _A = cmath.exp(2j * math.pi / 3)
 
 
@@ -123,17 +118,23 @@ class _Builder:
         ratio = (t.ur_hv_kv / t.ur_lv_kv) / (self.un[t.hv_bus] / self.un[t.lv_bus])
         return z1, z0, ratio
 
-    def build(self, seq: int, x_scale: float = 1.0, motors: bool = True) -> np.ndarray:
-        """Matrice Y in p.u.; ``x_scale`` scala le reattanze (metodo C, fc/f)."""
+    def build(
+        self, seq: int, x_scale: float = 1.0, motors: bool = True
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Matrice Y in p.u. e nodi con collegamento verso terra (elementi in derivazione).
+
+        ``x_scale`` scala le reattanze (metodo C, fc/f).
+        """
         n = len(self.net.buses)
         y = np.zeros((n, n), dtype=complex)
-        y[np.diag_indices(n)] += _Y_LEAK
+        grounded = np.zeros(n, dtype=bool)
 
         def scale(z: complex) -> complex:
             return complex(z.real, z.imag * x_scale)
 
         def shunt(bus: str, z: complex) -> None:
             y[self.idx[bus], self.idx[bus]] += 1.0 / scale(z)
+            grounded[self.idx[bus]] = True
 
         def branch(i_bus: str, j_bus: str, z: complex, ratio: float = 1.0) -> None:
             yy = 1.0 / scale(z)
@@ -190,8 +191,6 @@ class _Builder:
                 r, x = ln.r0_ohm_per_km, ln.x0_ohm_per_km
             z = complex(r * k_theta, x) * ln.length_km / ln.parallel
             branch(ln.from_bus, ln.to_bus, z / self.zbase(ln.from_bus))
-            if abs(self.un[ln.from_bus] - self.un[ln.to_bus]) > 1e-9:
-                raise ValueError(f"{ln.id}: collega nodi con tensioni nominali diverse")
 
         if seq in (1, 2):
             for g in self.net.generators:
@@ -208,11 +207,31 @@ class _Builder:
                     rx = m.rx if m.rx is not None else factors.motor_rx(m.ur_kv, m.pr_mw, m.pole_pairs)
                     xm = zm / math.sqrt(1.0 + rx**2)
                     shunt(m.bus, complex(rx * xm, xm) / self.zbase(m.bus))
-        return y
+        return y, grounded
 
 
-def _diag_z(y: np.ndarray) -> np.ndarray:
-    return np.diag(np.linalg.inv(y))
+def _diag_z(system: tuple[np.ndarray, np.ndarray]) -> np.ndarray:
+    """Impedenze nodali Z_ii; infinite per le parti di rete senza collegamento verso terra."""
+    y, grounded = system
+    n = y.shape[0]
+    z = np.full(n, complex(math.inf, math.inf))
+    seen = np.zeros(n, dtype=bool)
+    for start in range(n):
+        if seen[start]:
+            continue
+        component, stack = [], [start]
+        seen[start] = True
+        while stack:
+            i = stack.pop()
+            component.append(i)
+            for j in np.nonzero(y[i])[0]:
+                if not seen[j]:
+                    seen[j] = True
+                    stack.append(j)
+        if grounded[component].any():
+            sub = np.ix_(component, component)
+            z[component] = np.diag(np.linalg.inv(y[sub]))
+    return z
 
 
 def calculate(
@@ -237,6 +256,9 @@ def calculate(
     b = _Builder(net, case, warnings)
 
     z1 = _diag_z(b.build(1))
+    isolated = [net.buses[i].id for i in np.nonzero(~np.isfinite(z1))[0]]
+    if isolated:
+        raise ValueError(f"nodi non collegati ad alcuna sorgente: {isolated}")
     z2 = _diag_z(b.build(2))
     z0 = _diag_z(b.build(0))
     if kappa_method == "C":
@@ -257,7 +279,7 @@ def calculate(
         zb = b.zbase(bus.id)
         ibase = S_BASE_MVA / (math.sqrt(3.0) * bus.un_kv)
         z1i, z2i, z0i = z1[i], z2[i], z0[i]
-        zero_open = abs(z0i) > _Z_OPEN
+        zero_open = not cmath.isfinite(z0i)
 
         ik3 = c / abs(z1i) * ibase
         ik2 = math.sqrt(3.0) * c / abs(z1i + z2i) * ibase

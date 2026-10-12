@@ -127,6 +127,9 @@ class Network:
         for ln in self.lines:
             check(ln.from_bus, ln.id)
             check(ln.to_bus, ln.id)
+            un = {b.id: b.un_kv for b in self.buses}
+            if abs(un[ln.from_bus] - un[ln.to_bus]) > 1e-9:
+                raise ValueError(f"{ln.id}: collega nodi con tensioni nominali diverse")
         for g in self.generators:
             check(g.bus, g.id)
         for m in self.motors:
