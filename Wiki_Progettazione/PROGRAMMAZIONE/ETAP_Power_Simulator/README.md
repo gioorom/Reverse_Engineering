@@ -2,9 +2,9 @@
 
 ## Obiettivo
 
-Da definire con l'utente: quale funzionalità di ETAP Power Simulator studiare
-e a quale scopo (es. interoperabilità con i file di progetto, reimplementazione
-di un calcolo, automazione).
+Reimplementare il calcolo di cortocircuito secondo IEC 60909-0:2016 (modulo
+Short Circuit IEC di ETAP) partendo dalle formule della norma, senza
+decompilare ETAP.
 
 ## Target
 
@@ -35,12 +35,19 @@ AVEVA, Autodesk ed Excel.
 ## Stato
 
 - [x] Target identificato
-- [ ] Obiettivo e versione definiti
-- [ ] Analisi con REA (`analisi/`)
-- [ ] Conclusioni con evidenze
-- [ ] Implementazione (`implementazione/`)
-- [ ] Test
+- [x] Obiettivo definito: cortocircuito IEC 60909 dalle norme
+- [x] Formule e ipotesi documentate ([`analisi/01_iec60909_formule.md`](analisi/01_iec60909_formule.md))
+- [x] Implementazione ([`implementazione/`](implementazione/))
+- [x] Test: calcoli a mano e confronto con pandapower
+- [ ] Confronto con i risultati di ETAP su una rete reale
+- [ ] Estensioni: power station unit, trasformatori a 3 avvolgimenti, μ/q/λ
 
 ## Conclusioni
 
-—
+Il calcolo IEC 60909-0 è implementato nel pacchetto Python `iec60909`:
+guasti trifase, bifase, bifase a terra e monofase, correnti massime e minime,
+ip (metodi B e C), Ib, Ik, Ith. I risultati coincidono con pandapower entro
+1 ppm (le due differenze residue sono motivate in `analisi/`).
+
+Prossimo passo consigliato: calcolare la stessa rete con ETAP e con
+`iec60909` e confrontare i risultati.
