@@ -45,7 +45,7 @@ def test_cigre_tb880_grandezze_intermedie():
     from iec60909.iec60287 import t4_external
 
     inst = Installation(kind="ducts", u0_kv=U0, duct_inner_mm=119.4, duct_outer_mm=140)
-    assert t4_external(c, inst) == pytest.approx(1.38002093961, abs=1e-10)  # T4''' dei tubi a trifoglio
+    assert t4_external(c, inst) == pytest.approx([1.38002093961] * 3, abs=1e-10)  # T4''' dei tubi a trifoglio
     r = rating(c, inst)
     assert r.t4 - 1.38002093961 - 0.08866064719 == pytest.approx(0.3520961015, abs=0.02)  # T4' (θm iterata)
 
@@ -61,7 +61,7 @@ def test_skin_effect_e_immagini():
     assert ys == pytest.approx(0.00884, abs=5e-6)
     inst = Installation(depth_m=1.0)
     de = c.diameters_mm()["outer"] / 1000
-    assert 1.0 < _t4_images(inst, de, de) / t4_external(c, inst) < 1.05
+    assert 1.0 < max(_t4_images(inst, de, de)) / t4_external(c, inst)[0] < 1.05
 
 
 def test_dimensionamento_mt_con_portate_iec60287():
@@ -87,3 +87,38 @@ def test_dimensionamento_mt_con_portate_iec60287():
     portate = {c.section_mm2: c.iz_a for c in r.candidates}
     assert portate[95] < portate[150] < portate[240]
     assert r.section_mm2 == min(s for s, iz in portate.items() if iz >= 300)
+
+
+@pytest.mark.parametrize("parassite, attese", [(False, (765.8209, 891.1261, 792.0775)),
+                                               (True, (756.6453, 855.1481, 780.2569))])
+def test_cigre_tb880_canaletta_in_piano(parassite, attese):
+    """Caso 0-5 (TB 880 §4.10): cavi in piano a contatto in una canaletta chiusa non riempita
+    (0,36 × 0,55 m, p = 1,27 m), aria a 25 °C, h con Z = 0,62, E = 1,95, g = 0,25, schermi
+    collegati alle due estremità senza trasposizione (λ1' diverso per ogni cavo). Riferimento:
+    notebook che riproduce il caso, che nell'iterazione semplifica il riscaldamento dell'aria
+    (25 K costanti nel calcolo della temperatura superficiale e perdite del primo cavo per
+    tutti): scarto atteso qualche millesimo."""
+    c = CableConstruction(**CAVO_132)
+    inst = Installation(kind="air", formation="flat", air_temperature_c=25, air_z=0.62, air_e=1.95, air_g=0.25,
+                        trough_perimeter_m=1.27, u0_kv=U0, eddy_both_ends=parassite)
+    r = rating(c, inst)
+    assert r.t3 == pytest.approx(0.0541996092, abs=1e-10)  # senza il fattore 1,6 (non interrato)
+    assert r.cable == 0  # cavo esterno con la fase in ritardo
+    for got, ref in zip(r.currents_a, attese):
+        assert got == pytest.approx(ref, rel=5e-3)
+
+
+def test_piano_trasposto_e_simmetria():
+    """In piano con trasposizione i tre cavi hanno lo stesso λ1'; senza trasposizione il
+    cavo centrale ha perdite minori degli esterni."""
+    from iec60909.iec60287 import ac_resistance, screen_loss_factors
+
+    c = CableConstruction(**CAVO_132)
+    for transposed in (True, False):
+        inst = Installation(formation="flat", spacing_mm=200, u0_kv=U0, transposed=transposed)
+        r, _, _ = ac_resistance(c, inst, 90.0)
+        lam, _, _ = screen_loss_factors(c, inst, r, [80.0] * 3)
+        if transposed:
+            assert lam[0] == lam[1] == lam[2]
+        else:
+            assert lam[1] < min(lam[0], lam[2])

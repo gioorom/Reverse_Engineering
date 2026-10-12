@@ -73,8 +73,9 @@ class CableConstruction:
 class Installation:
     """Circuito trifase di tre cavi unipolari."""
 
-    kind: str = "buried"  # "buried" (direttamente interrati) | "ducts" (in tubi interrati)
+    kind: str = "buried"  # "buried" (interrati) | "ducts" (in tubi interrati) | "air" (in aria, all'ombra)
     formation: str = "trefoil"  # "trefoil" | "flat"
+    transposed: bool = False  # formazione in piano con trasposizione regolare delle fasi
     depth_m: float = 1.0  # profondità dell'asse (trifoglio: baricentro del gruppo)
     spacing_mm: Optional[float] = None  # interasse; None = a contatto (cavi o tubi)
     soil_temperature_c: float = 20.0
@@ -88,6 +89,13 @@ class Installation:
     duct_type: str = "plastic"
     duct_rho_t: float = 3.5
     other_cables_m: list = field(default_factory=list)  # altri cavi uguali e ugualmente caricati: (x, y)
+    # posa in aria (IEC 60287-2-1, 4.2.1): temperatura dell'aria e coefficienti Z, E, g della
+    # tabella 2 per la disposizione; canaletta chiusa non riempita: perimetro utile p [m]
+    air_temperature_c: float = 30.0
+    air_z: Optional[float] = None
+    air_e: Optional[float] = None
+    air_g: Optional[float] = None
+    trough_perimeter_m: Optional[float] = None
 
 
 @dataclass
@@ -108,6 +116,8 @@ class RatingResult:
     screen_temperature_c: float
     iterations: int
     notes: list[str] = field(default_factory=list)
+    cable: int = 0  # cavo che limita la portata (in piano: 0 esterno in ritardo, 1 centrale, 2 esterno in anticipo)
+    currents_a: list = field(default_factory=list)  # portata di ciascun cavo
 
 
 def _y(x2: float) -> float:
@@ -170,47 +180,77 @@ def screen_resistance(c: CableConstruction, theta_s: float) -> float:
     return rs0 * (1.0 + ALPHA_20[c.screen_material] * (theta_s - 20.0))
 
 
-def screen_loss_factor(c: CableConstruction, inst: Installation, r_ac: float,
-                       theta_s: float) -> tuple[float, float, list[str]]:
-    """λ1' (circolazione) e λ1'' (parassite) per tre cavi unipolari (IEC 60287-1-1, 2.3)."""
+def _f_reduction(m: float, n: float) -> float:
+    """Riduzione delle perdite parassite per effetto delle correnti di circolazione (2.3.5)."""
+    return (4 * m**2 * n**2 + (m + n) ** 2) / (4 * (m**2 + 1) * (n**2 + 1))
+
+
+def screen_loss_factors(c: CableConstruction, inst: Installation, r_ac: float,
+                        theta_s: list[float]) -> tuple[list[float], list[float], list[str]]:
+    """λ1' (circolazione) e λ1'' (parassite) dei tre cavi (IEC 60287-1-1, 2.3).
+
+    In piano: indice 0 cavo esterno con la fase in ritardo, 1 centrale, 2 esterno con la
+    fase in anticipo; a trifoglio i tre cavi sono equivalenti."""
     notes: list[str] = []
-    rs = screen_resistance(c, theta_s)
+    rs = [screen_resistance(c, t) for t in theta_s]
     s = _axis_spacing_m(c, inst)
     d = c.diameters_mm()["screen_mean"] / 1000.0
     omega = 2.0 * math.pi * inst.frequency_hz
-    if inst.formation == "trefoil":
-        x = 2.0 * omega * 1e-7 * math.log(2.0 * s / d)
-    elif inst.formation == "flat":  # con trasposizione regolare (2.3.1 b)
-        x = 2.0 * omega * 1e-7 * math.log(2.0 * 2.0 ** (1.0 / 3.0) * s / d)
-    else:
+    if inst.formation not in ("trefoil", "flat"):
         raise ValueError(f"formazione non valida {inst.formation!r} (trefoil, flat)")
+    x = 2.0 * omega * 1e-7 * math.log(2.0 * s / d)  # reattanza dello schermo per due cavi adiacenti
+    xm = 2.0 * omega * 1e-7 * math.log(2.0)  # mutua, cavo esterno-altri due (in piano)
+    p_, q_ = x + xm, x - xm / 3.0
     if inst.bonding == "both_ends":
-        lam_circ = rs / r_ac / (1.0 + (rs / x) ** 2)
         eddy = inst.eddy_both_ends
+        if inst.formation == "trefoil":
+            lam_circ = [r / r_ac / (1.0 + (r / x) ** 2) for r in rs]
+        elif inst.transposed:  # 2.3.2
+            x1 = 2.0 * omega * 1e-7 * math.log(2.0 * 2.0 ** (1.0 / 3.0) * s / d)
+            lam_circ = [r / r_ac / (1.0 + (r / x1) ** 2) for r in rs]
+        else:  # 2.3.3: senza trasposizione, diverso per ogni cavo
+            def outer(r: float, sign: float) -> float:
+                return r / r_ac * (0.75 * p_**2 / (r**2 + p_**2) + 0.25 * q_**2 / (r**2 + q_**2)
+                                   + sign * 2 * r * p_ * q_ * xm / (math.sqrt(3) * (r**2 + p_**2) * (r**2 + q_**2)))
+            lam_circ = [outer(rs[0], 1.0), rs[1] / r_ac * q_**2 / (rs[1] ** 2 + q_**2), outer(rs[2], -1.0)]
     elif inst.bonding in ("single_point", "cross_bonded"):
-        lam_circ = 0.0  # cross-bonding: sezioni maggiori considerate perfettamente bilanciate
+        lam_circ = [0.0, 0.0, 0.0]  # cross-bonding: sezioni maggiori considerate bilanciate
         eddy = True
     else:
         raise ValueError(f"collegamento degli schermi non valido {inst.bonding!r}")
-    lam_eddy = 0.0
-    if eddy:
-        if c.screen_kind != "sheath":
-            notes.append("perdite parassite trascurate per lo schermo a fili o a nastro")
-        elif inst.formation != "trefoil":
-            raise ValueError("perdite parassite: implementate solo per la formazione a trifoglio")
-        else:
-            ts = c.screen_thickness_mm
-            ds = c.diameters_mm()["screen"]
-            rho_s = RHO_20[c.screen_material] * (1.0 + ALPHA_20[c.screen_material] * (theta_s - 20.0))
+    lam_eddy = [0.0, 0.0, 0.0]
+    if eddy and c.screen_kind != "sheath":
+        notes.append("perdite parassite trascurate per lo schermo a fili o a nastro")
+    elif eddy:  # 2.3.6.1
+        ts = c.screen_thickness_mm
+        ds = c.diameters_mm()["screen"]
+        r_ = d / (2.0 * s)
+        for k, r in enumerate(rs):
+            rho_s = RHO_20[c.screen_material] * (1.0 + ALPHA_20[c.screen_material] * (theta_s[k] - 20.0))
             beta1 = math.sqrt(4.0 * math.pi * omega / (1e7 * rho_s))  # [1/m]
-            m = omega / rs * 1e-7
+            m = omega / r * 1e-7
             gs = 1.0 + (ts / ds) ** 1.74 * (beta1 * ds * 1e-3 - 1.6)
-            lam0 = 3.0 * (m * m / (1.0 + m * m)) * (d / (2.0 * s)) ** 2
-            delta1 = (1.14 * m**2.45 + 0.33) * (d / (2.0 * s)) ** (0.92 * m + 1.66)
-            lam_eddy = rs / r_ac * (gs * lam0 * (1.0 + delta1) + (beta1 * ts) ** 4 / 12e12)
-            if inst.bonding == "both_ends":  # riduzione per le correnti di circolazione (2.3.5)
-                mm = nn = rs / x
-                lam_eddy *= (4 * mm**2 * nn**2 + (mm + nn) ** 2) / (4 * (mm**2 + 1) * (nn**2 + 1))
+            if inst.formation == "trefoil":
+                lam0 = 3.0 * (m * m / (1.0 + m * m)) * r_**2
+                d1, d2 = (1.14 * m**2.45 + 0.33) * r_ ** (0.92 * m + 1.66), 0.0
+            elif k == 1:  # centrale
+                lam0 = 6.0 * (m * m / (1.0 + m * m)) * r_**2
+                d1, d2 = 0.86 * m**3.08 * r_ ** (1.4 * m + 0.7), 0.0
+            elif k == 2:  # esterno, fase in anticipo
+                lam0 = 1.5 * (m * m / (1.0 + m * m)) * r_**2
+                d1, d2 = 4.7 * m**0.7 * r_ ** (0.16 * m + 2), 21 * m**3.3 * r_ ** (1.47 * m + 5.06)
+            else:  # esterno, fase in ritardo
+                lam0 = 1.5 * (m * m / (1.0 + m * m)) * r_**2
+                d1 = -(0.74 * (m + 2) * m**0.5 / (2 + (m - 0.3) ** 2)) * r_ ** (m + 1)
+                d2 = 0.92 * m**3.7 * r_ ** (m + 2)
+            le = r / r_ac * (gs * lam0 * (1.0 + d1 + d2) + (beta1 * ts) ** 4 / 12e12)
+            if inst.bonding == "both_ends":
+                if inst.formation == "trefoil" or inst.transposed:
+                    mm = nn = r / x
+                else:
+                    mm, nn = r / p_, r / q_
+                le *= _f_reduction(mm, nn)
+            lam_eddy[k] = le
     return lam_circ, lam_eddy, notes
 
 
@@ -254,80 +294,122 @@ def _positions(inst: Installation, s: float) -> list[tuple[float, float]]:
     return pos + [tuple(p) for p in inst.other_cables_m]
 
 
-def _t4_images(inst: Installation, diameter_m: float, s: float) -> float:
-    """Cavo (o tubo) più caldo di un gruppo ugualmente caricato, metodo delle immagini
-    (IEC 60287-2-1, 4.2.3.2)."""
+def _t4_images(inst: Installation, diameter_m: float, s: float) -> list[float]:
+    """T4 di ciascun cavo (o tubo) di un gruppo ugualmente caricato, metodo delle immagini
+    (IEC 60287-2-1, 4.2.3.2); i primi tre sono il circuito considerato."""
     pos = _positions(inst, s)
-    best = 0.0
-    for i, (xi, yi) in enumerate(pos):
+    out = []
+    for i, (xi, yi) in enumerate(pos[:3]):
         u = 2.0 * yi / diameter_m
         t = math.log(u + math.sqrt(u * u - 1.0))
         for k, (xk, yk) in enumerate(pos):
             if k != i:
                 t += math.log(math.hypot(xi - xk, yi + yk) / math.hypot(xi - xk, yi - yk))
-        best = max(best, inst.soil_rho_t / (2.0 * math.pi) * t)
-    return best
+        out.append(inst.soil_rho_t / (2.0 * math.pi) * t)
+    return out
 
 
-def t4_external(c: CableConstruction, inst: Installation) -> float:
-    """T4 (direttamente interrati) o T4''' (esterna dei tubi)."""
+def t4_external(c: CableConstruction, inst: Installation) -> list[float]:
+    """T4 dei tre cavi direttamente interrati o T4''' dei loro tubi."""
+    alone = inst.formation == "trefoil" and inst.spacing_mm is None and not inst.other_cables_m
     if inst.kind == "buried":
         de = c.diameters_mm()["outer"] / 1000.0
-        if inst.formation == "trefoil" and inst.spacing_mm is None and not inst.other_cables_m:
+        if alone:
             u = 2.0 * inst.depth_m / de
-            return 1.5 * inst.soil_rho_t / math.pi * (math.log(2.0 * u) - 0.630)  # 4.2.4.3.2
+            return [1.5 * inst.soil_rho_t / math.pi * (math.log(2.0 * u) - 0.630)] * 3  # 4.2.4.3.2
         return _t4_images(inst, de, _axis_spacing_m(c, inst))
     d0 = inst.duct_outer_mm / 1000.0
-    if inst.formation == "trefoil" and inst.spacing_mm is None and not inst.other_cables_m:
+    if alone:
         u = 2.0 * inst.depth_m / d0  # tubi a trifoglio a contatto
-        return inst.soil_rho_t / (2.0 * math.pi) * (math.log(2.0 * u) + 2.0 * math.log(u))
+        return [inst.soil_rho_t / (2.0 * math.pi) * (math.log(2.0 * u) + 2.0 * math.log(u))] * 3
     return _t4_images(inst, d0, _axis_spacing_m(c, inst))
 
 
-def rating(c: CableConstruction, inst: Installation, max_iter: int = 200, tol: float = 1e-11) -> RatingResult:
-    """Portata [A] di un circuito di tre cavi unipolari."""
-    if inst.kind not in ("buried", "ducts"):
-        raise ValueError(f"posa non supportata {inst.kind!r} (buried, ducts)")
+def _t4_air(c: CableConstruction, inst: Installation, lam1: float, t1: float, t2: float, t3: float,
+            wd: float, dtheta: float) -> float:
+    """T4 in aria, all'ombra (IEC 60287-2-1, 4.2.1): h = Z/De^g + E, iterazione su (Δθs)^(1/4)."""
+    de = c.diameters_mm()["outer"] / 1000.0
+    h = inst.air_z / de**inst.air_g + inst.air_e
+    ka = math.pi * de * h / (1.0 + lam1) * (t1 + t2 * (1.0 + lam1) + t3 * (1.0 + lam1))
+    dtheta_d = wd * (1.0 / (1.0 + lam1) - 0.5) * t1
+    x = 2.0
+    for _ in range(100):
+        new = ((dtheta + dtheta_d) / (1.0 + ka * x)) ** 0.25
+        if abs(new - x) < 1e-13:
+            x = new
+            break
+        x = new
+    return 1.0 / (math.pi * de * h * x)
+
+
+def rating(c: CableConstruction, inst: Installation, max_iter: int = 500, tol: float = 1e-11) -> RatingResult:
+    """Portata [A] di un circuito di tre cavi unipolari: la minore tra quelle dei tre cavi."""
+    if inst.kind not in ("buried", "ducts", "air"):
+        raise ValueError(f"posa non supportata {inst.kind!r} (buried, ducts, air)")
     if inst.kind == "ducts" and (inst.duct_inner_mm is None or inst.duct_outer_mm is None):
         raise ValueError("per la posa in tubo servono duct_inner_mm e duct_outer_mm")
+    if inst.kind == "air" and None in (inst.air_z, inst.air_e, inst.air_g):
+        raise ValueError("per la posa in aria servono air_z, air_e, air_g (IEC 60287-2-1, tabella 2)")
     theta = c.max_temperature_c
-    dtheta = theta - inst.soil_temperature_c
+    ambient = inst.air_temperature_c if inst.kind == "air" else inst.soil_temperature_c
     r, ys, yp = ac_resistance(c, inst, theta)
     wd = dielectric_loss(c, inst)
     t1, t2, t3 = t1_insulation(c), t2_bedding(c), t3_oversheath(c, inst)
-    t4_ext = t4_external(c, inst)
     de = c.diameters_mm()["outer"]
+    t4_ext = t4_external(c, inst) if inst.kind != "air" else [0.0] * 3
     t4_duct = 0.0
     if inst.kind == "ducts":
         if inst.duct_inner_mm <= de:
             raise ValueError("il diametro interno del tubo è minore del cavo")
         t4_duct = inst.duct_rho_t / (2.0 * math.pi) * math.log(inst.duct_outer_mm / inst.duct_inner_mm)
         uc, vc, yc = DUCT_CONSTANTS[inst.duct_type]
-    theta_s = theta - 10.0
-    theta_m = 70.0  # temperatura media dell'aria nel tubo, prima stima
-    i = 0.0
+    theta_s = [theta - 10.0] * 3
+    theta_m = [70.0] * 3  # temperatura media dell'aria nel tubo, prima stima
+    dtheta_tr = 0.0  # riscaldamento dell'aria in una canaletta chiusa
+    currents = [0.0] * 3
+    t4 = [0.0] * 3
     notes: list[str] = []
     for it in range(1, max_iter + 1):
-        t4_air = uc / (1.0 + 0.1 * (vc + yc * theta_m) * de) if inst.kind == "ducts" else 0.0
-        t4 = t4_air + t4_duct + t4_ext
-        lam_c, lam_e, notes = screen_loss_factor(c, inst, r, theta_s)
-        lam1 = lam_c + lam_e
-        num = dtheta - wd * (0.5 * t1 + t2 + t3 + t4)
-        if num <= 0:
-            raise ValueError("le perdite dielettriche da sole superano il salto termico ammesso")
-        den = r * t1 + r * (1 + lam1) * t2 + r * (1 + lam1) * (t3 + t4)
-        i = math.sqrt(num / den)
-        wc = i * i * r
-        w = wc * (1 + lam1) + wd
-        new_theta_s = theta - (wc + 0.5 * wd) * t1
-        new_theta_m = inst.soil_temperature_c + w * t4 - 0.5 * t4_air * w
-        done = abs(new_theta_s - theta_s) < tol and abs(new_theta_m - theta_m) < tol
-        theta_s, theta_m = new_theta_s, new_theta_m
+        lam_c, lam_e, notes = screen_loss_factors(c, inst, r, theta_s)
+        t4_air = [0.0] * 3
+        dtheta = theta - ambient - dtheta_tr
+        for k in range(3):
+            lam1 = lam_c[k] + lam_e[k]
+            if inst.kind == "air":
+                t4[k] = _t4_air(c, inst, lam1, t1, t2, t3, wd, dtheta)
+            else:
+                if inst.kind == "ducts":
+                    t4_air[k] = uc / (1.0 + 0.1 * (vc + yc * theta_m[k]) * de)
+                t4[k] = t4_air[k] + t4_duct + t4_ext[k]
+            num = dtheta - wd * (0.5 * t1 + t2 + t3 + t4[k])
+            if num <= 0:
+                raise ValueError("le perdite dielettriche da sole superano il salto termico ammesso")
+            den = r * t1 + r * (1 + lam1) * t2 + r * (1 + lam1) * (t3 + t4[k])
+            currents[k] = math.sqrt(num / den)
+        new_s, new_m = [], []
+        for k in range(3):
+            wc = currents[k] ** 2 * r
+            w = wc * (1 + lam_c[k] + lam_e[k]) + wd
+            new_s.append(theta - (wc + 0.5 * wd) * t1)
+            new_m.append(ambient + w * t4[k] - 0.5 * t4_air[k] * w)
+        new_tr = 0.0
+        if inst.trough_perimeter_m:
+            i_min = min(currents)  # le tre fasi portano la stessa corrente
+            w_tot = sum(i_min**2 * r * (1 + lam_c[k] + lam_e[k]) + wd for k in range(3))
+            new_tr = w_tot / (3.0 * inst.trough_perimeter_m)
+        old = theta_s + theta_m + [dtheta_tr]
+        done = max(abs(a - b) for a, b in zip(new_s + new_m + [new_tr], old)) < tol
+        theta_s, theta_m, dtheta_tr = new_s, new_m, new_tr
         if done:
             break
     else:
         raise ValueError("calcolo della portata non convergente")
-    return RatingResult(i, r, ys, yp, i * i * r, wd, lam_c + lam_e, lam_c, lam_e, t1, t2, t3, t4, theta_s, it, notes)
+    k = min(range(3), key=lambda q: currents[q])
+    lam_c, lam_e, notes = screen_loss_factors(c, inst, r, theta_s)
+    if inst.trough_perimeter_m:
+        notes.append(f"aria nella canaletta più calda di {dtheta_tr:.2f} K")
+    return RatingResult(currents[k], r, ys, yp, currents[k] ** 2 * r, wd, lam_c[k] + lam_e[k], lam_c[k], lam_e[k],
+                        t1, t2, t3, t4[k], theta_s[k], it, notes, k, list(currents))
 
 
 def rating_of(cr) -> tuple[CableConstruction, RatingResult]:
