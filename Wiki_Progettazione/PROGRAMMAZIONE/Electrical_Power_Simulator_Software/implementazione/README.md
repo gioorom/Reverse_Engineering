@@ -69,7 +69,9 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
   `ukr_hv_mv_percent`, `ukr_hv_lv_percent`, `ukr_mv_lv_percent` e
   `urr_..._percent` (riferite alla potenza della coppia), facoltativi
   `uk0_..._percent`/`ur0_..._percent`, `vector_group` (es. `YNynd5`),
-  `zn_hv_ohm`, `zn_mv_ohm`, `zn_lv_ohm`. Esempio: `esempi/stazione_tre_avvolgimenti.json`
+  `zn_hv_ohm`, `zn_mv_ohm`, `zn_lv_ohm`; per gli avvolgimenti a zig-zag con
+  neutro `z0_zigzag_hv_ohm`/`_mv_`/`_lv_` (`[R, X]` omopolare propria in Ω).
+  Esempio: `esempi/stazione_tre_avvolgimenti.json`
 - `lines`: `id`, `from_bus`, `to_bus`, `length_km`, `r1_ohm_per_km`,
   `x1_ohm_per_km`, `r0_ohm_per_km`, `x0_ohm_per_km`, `end_temperature_c`
   (temperatura a fine guasto per il caso minimo), `parallel`

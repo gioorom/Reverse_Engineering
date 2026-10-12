@@ -352,6 +352,12 @@ class _Builder:
                 elif connections[w] == "D":
                     # il triangolo chiude la corrente omopolare: derivazione dal centro stella
                     shunt(star, z_star[w] / self.zbase(star))
+                elif connections[w] == "ZN":
+                    # zig-zag con neutro: la corrente omopolare si chiude nell'avvolgimento
+                    # stesso, staccato dal centro stella (lati disaccoppiati)
+                    z0_zz = complex(*getattr(t, f"z0_zigzag_{w}_ohm"))
+                    zn = 3.0 * complex(getattr(t, f"zn_{w}_ohm"))
+                    shunt(bus, (z0_zz + zn) / self.zbase(bus))
                 # Y o Z senza neutro: avvolgimento aperto in sequenza zero
 
         for ln in self.net.lines:

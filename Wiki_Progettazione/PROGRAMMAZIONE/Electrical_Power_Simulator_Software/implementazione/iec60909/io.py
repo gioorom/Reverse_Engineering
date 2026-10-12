@@ -46,6 +46,9 @@ def _build(cls: type, data: dict[str, Any]) -> Any:
     if unknown:
         raise ValueError(f"{cls.__name__}: campi sconosciuti {sorted(unknown)}")
     kwargs = dict(data)
+    for key in ("z0_zigzag_hv_ohm", "z0_zigzag_mv_ohm", "z0_zigzag_lv_ohm", "z0_ohm"):
+        if kwargs.get(key) is not None:
+            kwargs[key] = tuple(kwargs[key])
     for key in ("zn_hv_ohm", "zn_mv_ohm", "zn_lv_ohm", "zn_ohm"):
         if key in kwargs:
             kwargs[key] = _complex(kwargs[key])

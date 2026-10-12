@@ -47,7 +47,11 @@ Codice: [`../implementazione/iec60909/`](../implementazione/iec60909/).
   Z_C = ½(Z_AC + Z_BC − Z_AB). Il centro stella è un nodo interno con tensione
   di base Ur_AT; ogni avvolgimento è un ramo con il proprio rapporto nominale.
   Sequenza zero: avvolgimento YN → ramo serie (+3·Zn); avvolgimento D →
-  derivazione verso terra dal centro stella; Y senza neutro → aperto.
+  derivazione verso terra dal centro stella; avvolgimento a zig-zag con
+  neutro (ZN) → derivazione verso terra sul proprio nodo con la sua impedenza
+  omopolare propria (`z0_zigzag_<lato>_ohm`, dato del costruttore) + 3·Zn,
+  staccata dal centro stella (le impedenze omopolari di coppia non sono
+  definite per uno zig-zag); Y o Z senza neutro → aperto.
 - **Gruppo di generazione** (generatore con trasformatore elevatore dedicato,
   `unit_transformer`): al posto di K_G e K_T un unico fattore per generatore
   e trasformatore, Z_S = K·(t_r²·Z_G + Z_THV):
@@ -185,8 +189,6 @@ per bifase e monofase.
 
 ## Limiti (non ancora implementati)
 
-- Avvolgimenti a zig-zag nei trasformatori a tre avvolgimenti (rifiutati con
-  un errore esplicito).
 - Gruppi di generazione: trasformatori ausiliari e guasti sul lato dei
   servizi ausiliari.
 - Fattore n della corrente termica per guasti vicini ai generatori (n = 1).

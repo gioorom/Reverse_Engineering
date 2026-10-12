@@ -11,8 +11,8 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
-- Avvolgimenti a zig-zag nei trasformatori a due avvolgimenti e trasformatori
-  di messa a terra in `iec60909`.
+- Avvolgimenti a zig-zag nei trasformatori a due e a tre avvolgimenti e
+  trasformatori di messa a terra in `iec60909`.
 - Generatori statici in `iec60909`: convertitori pieni (sorgenti di corrente,
   confronto con pandapower) ed eolico a doppia alimentazione (Z_WD).
 - Impedenza di guasto Z_F in `iec60909` (in serie a ogni fase guasta) per

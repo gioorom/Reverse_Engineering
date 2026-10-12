@@ -99,11 +99,36 @@ def test_json_e_validazione():
     data["earthing_transformers"][0]["z0_ohm"] = [1.0, 0.0]
     with pytest.raises(ValueError, match="z0_ohm"):
         calculate(network_from_dict(data))
-    rete = Network(
+    # tre avvolgimenti: lo zig-zag con neutro richiede la sua impedenza omopolare
+    with pytest.raises(ValueError, match="z0_zigzag_mv_ohm"):
+        calculate(_tre_avvolgimenti("YNznd5", z0_mv=None))
+    with pytest.raises(ValueError, match="R >= 0, X > 0"):
+        calculate(_tre_avvolgimenti("YNznd5", z0_mv=(0.1, 0.0)))
+
+
+def _tre_avvolgimenti(gruppo, z0_mv=(0.2, 1.5), zn_mv=0.0):
+    return Network(
         buses=[Bus("A", 132.0), Bus("B", 20.0), Bus("C", 10.0)],
-        external_grids=[ExternalGrid("Q", "A", skq_max_mva=3000.0)],
+        external_grids=[ExternalGrid("Q", "A", skq_max_mva=3000.0, rx_max=0.1, x0x1=1.2, r0x0=0.1)],
         transformers3w=[Transformer3W("T", "A", "B", "C", 132, 20, 10, 40, 10, 10,
-                                      12, 18, 6, 0.4, 0.5, 0.4, vector_group="YNznd5")],
+                                      12, 18, 6, 0.4, 0.5, 0.4, vector_group=gruppo,
+                                      z0_zigzag_mv_ohm=z0_mv, zn_mv_ohm=zn_mv)],
     )
-    with pytest.raises(ValueError, match="zig-zag"):
-        calculate(rete)
+
+
+def test_tre_avvolgimenti_zigzag_derivazione_propria():
+    """YNznd: guasto a terra sul lato MT zig-zag = Z0 propria + 3·Zn, disaccoppiata."""
+    r = calculate(_tre_avvolgimenti("YNznd5", zn_mv=5.0)).bus("B")
+    z0 = complex(0.2, 1.5) + 15.0
+    assert r.z0_ohm == pytest.approx(z0, rel=1e-12)
+    assert r.ikss1_ka == pytest.approx(SQ3 * 1.1 * 20.0 / abs(r.z1_ohm + r.z2_ohm + z0), rel=1e-9)
+
+
+def test_tre_avvolgimenti_zigzag_non_cambia_gli_altri_lati():
+    """Lato AT: lo zig-zag MT non entra (come un avvolgimento aperto, YNyd)."""
+    zz = calculate(_tre_avvolgimenti("YNznd5")).bus("A")
+    aperto = calculate(_tre_avvolgimenti("YNyd5")).bus("A")
+    assert zz.z0_ohm == pytest.approx(aperto.z0_ohm, rel=1e-12)
+    # sequenza diretta: zig-zag come una stella
+    assert zz.z1_ohm == pytest.approx(aperto.z1_ohm, rel=1e-12)
+    assert calculate(_tre_avvolgimenti("YNzd5")).bus("B").ikss1_ka == 0.0

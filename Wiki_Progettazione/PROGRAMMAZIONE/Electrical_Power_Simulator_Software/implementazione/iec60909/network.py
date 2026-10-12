@@ -15,12 +15,22 @@ def _check_zero_sequence(
         raise ValueError(f"{owner}: ur0 deve essere minore di uk0")
 
 
-def _reject_zigzag(owner: str, vector_group: str) -> None:
-    if "Z" in vector_group.upper():
-        raise ValueError(
-            f"{owner}: avvolgimenti a zig-zag supportati solo nei trasformatori a due "
-            f"avvolgimenti ({vector_group})"
-        )
+def _check_zigzag_3w(t: "Transformer3W") -> None:
+    """Ogni avvolgimento zig-zag con neutro richiede la sua impedenza omopolare."""
+    import re
+
+    tokens = re.findall(r"(YN|ZN|Y|D|Z)\d*", t.vector_group.strip(), flags=re.IGNORECASE)
+    for winding, token in zip(("hv", "mv", "lv"), tokens):
+        if token.upper() != "ZN":
+            continue
+        z0 = getattr(t, f"z0_zigzag_{winding}_ohm")
+        if z0 is None:
+            raise ValueError(
+                f"{t.id}: l'avvolgimento {winding} è a zig-zag con neutro: serve "
+                f"z0_zigzag_{winding}_ohm (impedenza omopolare propria [R, X] in Ω)"
+            )
+        if len(z0) != 2 or z0[0] < 0 or z0[1] <= 0:
+            raise ValueError(f"{t.id}: z0_zigzag_{winding}_ohm deve essere [R >= 0, X > 0]")
 
 
 @dataclass
@@ -99,6 +109,12 @@ class Transformer3W:
     zn_hv_ohm: complex = 0.0
     zn_mv_ohm: complex = 0.0
     zn_lv_ohm: complex = 0.0
+    # Avvolgimenti a zig-zag con neutro (ZN): impedenza omopolare propria
+    # dell'avvolgimento in Ω per fase ([R, X], lato dell'avvolgimento), dalla
+    # prova del costruttore tra neutro e fasi.
+    z0_zigzag_hv_ohm: Optional[tuple[float, float]] = None
+    z0_zigzag_mv_ohm: Optional[tuple[float, float]] = None
+    z0_zigzag_lv_ohm: Optional[tuple[float, float]] = None
 
 
 @dataclass
@@ -258,7 +274,7 @@ class Network:
                     getattr(t, f"ukr_{pair}_percent"),
                     getattr(t, f"urr_{pair}_percent"),
                 )
-            _reject_zigzag(t.id, t.vector_group)
+            _check_zigzag_3w(t)
         for ln in self.lines:
             check(ln.from_bus, ln.id)
             check(ln.to_bus, ln.id)
