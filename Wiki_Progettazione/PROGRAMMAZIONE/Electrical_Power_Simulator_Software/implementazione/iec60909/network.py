@@ -281,11 +281,21 @@ class ArcFlashPoint:
     10 della norma; i campi indicati esplicitamente li sostituiscono.
     `protection`: {"time_ms": …} oppure relè IEC 60255-151 {"curve": "SI"|"VI"|
     "EI"|"LTI", "pickup_ka", "tms", "inst_pickup_ka", "inst_time_ms",
-    "breaker_time_ms", "max_time_ms"}.
+    "breaker_time_ms", "max_time_ms"} oppure {"device": id} (dispositivo della
+    sezione protective_devices).
+
+    Corrente franca (c.a.): `ibf_ka` impone il valore invece della I"k IEC
+    60909; `motor_decay_ms` (contributo dei motori che si esaurisce dopo quel
+    tempo) oppure `steps` ([{"ibf_ka", "duration_ms", "current_ratio"}, …])
+    attivano il calcolo a più intervalli.
+    Corrente continua (`system: "dc"`, nodo facoltativo): tensione `vdc_v`,
+    corrente franca `ibf_ka` oppure resistenza del sistema `r_system_ohm`,
+    metodo `dc_method` ("doan" o "stokes") e fattore per l'arco in involucro
+    `dc_enclosure_factor` (default 3 in cella, 1 per VOA/HOA).
     """
 
     id: str
-    bus: str
+    bus: str = ""
     configuration: str = "VCB"
     equipment_class: Optional[str] = None
     gap_mm: Optional[float] = None
@@ -294,6 +304,14 @@ class ArcFlashPoint:
     width_mm: Optional[float] = None
     depth_mm: Optional[float] = None
     protection: dict = field(default_factory=dict)
+    system: str = "ac"
+    ibf_ka: Optional[float] = None
+    motor_decay_ms: Optional[float] = None
+    steps: list = field(default_factory=list)
+    vdc_v: Optional[float] = None
+    r_system_ohm: Optional[float] = None
+    dc_method: str = "doan"
+    dc_enclosure_factor: Optional[float] = None
 
 
 @dataclass
@@ -456,7 +474,8 @@ class Network:
         for sh in self.shunts:
             check(sh.bus, sh.id)
         for af in self.arc_flash:
-            check(af.bus, af.id)
+            if af.system != "dc" or af.bus:  # i punti in c.c. possono non avere un nodo
+                check(af.bus, af.id)
         for pd in self.protective_devices:
             check(pd.bus, pd.id)
         for t in self.transformers:
