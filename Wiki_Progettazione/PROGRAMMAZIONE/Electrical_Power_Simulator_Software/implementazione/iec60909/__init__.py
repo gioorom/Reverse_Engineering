@@ -1,9 +1,11 @@
-"""Correnti di cortocircuito secondo IEC 60909-0:2016 e flusso di potenza."""
+"""Correnti di cortocircuito (IEC 60909-0:2016), flusso di potenza e arc flash (IEEE 1584-2018)."""
 
+from .arcflash import ArcFlashResult, Enclosure, Protection, arc_flash, arc_flash_study
 from .calc import BusResult, StudyResult, calculate
 from .io import load_network, network_from_dict
 from .loadflow import LoadFlowResult, run_load_flow
 from .network import (
+    ArcFlashPoint,
     Bus,
     EarthingTransformer,
     ExternalGrid,
@@ -19,9 +21,12 @@ from .network import (
 )
 
 __all__ = [
+    "ArcFlashPoint",
+    "ArcFlashResult",
     "Bus",
     "BusResult",
     "EarthingTransformer",
+    "Enclosure",
     "ExternalGrid",
     "Generator",
     "Line",
@@ -29,11 +34,14 @@ __all__ = [
     "LoadFlowResult",
     "Motor",
     "Network",
+    "Protection",
     "Shunt",
     "StaticGenerator",
     "StudyResult",
     "Transformer",
     "Transformer3W",
+    "arc_flash",
+    "arc_flash_study",
     "calculate",
     "load_network",
     "network_from_dict",

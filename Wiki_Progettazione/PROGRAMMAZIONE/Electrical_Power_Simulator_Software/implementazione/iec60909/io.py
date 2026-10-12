@@ -9,6 +9,7 @@ from typing import Any
 
 from .calc import StudyResult
 from .network import (
+    ArcFlashPoint,
     Bus,
     EarthingTransformer,
     ExternalGrid,
@@ -35,6 +36,7 @@ _SECTIONS = {
     "earthing_transformers": EarthingTransformer,
     "loads": Load,
     "shunts": Shunt,
+    "arc_flash": ArcFlashPoint,
 }
 
 

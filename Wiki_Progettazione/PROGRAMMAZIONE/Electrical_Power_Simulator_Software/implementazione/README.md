@@ -1,14 +1,18 @@
-# iec60909 — cortocircuito e flusso di potenza
+# iec60909 — cortocircuito, flusso di potenza e arc flash
 
-Pacchetto Python di Electrical Power Simulator Software con due calcoli sulla
+Pacchetto Python di Electrical Power Simulator Software con tre calcoli sulla
 stessa descrizione della rete:
 
 - **cortocircuito** secondo la **IEC 60909-0:2016**, scritto dalle formule
   della norma;
-- **flusso di potenza** (load flow) con il metodo di Newton-Raphson.
+- **flusso di potenza** (load flow) con il metodo di Newton-Raphson;
+- **arc flash** (energia incidente e confine dell'arco) secondo
+  **IEEE 1584-2018**.
 
-Entrambi sono verificati contro [pandapower](https://www.pandapower.org/),
-implementazione open source indipendente, e con calcoli a mano.
+Cortocircuito e flusso di potenza sono verificati contro
+[pandapower](https://www.pandapower.org/), implementazione open source
+indipendente, e con calcoli a mano. L'arc flash è verificato con gli esempi
+svolti della norma e con [arcflash-calc](https://github.com/LiaungYip/arcflash).
 
 ## Installazione
 
@@ -60,6 +64,25 @@ Risultati: nodi (`vm_pu`, `u_kv`, `va_degree`, potenze immesse), rami
 avvolgimenti sono i rami `<id>:hv`, `<id>:mv`, `<id>:lv`), sorgenti (potenze
 di reti esterne e generatori). Modelli e limiti:
 [`../analisi/07_flusso_di_potenza.md`](../analisi/07_flusso_di_potenza.md).
+
+### Arc flash
+
+```bash
+python -m iec60909.arco esempi/arc_flash_cabina.json         # Markdown
+python -m iec60909.arco rete.json --json                     # JSON
+```
+
+```python
+from iec60909 import Enclosure, Protection, arc_flash, arc_flash_study, load_network
+
+risultati = arc_flash_study(load_network("rete.json"))           # punti della sezione arc_flash
+r = arc_flash(Enclosure(0.4, "VCB", gap_mm=32, distance_mm=610), ibf_ka=25.0,
+              protection=Protection(time_ms=100))
+print(r.e_cal_cm2, r.afb_mm, r.ppe_category)
+```
+
+Ibf è la I"k trifase IEC 60909 del nodo. Procedura, campo di validità e
+limiti sono in [`../analisi/08_arc_flash_ieee1584.md`](../analisi/08_arc_flash_ieee1584.md).
 
 ## Risultati per nodo (cortocircuito)
 
@@ -137,6 +160,18 @@ Campi usati solo dal flusso di potenza (tutti facoltativi, esempio in
 - `shunts`: `id`, `bus`, `q_mvar` (assorbita a tensione nominale: > 0
   reattore, < 0 condensatori), `p_mw`
 
+Sezione dell'arc flash (esempio in `esempi/arc_flash_cabina.json`):
+
+- `arc_flash`: `id`, `bus`, `configuration` (`VCB`, `VCBB`, `HCB`, `VOA`,
+  `HOA`), `equipment_class` (valori tipici delle tabelle 8 e 10: `quadro_bt`,
+  `ccm_bt`, `pannello_bt`, `cassetta_di_derivazione`, `quadro_mt_5kv`,
+  `quadro_mt_15kv`, …, anche `_poco_profondo`), `gap_mm`, `distance_mm`,
+  `height_mm`, `width_mm`, `depth_mm` (sostituiscono i valori tipici),
+  `protection`: `time_ms` fisso oppure relè IEC 60255-151 con `curve` (`SI`,
+  `VI`, `EI`, `LTI`), `pickup_ka`, `tms`, `inst_pickup_ka`, `inst_time_ms`,
+  `breaker_time_ms`, `current_ratio` (corrente vista dal relè / corrente
+  d'arco), `max_time_ms` (default 2000)
+
 ## Confronto con ETAP
 
 Gli studi di cortocircuito IEC di ETAP sono database SQLite (`.SI2S`) che
@@ -167,5 +202,7 @@ python -m pytest
 - `tests/test_loadflow.py`: flusso di potenza, soluzione in forma chiusa su due
   nodi e confronto con pandapower `runpp` (tolleranza 1e-6);
   `tests/test_loadflow_ieee14.py`: rete di prova IEEE a 14 nodi.
+- `tests/test_arcflash.py`: arc flash, esempi svolti dell'allegato D della
+  IEEE 1584-2018 e confronto con arcflash-calc su 864 casi.
 
 Dettagli delle formule, ipotesi e limiti: [`../analisi/01_iec60909_formule.md`](../analisi/01_iec60909_formule.md).

@@ -11,6 +11,11 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Arc flash secondo IEEE 1584-2018 in `iec60909.arcflash`, riga di comando
+  `python -m iec60909.arco`: corrente d'arco piena e ridotta, fattore
+  dell'involucro, energia incidente e confine dell'arco, Ibf dal cortocircuito
+  IEC 60909, tempo d'arco da tempo fisso o relè IEC 60255-151; verifica con
+  gli esempi dell'allegato D e con arcflash-calc.
 - Flusso di potenza (Newton-Raphson) in `iec60909.loadflow`, riga di comando
   `python -m iec60909.flusso`: reti esterne di saldo, generatori PV/PQ con
   limiti di Q, carichi, motori, generatori statici, condensatori, linee con

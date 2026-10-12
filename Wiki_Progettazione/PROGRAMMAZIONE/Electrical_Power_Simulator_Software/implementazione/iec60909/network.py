@@ -239,6 +239,29 @@ class Shunt:
 
 
 @dataclass
+class ArcFlashPoint:
+    """Punto di calcolo dell'arc flash (IEEE 1584-2018) su un nodo.
+
+    `equipment_class` (facoltativa) fornisce i valori tipici delle tabelle 8 e
+    10 della norma; i campi indicati esplicitamente li sostituiscono.
+    `protection`: {"time_ms": …} oppure relè IEC 60255-151 {"curve": "SI"|"VI"|
+    "EI"|"LTI", "pickup_ka", "tms", "inst_pickup_ka", "inst_time_ms",
+    "breaker_time_ms", "max_time_ms"}.
+    """
+
+    id: str
+    bus: str
+    configuration: str = "VCB"
+    equipment_class: Optional[str] = None
+    gap_mm: Optional[float] = None
+    distance_mm: Optional[float] = None
+    height_mm: Optional[float] = None
+    width_mm: Optional[float] = None
+    depth_mm: Optional[float] = None
+    protection: dict = field(default_factory=dict)
+
+
+@dataclass
 class EarthingTransformer:
     """Trasformatore di messa a terra (es. zig-zag) collegato a un nodo.
 
@@ -295,6 +318,7 @@ class Network:
     earthing_transformers: list[EarthingTransformer] = field(default_factory=list)
     loads: list[Load] = field(default_factory=list)
     shunts: list[Shunt] = field(default_factory=list)
+    arc_flash: list[ArcFlashPoint] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}
@@ -395,6 +419,8 @@ class Network:
             check(ld.bus, ld.id)
         for sh in self.shunts:
             check(sh.bus, sh.id)
+        for af in self.arc_flash:
+            check(af.bus, af.id)
         for t in self.transformers:
             if t.tap_side not in ("hv", "lv"):
                 raise ValueError(f"{t.id}: tap_side deve essere 'hv' o 'lv'")

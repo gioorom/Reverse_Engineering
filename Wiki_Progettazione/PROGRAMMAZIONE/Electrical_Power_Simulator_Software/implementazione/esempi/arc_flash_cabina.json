@@ -1,0 +1,106 @@
+{
+  "name": "Cabina MT/BT 20/0,4 kV — arc flash",
+  "f_hz": 50,
+  "lv_tolerance_percent": 6,
+  "buses": [
+    {
+      "id": "MT",
+      "un_kv": 20.0
+    },
+    {
+      "id": "QGBT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "QD1",
+      "un_kv": 0.4
+    }
+  ],
+  "external_grids": [
+    {
+      "id": "Rete_ENEL",
+      "bus": "MT",
+      "skq_max_mva": 500,
+      "rx_max": 0.1,
+      "skq_min_mva": 250,
+      "rx_min": 0.1
+    }
+  ],
+  "transformers": [
+    {
+      "id": "TR1",
+      "hv_bus": "MT",
+      "lv_bus": "QGBT",
+      "sr_mva": 0.63,
+      "ur_hv_kv": 20.0,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 6.0,
+      "urr_percent": 1.03,
+      "vector_group": "Dyn11"
+    }
+  ],
+  "lines": [
+    {
+      "id": "C1",
+      "from_bus": "QGBT",
+      "to_bus": "QD1",
+      "length_km": 0.05,
+      "r1_ohm_per_km": 0.0754,
+      "x1_ohm_per_km": 0.072,
+      "r0_ohm_per_km": 0.3016,
+      "x0_ohm_per_km": 0.288,
+      "end_temperature_c": 160,
+      "parallel": 1
+    }
+  ],
+  "motors": [
+    {
+      "id": "M1",
+      "bus": "QD1",
+      "pr_mw": 0.075,
+      "ur_kv": 0.4,
+      "efficiency": 0.94,
+      "cos_phi": 0.86,
+      "ilr_ir": 7.0
+    }
+  ],
+  "arc_flash": [
+    {
+      "id": "QGBT_arrivo",
+      "bus": "QGBT",
+      "configuration": "VCB",
+      "equipment_class": "quadro_bt",
+      "protection": {
+        "curve": "VI",
+        "pickup_ka": 0.025,
+        "tms": 0.1,
+        "inst_pickup_ka": 0.4,
+        "inst_time_ms": 50,
+        "breaker_time_ms": 60,
+        "current_ratio": 0.02
+      }
+    },
+    {
+      "id": "QGBT_partenze",
+      "bus": "QGBT",
+      "configuration": "VCB",
+      "equipment_class": "quadro_bt",
+      "protection": {
+        "curve": "EI",
+        "pickup_ka": 1.0,
+        "tms": 0.05,
+        "inst_pickup_ka": 8.0,
+        "breaker_time_ms": 30
+      }
+    },
+    {
+      "id": "QD1",
+      "bus": "QD1",
+      "configuration": "VCBB",
+      "equipment_class": "pannello_bt",
+      "protection": {
+        "time_ms": 20
+      }
+    }
+  ]
+}
