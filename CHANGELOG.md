@@ -11,6 +11,20 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Coordinamento delle protezioni, estensioni: correnti nei rami per guasti
+  trifase, bifase, bifase a terra e monofase con gli sfasamenti dei gruppi
+  vettoriali; protezioni di terra (corrente residua); relè direzionali;
+  correnti di interruzione Ib (decadimento delle macchine); bande di
+  tolleranza; limiti di selettività energetica dei costruttori; convertitori
+  pieni e guasti interni ai gruppi di generazione nelle correnti nei rami.
+- Flusso di potenza, estensioni: sfasamenti dei gruppi vettoriali; prese e
+  magnetizzazione dei trasformatori a tre avvolgimenti; regolazione automatica
+  delle prese; regolazione remota della tensione dei generatori; saldo
+  distribuito; carichi ZIP; confronto con pandapower.
+- Arc flash, estensioni: metodo di Lee oltre 15 kV; arco in corrente continua
+  (Doan, Stokes-Oppenlander/Ammerman, NFPA 70E); scelta della corrente Ibf;
+  calcolo a più intervalli con decadimento del contributo dei motori;
+  avvisi sotto 240 V e sotto 2 kA.
 - Coordinamento delle protezioni in `iec60909.coordination`, riga di comando
   `python -m iec60909.coordinamento`: relè IEC 60255-151/IEEE C37.112 con
   soglie a tempo definito, interruttori BT L-S-I, fusibili per punti;
