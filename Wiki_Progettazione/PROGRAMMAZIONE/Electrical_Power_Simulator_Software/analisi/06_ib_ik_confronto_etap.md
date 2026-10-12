@@ -1,4 +1,4 @@
-# 06 — Ib e Ik (μ, q, λ): implementazione e confronto con ETAP
+# 06 — Ib, i_DC e Ik (μ, q, λ): implementazione e confronto con ETAP
 
 Corrente di interruzione simmetrica Ib e corrente permanente Ik secondo
 IEC 60909-0:2016, confrontate con lo studio di "duty" `Duty909.SI1S` del
@@ -34,6 +34,27 @@ Due regole, ricavate dal confronto, rendono i risultati coincidenti:
    `iec60909` usa Ib = I"k (nessun decadimento, scelta cautelativa); ETAP
    applica un decadimento intermedio (simile a un'estrapolazione lineare, che
    darebbe +0,03/+0,04 %). Lo scarto è dalla parte della sicurezza.
+
+## i_DC e Ib asimmetrica
+
+Stessi dispositivi della tabella precedente; i_DC all'istante t = t_min, R/X
+con la frequenza equivalente della norma (fc/f in base a f·t).
+
+| Nodo | Dispositivo | t_min [s] | i_DC ETAP | i_DC iec60909 | Scarto | Ib asim ETAP | Ib asim iec60909 | Scarto |
+|---|---|---|---|---|---|---|---|---|
+| Bus C | CB32 | 0,052 | 2,382 | 2,358 | −1,00 % | 6,951 | 6,943 | −0,11 % |
+| Bus C | CB C1 | 0,055 | 2,202 | 2,179 | −1,06 % | 6,891 | 6,883 | −0,11 % |
+| Bus C | Fuse C1 | 0,01 | 7,121 | 7,118 | −0,04 % | 9,684 | 9,696 | +0,13 % |
+| EmergencySwBrd | LVCB11 | 0,025 | 33,726 | 33,701 | −0,08 % | 59,307 | 59,292 | −0,03 % |
+| MCC1 | Fuse2 | 0,01 | 37,889 | 37,873 | −0,04 % | 54,732 | 54,995 | +0,48 % |
+| Swbrd2 | LVCB2 | 0,25 | 0,0026 | 0,0025 | −1,8 % | 39,045 | 39,045 | 0,00 % |
+
+L'R/X che ETAP usa (ricavato invertendo i suoi i_DC: 11,98 a Bus C, 10,97 in
+BT) non coincide con nessuno dei valori di fc/f della tabella della norma:
+ETAP usa una variante propria. Lo scarto su i_DC resta entro l'1–2 % (la
+componente continua dipende in modo esponenziale da R/X) e su Ib asimmetrica
+entro lo 0,5 %; con t_min = 0,01 s la differenza su Ib asimmetrica deriva da
+Ib (vedi sopra).
 
 ## Ik
 

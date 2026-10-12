@@ -125,6 +125,12 @@ per bifase e monofase.
     j·sinφ)| per λmax (Ufmax/Ufr = 1,3 serie 1, 1,6 serie 2) ed E = 1 per λmin.
     Il modello approssima le curve grafiche della norma: per verifiche
     formali usare i valori letti dalle curve.
+- **i_DC** (componente continua all'istante t = tmin):
+  i_DC = √2·I"k·e^(−2π·f·t·R/X), con R/X calcolato con la frequenza
+  equivalente fc = f·(fc/f) scelta in base a f·t: 0,27 (f·t < 1), 0,15 (< 2,5),
+  0,092 (< 5), 0,055 (altrimenti); R/X = (Rc/Xc)·(fc/f). In una rete solo
+  radiale coincide con l'R/X di Z1. Corrente di interruzione asimmetrica:
+  Ib,asym = √(Ib² + i_DC²).
 - **Ith** = I"k·√(m + n), con n = 1 e
   m = [e^(4·f·Tk·ln(κ−1)) − 1] / [2·f·Tk·ln(κ−1)]; per κ → 2 il limite è m = 2.
 
@@ -147,5 +153,5 @@ per bifase e monofase.
 - Gruppi di generazione: trasformatori ausiliari e guasti sul lato dei
   servizi ausiliari.
 - Fattore n della corrente termica per guasti vicini ai generatori (n = 1).
-- Componente continua i_DC, impedenza di guasto, contributo di inverter/eolico.
+- Impedenza di guasto, contributo di inverter/eolico.
 - Metodo B senza la deroga per R/X < 0,3 in tutti i rami.

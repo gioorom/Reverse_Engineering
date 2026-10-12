@@ -11,6 +11,8 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Componente continua i_DC (frequenza equivalente in base a f·t) e corrente
+  di interruzione asimmetrica in `iec60909`; confronto con ETAP.
 - Gruppi di generazione con trasformatore dedicato in `iec60909`: K_S/K_SO
   per i guasti esterni, K_G,S/K_T,S per i guasti tra generatore e
   trasformatore; confronto con pandapower.

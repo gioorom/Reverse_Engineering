@@ -98,14 +98,15 @@ def result_to_markdown(result: StudyResult) -> str:
         f"Correnti {caso}, fattore di picco con metodo {result.kappa_method}, "
         f"Tk = {result.tk_s:g} s, tmin = {result.tmin_s:g} s. Correnti in kA, impedenze in Ω.",
         "",
-        "| Nodo | Un [kV] | c | Zk1 [Ω] | R/X | I\"k3 | S\"k3 [MVA] | ip3 | Ib | Ik | Ith "
-        "| I\"k2 | I\"k1 | I\"kE2E |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "| Nodo | Un [kV] | c | Zk1 [Ω] | R/X | I\"k3 | S\"k3 [MVA] | ip3 | Ib | i_DC | Ib asim "
+        "| Ik | Ith | I\"k2 | I\"k1 | I\"kE2E |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for b in result.buses:
         lines.append(
             f"| {b.bus} | {b.un_kv:g} | {b.c:.2f} | {abs(b.z1_ohm):.5f} | {b.r_over_x:.3f} "
             f"| {_fmt(b.ikss3_ka)} | {_fmt(b.skss3_mva, 1)} | {_fmt(b.ip3_ka)} | {_fmt(b.ib_ka)} "
+            f"| {_fmt(b.idc_ka)} | {_fmt(b.ib_asym_ka)} "
             f"| {_fmt(b.ik_ka)} | {_fmt(b.ith_ka)} | {_fmt(b.ikss2_ka)} | {_fmt(b.ikss1_ka)} "
             f"| {_fmt(b.ikss2e_earth_ka)} |"
         )

@@ -44,6 +44,7 @@ print(risultato.bus("QGBT").ikss3_ka)
 | `ikss2e_l2_ka`, `ikss2e_l3_ka` | correnti nelle fasi guaste del guasto bifase a terra |
 | `kappa`, `ip3_ka`, `ip2_ka`, `ip1_ka` | fattore κ e correnti di picco |
 | `ib_ka` | corrente di interruzione simmetrica Ib con i fattori μ e q (tmin da `--tmin`) |
+| `idc_ka`, `ib_asym_ka` | componente continua all'istante tmin e corrente di interruzione asimmetrica |
 | `ik_ka` | corrente permanente Ik (reti magliate: senza motori asincroni; un solo generatore: λ·IrG) |
 | `ith_ka` | corrente termica equivalente per la durata Tk |
 | `z1_ohm`, `z2_ohm`, `z0_ohm` | impedenze di cortocircuito di sequenza nel nodo |

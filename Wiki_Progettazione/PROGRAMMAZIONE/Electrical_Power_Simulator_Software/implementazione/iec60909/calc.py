@@ -46,6 +46,9 @@ class BusResult:
     ib_ka: float
     ik_ka: Optional[float]
     ith_ka: float
+    # componente continua all'istante tmin e corrente di interruzione asimmetrica
+    idc_ka: float = 0.0
+    ib_asym_ka: float = 0.0
 
     @property
     def r_over_x(self) -> float:
@@ -430,6 +433,11 @@ def _calculate(
         fc = 20.0 if net.f_hz == 50.0 else 24.0
         zc = _diag_z(b.build(1, x_scale=fc / net.f_hz))
         rx_c = zc.real / zc.imag * fc / net.f_hz
+    # componente continua all'istante tmin: R/X con la frequenza equivalente
+    # fc = f·(fc/f), con fc/f scelto in base a f·t (metodo C della norma)
+    fc_dc = factors.dc_frequency_ratio(net.f_hz * tmin_s)
+    zdc = _diag_z(b.build(1, x_scale=fc_dc))
+    rx_dc = zdc.real / zdc.imag * fc_dc
     machines = _machines(b, warnings)
     steady = _steady_state(net, b, warnings)
 
@@ -466,6 +474,7 @@ def _calculate(
         m = factors.thermal_m(k, net.f_hz, tk_s)
         ith = ik3 * math.sqrt(m + 1.0)
         ib = _breaking_current(i, c, z1_full, machines, tmin_s) * ibase
+        idc = factors.dc_component(ik3, net.f_hz, tmin_s, rx_dc[i])
         ik = None if steady[i] is None else steady[i] * ibase
 
         results.append(
@@ -490,6 +499,8 @@ def _calculate(
                 ib_ka=ib,
                 ik_ka=ik,
                 ith_ka=ith,
+                idc_ka=idc,
+                ib_asym_ka=math.hypot(ib, idc),
             )
         )
     return StudyResult(net.name, case, kappa_method, tk_s, results, warnings, tmin_s)

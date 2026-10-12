@@ -178,3 +178,22 @@ def power_station_factors(
     k_g_in = scale * c_max_g / (1.0 + xd2_pu * sin_phi)
     k_t_in = scale * c_max_g / (1.0 - xt_pu * sin_phi)
     return k_out, k_g_in, k_t_in
+
+
+def dc_frequency_ratio(f_times_t: float) -> float:
+    """Rapporto fc/f della frequenza equivalente per la componente continua.
+
+    f·t < 1 → 0,27; < 2,5 → 0,15; < 5 → 0,092; altrimenti 0,055.
+    """
+    if f_times_t < 1.0:
+        return 0.27
+    if f_times_t < 2.5:
+        return 0.15
+    if f_times_t < 5.0:
+        return 0.092
+    return 0.055
+
+
+def dc_component(ikss: float, f_hz: float, t_s: float, r_over_x: float) -> float:
+    """Componente continua i_DC = √2·I"k·e^(−2π·f·t·R/X)."""
+    return math.sqrt(2.0) * ikss * math.exp(-2.0 * math.pi * f_hz * t_s * r_over_x)

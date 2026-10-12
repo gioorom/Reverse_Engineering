@@ -385,7 +385,10 @@ def _compare_duty(
         if tmin not in by_tmin:
             by_tmin[tmin] = calculate(network_from_dict(data), "max", kappa_method, tmin_s=tmin)
         rb = by_tmin[tmin].bus(alias.get(bus, bus))
-        out.append(Comparison(bus, f"Ib {e['DeviceID'].strip()} (tmin {tmin:g} s)", _num(e["Ibsymm"]), rb.ib_ka))
+        device = f"{str(e['DeviceID']).strip()} (tmin {tmin:g} s)"
+        out.append(Comparison(bus, f"Ib {device}", _num(e["Ibsymm"]), rb.ib_ka))
+        out.append(Comparison(bus, f"i_DC {device}", _num(e.get("Idc")), rb.idc_ka))
+        out.append(Comparison(bus, f"Ib asim {device}", _num(e.get("Ibasymm")), rb.ib_asym_ka))
     return out
 
 
