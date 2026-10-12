@@ -24,6 +24,7 @@ Reverse_Engineering/
 ├── README.md                 ← questa pagina
 ├── CONTRIBUTING.md           ← come aprire un progetto e contribuire
 ├── CHANGELOG.md              ← cronologia delle modifiche
+├── LICENSE                   ← licenza MIT
 ├── CLAUDE.md                 ← istruzioni e flusso di lavoro per Claude Code
 ├── .mcp.json                 ← registra REA come server MCP per Claude Code
 ├── .gitignore                ← esclude binari, archivi di analisi, file temporanei
@@ -156,6 +157,9 @@ dopo il merge, sul PC basta `git pull`.
 
 ## Licenza
 
-Non è ancora stata scelta una licenza. In assenza di una licenza esplicita,
-tutti i diritti sono riservati ai titolari del repository: il contenuto non
-può essere copiato, modificato o redistribuito senza autorizzazione.
+Distribuito con licenza [MIT](LICENSE): il contenuto può essere usato,
+modificato e redistribuito liberamente, mantenendo l'avviso di copyright.
+
+I calcoli sono forniti "così come sono", senza garanzie (vedi la licenza):
+i risultati vanno sempre verificati da un tecnico abilitato prima di essere
+usati per progettazione o dimensionamento.

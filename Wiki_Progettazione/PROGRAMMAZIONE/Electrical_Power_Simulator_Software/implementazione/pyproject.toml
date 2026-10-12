@@ -3,6 +3,7 @@ name = "iec60909"
 version = "0.1.0"
 description = "Calcolo delle correnti di cortocircuito secondo IEC 60909-0:2016"
 requires-python = ">=3.10"
+license = "MIT"
 dependencies = ["numpy>=1.24"]
 
 [project.optional-dependencies]
@@ -12,7 +13,7 @@ test = ["pytest>=8", "pandapower>=3.0"]
 iec60909 = "iec60909.__main__:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]

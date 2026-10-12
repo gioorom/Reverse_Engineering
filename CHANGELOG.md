@@ -11,6 +11,7 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Licenza MIT.
 - Presentazione del repository: README riscritto, `CONTRIBUTING.md`,
   `CHANGELOG.md`, `.editorconfig`, modelli per pull request e issue in
   `.github/`.
