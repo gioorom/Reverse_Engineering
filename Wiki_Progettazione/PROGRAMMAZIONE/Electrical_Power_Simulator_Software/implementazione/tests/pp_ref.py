@@ -3,6 +3,7 @@
 import math
 
 from iec60909 import factors
+from iec60909.loadflow import clock_numbers
 
 
 def to_pandapower(data):
@@ -21,6 +22,7 @@ def to_pandapower(data):
             x0x_max=g.get("x0x1", math.nan), r0x0_max=g.get("r0x0", math.nan),
             x0x_min=g.get("x0x1", math.nan), r0x0_min=g.get("r0x0", math.nan),
             vm_pu=g.get("vm_pu", 1.0), va_degree=g.get("va_degree", 0.0),
+            slack_weight=g.get("slack_weight", 1.0),
         )
     for t in data.get("transformers", []):
         trafo_ids[t["id"]] = pp.create_transformer_from_parameters(
@@ -32,7 +34,11 @@ def to_pandapower(data):
             vkr0_percent=t.get("ur0_percent", t["urr_percent"]),
             mag0_percent=100, mag0_rx=0, si0_hv_partial=0.9,
             parallel=t.get("parallel", 1),
-            **({"tap_side": t.get("tap_side", "hv"), "tap_neutral": 0, "tap_min": -20, "tap_max": 20,
+            # sfasamento: la tensione BT è in ritardo di k·30° (shift_degree di pandapower)
+            shift_degree=30.0 * clock_numbers(t.get("vector_group", "Dyn"), 2)[0],
+            **({"tap_side": t.get("tap_side", "hv"), "tap_neutral": 0,
+                "tap_min": t.get("tap_min") if t.get("tap_min") is not None else -20,
+                "tap_max": t.get("tap_max") if t.get("tap_max") is not None else 20,
                 "tap_pos": t.get("tap_pos", 0), "tap_step_percent": t["tap_step_percent"],
                 "tap_step_degree": 0.0, "tap_changer_type": "Ratio"}
                if t.get("tap_step_percent") else {}),
@@ -52,10 +58,17 @@ def to_pandapower(data):
             kw[f"vkr_{pp_side}_percent"] = t[f"urr_{pair}_percent"]
             kw[f"vk0_{pp_side}_percent"] = t.get(f"uk0_{pair}_percent", t[f"ukr_{pair}_percent"])
             kw[f"vkr0_{pp_side}_percent"] = t.get(f"ur0_{pair}_percent", t[f"urr_{pair}_percent"])
+        k_mv, k_lv = clock_numbers(t["vector_group"], 3)
+        if t.get("tap_step_percent"):
+            kw.update(tap_side=t.get("tap_side", "hv"), tap_neutral=0, tap_min=-20, tap_max=20,
+                      tap_pos=t.get("tap_pos", 0), tap_step_percent=t["tap_step_percent"],
+                      tap_step_degree=0.0, tap_changer_type="Ratio", tap_at_star_point=False)
         pp.create_transformer3w_from_parameters(
             net, ids[t["hv_bus"]], ids[t["mv_bus"]], ids[t["lv_bus"]],
             vn_hv_kv=t["ur_hv_kv"], vn_mv_kv=t["ur_mv_kv"], vn_lv_kv=t["ur_lv_kv"],
-            sn_hv_mva=sn_hv, sn_mv_mva=sn_mv, sn_lv_mva=sn_lv, pfe_kw=0, i0_percent=0,
+            sn_hv_mva=sn_hv, sn_mv_mva=sn_mv, sn_lv_mva=sn_lv,
+            pfe_kw=t.get("pfe_kw", 0.0), i0_percent=t.get("i0_percent", 0.0),
+            shift_mv_degree=30.0 * k_mv, shift_lv_degree=30.0 * k_lv,
             vector_group="".join(c for c in t["vector_group"] if not c.isdigit()), **kw,
         )
     for ln in data.get("lines", []):
@@ -92,7 +105,8 @@ def to_pandapower(data):
         pp.create_gen(
             net, ids[g["bus"]], p_mw=g.get("p_mw", 0.0), vm_pu=g.get("vm_pu", 1.0),
             sn_mva=g["sr_mva"], vn_kv=g["ur_kv"],
-            xdss_pu=g["xd2_percent"] / 100, rdss_ohm=rg, cos_phi=g["cos_phi"], **unit, **lims,
+            xdss_pu=g["xd2_percent"] / 100, rdss_ohm=rg, cos_phi=g["cos_phi"],
+            slack_weight=g.get("slack_weight", 0.0), **unit, **lims,
         )
     for m in data.get("motors", []):
         rx = m.get("rx") or factors.motor_rx(m["ur_kv"], m["pr_mw"], m.get("pole_pairs"))
@@ -105,7 +119,9 @@ def to_pandapower(data):
         )
     for ld in data.get("loads", []):
         pp.create_load(net, ids[ld["bus"]], p_mw=ld["p_mw"], q_mvar=ld.get("q_mvar", 0.0),
-                       scaling=ld.get("count", 1))
+                       scaling=ld.get("count", 1),
+                       **{k: ld.get(k, 0.0) for k in ("const_z_p_percent", "const_i_p_percent",
+                                                       "const_z_q_percent", "const_i_q_percent")})
     for sh in data.get("shunts", []):
         pp.create_shunt(net, ids[sh["bus"]], q_mvar=sh["q_mvar"], p_mw=sh.get("p_mw", 0.0))
     for sg in data.get("static_generators", []):
@@ -129,11 +145,16 @@ def run(data, fault, case, topology="meshed", **kwargs):
     return {name: net.res_bus_sc.loc[idx] for name, idx in ids.items()}
 
 
-def run_pf(data, **kwargs):
-    """Flusso di potenza di riferimento con pandapower (modello a π dei trasformatori)."""
+def run_pf(data, calculate_voltage_angles=True, **kwargs):
+    """Flusso di potenza di riferimento con pandapower (modello a π dei trasformatori).
+
+    calculate_voltage_angles=True: sfasamenti dei gruppi vettoriali (shift_degree),
+    corrisponde a run_load_flow(phase_shift=True); False: angoli relativi.
+    """
     import pandapower as pp
 
     net, ids = to_pandapower(data)
-    pp.runpp(net, trafo_model="pi", calculate_voltage_angles=False, tolerance_mva=1e-10,
-             init="flat", **kwargs)
+    kwargs.setdefault("init", "dc" if calculate_voltage_angles else "flat")
+    pp.runpp(net, trafo_model="pi", calculate_voltage_angles=calculate_voltage_angles,
+             tolerance_mva=1e-10, **kwargs)
     return net, ids
