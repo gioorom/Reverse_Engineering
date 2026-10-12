@@ -72,3 +72,31 @@ RETE_TRE_AVVOLGIMENTI = {
          "x0_ohm_per_km": 0.45, "end_temperature_c": 90},
     ],
 }
+
+
+RETE_GRUPPO_GENERAZIONE = {
+    "name": "Gruppo di generazione con trasformatore elevatore",
+    "f_hz": 50,
+    "buses": [
+        {"id": "AT", "un_kv": 110.0},
+        {"id": "AT2", "un_kv": 110.0},
+        {"id": "GEN", "un_kv": 10.5},
+    ],
+    "external_grids": [
+        {"id": "Q", "bus": "AT", "skq_max_mva": 3000, "rx_max": 0.1,
+         "skq_min_mva": 2000, "rx_min": 0.12, "x0x1": 1.2, "r0x0": 0.1}
+    ],
+    "lines": [
+        {"id": "L1", "from_bus": "AT", "to_bus": "AT2", "length_km": 20,
+         "r1_ohm_per_km": 0.12, "x1_ohm_per_km": 0.39, "r0_ohm_per_km": 0.36,
+         "x0_ohm_per_km": 1.17, "end_temperature_c": 80},
+    ],
+    "transformers": [
+        {"id": "TG", "hv_bus": "AT2", "lv_bus": "GEN", "sr_mva": 100, "ur_hv_kv": 115,
+         "ur_lv_kv": 10.5, "ukr_percent": 13, "urr_percent": 0.3, "vector_group": "YNd5"},
+    ],
+    "generators": [
+        {"id": "G", "bus": "GEN", "sr_mva": 100, "ur_kv": 10.5, "xd2_percent": 17,
+         "cos_phi": 0.85, "rg_ohm": 0.0094, "unit_transformer": "TG"},
+    ],
+}

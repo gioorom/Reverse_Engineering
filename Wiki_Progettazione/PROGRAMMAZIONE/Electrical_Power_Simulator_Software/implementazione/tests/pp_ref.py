@@ -10,6 +10,7 @@ def to_pandapower(data):
 
     net = pp.create_empty_network(f_hz=data.get("f_hz", 50))
     ids = {}
+    trafo_ids = {}
     for b in data["buses"]:
         ids[b["id"]] = pp.create_bus(net, vn_kv=b["un_kv"], name=b["id"])
     for g in data.get("external_grids", []):
@@ -21,7 +22,7 @@ def to_pandapower(data):
             x0x_min=g.get("x0x1", math.nan), r0x0_min=g.get("r0x0", math.nan),
         )
     for t in data.get("transformers", []):
-        pp.create_transformer_from_parameters(
+        trafo_ids[t["id"]] = pp.create_transformer_from_parameters(
             net, ids[t["hv_bus"]], ids[t["lv_bus"]], sn_mva=t["sr_mva"],
             vn_hv_kv=t["ur_hv_kv"], vn_lv_kv=t["ur_lv_kv"], vkr_percent=t["urr_percent"],
             vk_percent=t["ukr_percent"], pfe_kw=0, i0_percent=0,
@@ -61,9 +62,20 @@ def to_pandapower(data):
     for g in data.get("generators", []):
         xd = g["xd2_percent"] / 100 * g["ur_kv"] ** 2 / g["sr_mva"]
         rg = g.get("rg_ohm", factors.generator_rx(g["ur_kv"], g["sr_mva"]) * xd)
+        unit = {}
+        if g.get("unit_transformer") is not None:
+            # gruppo di generazione: trasformatore dedicato con K_S / K_SO
+            tid = trafo_ids[g["unit_transformer"]]
+            for col, default in (("power_station_unit", False), ("oltc", False), ("pt_percent", 0.0)):
+                if col not in net.trafo.columns:
+                    net.trafo[col] = default
+            net.trafo.loc[tid, "power_station_unit"] = True
+            net.trafo.loc[tid, "oltc"] = g.get("oltc", True)
+            net.trafo.loc[tid, "pt_percent"] = g.get("pt_percent", 0.0)
+            unit = dict(power_station_trafo=tid, pg_percent=g.get("pg_percent", 0.0))
         pp.create_gen(
             net, ids[g["bus"]], p_mw=0, sn_mva=g["sr_mva"], vn_kv=g["ur_kv"],
-            xdss_pu=g["xd2_percent"] / 100, rdss_ohm=rg, cos_phi=g["cos_phi"],
+            xdss_pu=g["xd2_percent"] / 100, rdss_ohm=rg, cos_phi=g["cos_phi"], **unit,
         )
     for m in data.get("motors", []):
         rx = m.get("rx") or factors.motor_rx(m["ur_kv"], m["pr_mw"], m.get("pole_pairs"))

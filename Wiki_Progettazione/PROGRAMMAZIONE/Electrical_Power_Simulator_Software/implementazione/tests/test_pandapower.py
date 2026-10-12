@@ -7,7 +7,7 @@ import pytest
 
 from iec60909 import calculate, network_from_dict
 
-from .reti import RETE_MAGLIATA, RETE_TRE_AVVOLGIMENTI
+from .reti import RETE_GRUPPO_GENERAZIONE, RETE_MAGLIATA, RETE_TRE_AVVOLGIMENTI
 
 pytest.importorskip("pandapower")
 from .pp_ref import run  # noqa: E402
@@ -112,3 +112,25 @@ def test_tre_avvolgimenti_monofase(case, vector_group):
     ref = run(data, "1ph", case)
     for b in result.buses:
         assert b.ikss1_ka == pytest.approx(ref[b.bus].ikss_ka, rel=REL), b.bus
+
+
+def _gruppo(oltc, pg, pt):
+    data = copy.deepcopy(RETE_GRUPPO_GENERAZIONE)
+    data["generators"][0].update(oltc=oltc, pg_percent=pg, pt_percent=pt)
+    return data
+
+
+@pytest.mark.parametrize("case", ["max", "min"])
+@pytest.mark.parametrize("oltc, pg, pt", [(True, 0, 0), (False, 5, 0), (False, 0, 2.5)])
+def test_gruppo_di_generazione_guasti_esterni(case, oltc, pg, pt):
+    # Guasti fuori dal gruppo (nodi AT): generatore e trasformatore corretti con
+    # K_S / K_SO. Al nodo del generatore pandapower non applica K_T,S al
+    # trasformatore: quel caso è verificato a mano in test_gruppi_generazione.
+    data = _gruppo(oltc, pg, pt)
+    result = calculate(network_from_dict(data), case)
+    ref3 = run(data, "3ph", case)
+    ref1 = run(data, "1ph", case)
+    for bus in ("AT", "AT2"):
+        b = result.bus(bus)
+        assert b.ikss3_ka == pytest.approx(ref3[bus].ikss_ka, rel=REL), bus
+        assert b.ikss1_ka == pytest.approx(ref1[bus].ikss_ka, rel=REL), bus
