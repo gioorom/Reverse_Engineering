@@ -113,9 +113,8 @@ da 15,5 mm, guaina di alluminio da 0,8 mm, posato a 1 m con terreno a 20 °C e
 
 Le formule e le costanti sono state confrontate con più implementazioni
 aperte indipendenti della norma (Alliander cable-thermal-model, DiTuS,
-C4_open, CableDesign, IEC_Power_Cable_tools e i notebook TB 880). La raccolta,
-con le concordanze, è nelle note di lavoro del progetto. Due eccezioni hanno
-una sola conferma e sono segnalate:
+C4_open, CableDesign, IEC_Power_Cable_tools e i notebook TB 880). Due
+eccezioni hanno una sola conferma e sono segnalate:
 - il fattore 1,07 su T1 per gli schermi a fili, ricavato dal caso 4 della
   brochure;
 - la reattanza X1 della formazione in piano trasposta.
