@@ -31,3 +31,13 @@ __pycache__/
 *.7z
 *.rar
 *.msi
+
+# File di ETAP (materiale protetto da licenza: mai nel repository)
+*.SI1S
+*.SI2S
+*.SI4S
+*.OTI
+*.MDF
+*.ldf
+*.PSO
+*.dmp
