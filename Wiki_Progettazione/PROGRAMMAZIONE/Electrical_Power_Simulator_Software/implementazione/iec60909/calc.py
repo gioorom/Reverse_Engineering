@@ -453,14 +453,23 @@ def calculate(
     if kappa_method not in ("B", "C"):
         raise ValueError("kappa_method deve essere 'B' o 'C'")
     result = _calculate(net, case, kappa_method, tk_s, tmin_s, None, zf_ohm)
-    # Guasti all'interno dei gruppi di generazione (nodo del generatore):
-    # fattori K_G,S e K_T,S invece di K_S/K_SO.
+    # Guasti all'interno dei gruppi di generazione (nodo del generatore e
+    # servizi ausiliari a valle dei trasformatori ausiliari): fattori K_G,S e
+    # K_T,S invece di K_S/K_SO; i trasformatori ausiliari restano con il loro K_T.
     for g in net.generators:
         if g.unit_transformer is None:
             continue
+        region, other_sources = net.unit_region(g)
+        if other_sources:
+            region = [g.bus]
+            result.warnings.append(
+                f"{g.id}: i servizi ausiliari sono collegati ad altre sorgenti, "
+                "solo il nodo del generatore è calcolato come interno al gruppo"
+            )
         inside = _calculate(net, case, kappa_method, tk_s, tmin_s, g.id, zf_ohm)
-        k = next(i for i, r in enumerate(result.buses) if r.bus == g.bus)
-        result.buses[k] = inside.bus(g.bus)
+        for bus_id in region:
+            k = next(i for i, r in enumerate(result.buses) if r.bus == bus_id)
+            result.buses[k] = inside.bus(bus_id)
         result.warnings += [w for w in inside.warnings if w not in result.warnings]
     return result
 

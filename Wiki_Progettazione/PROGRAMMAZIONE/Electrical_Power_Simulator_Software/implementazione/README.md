@@ -83,7 +83,9 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
   `lambda_max` e `lambda_min` letti dalle curve della norma; per un gruppo di
   generazione: `unit_transformer` (id del trasformatore elevatore, lato BT sul
   nodo del generatore), `oltc` (variatore sotto carico, default vero),
-  `pg_percent`, `pt_percent`
+  `pg_percent`, `pt_percent`; i trasformatori ausiliari sono trasformatori
+  normali con il lato AT sul nodo del generatore: i nodi a valle sono
+  riconosciuti come interni al gruppo
 - `earthing_transformers` (messa a terra, es. zig-zag): `id`, `bus`, `z0_ohm`
   (`[R, X]` omopolare per fase), `zn_ohm`
 - `static_generators`: `id`, `bus`, `kind` (`PF` convertitore pieno con

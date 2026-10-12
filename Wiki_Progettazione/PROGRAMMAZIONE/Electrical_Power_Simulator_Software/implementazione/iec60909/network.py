@@ -160,7 +160,9 @@ class Generator:
     # Gruppo di generazione (power station unit): id del trasformatore elevatore
     # dedicato (lato BT sul nodo del generatore), presenza del variatore sotto
     # carico, campo di regolazione della tensione del generatore pG e presa
-    # fissa permanente del trasformatore pT (solo senza variatore).
+    # fissa permanente del trasformatore pT (solo senza variatore). I nodi
+    # alimentati dal nodo del generatore senza passare per il trasformatore del
+    # gruppo (servizi ausiliari) sono calcolati come interni al gruppo.
     unit_transformer: Optional[str] = None
     oltc: bool = True
     pg_percent: float = 0.0
@@ -245,6 +247,42 @@ class Network:
         if len(index) != len(self.buses):
             raise ValueError("identificativi dei nodi duplicati")
         return index
+
+    def unit_region(self, g: Generator) -> tuple[list[str], bool]:
+        """Nodi all'interno del gruppo di generazione di g.
+
+        Sono il nodo del generatore e i nodi alimentati da esso senza passare
+        per il trasformatore del gruppo (servizi ausiliari: trasformatori
+        ausiliari e reti a valle). Restituisce anche se la regione contiene
+        altre sorgenti (reti esterne, altri generatori, generatori statici).
+        """
+        adj: dict[str, set[str]] = {b.id: set() for b in self.buses}
+
+        def link(a: str, b: str) -> None:
+            adj[a].add(b)
+            adj[b].add(a)
+
+        for t in self.transformers:
+            if t.id != g.unit_transformer:
+                link(t.hv_bus, t.lv_bus)
+        for t3 in self.transformers3w:
+            link(t3.hv_bus, t3.mv_bus)
+            link(t3.hv_bus, t3.lv_bus)
+        for ln in self.lines:
+            link(ln.from_bus, ln.to_bus)
+        seen = {g.bus}
+        stack = [g.bus]
+        while stack:
+            for nxt in adj[stack.pop()]:
+                if nxt not in seen:
+                    seen.add(nxt)
+                    stack.append(nxt)
+        other = (
+            any(q.bus in seen for q in self.external_grids)
+            or any(o.bus in seen for o in self.generators if o is not g)
+            or any(sg.bus in seen for sg in self.static_generators)
+        )
+        return [b.id for b in self.buses if b.id in seen], other
 
     def validate(self) -> None:
         index = self.bus_index()

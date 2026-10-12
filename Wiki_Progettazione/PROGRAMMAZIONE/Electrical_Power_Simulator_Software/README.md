@@ -29,7 +29,7 @@ IEC 60909-0:2016.
 - [x] Obiettivo definito: simulatore proprio basato sulle norme
 - [x] Cortocircuito IEC 60909: formule documentate ([`analisi/01_iec60909_formule.md`](analisi/01_iec60909_formule.md))
 - [x] Cortocircuito IEC 60909: implementazione e test (calcoli a mano, confronto con pandapower)
-- [ ] Cortocircuito: power station unit, fattori μ/q/λ, componente continua
+- [x] Cortocircuito: gruppi di generazione con servizi ausiliari, fattori μ/q/λ, componente continua, generatori statici, zig-zag
 - [ ] Altri moduli (es. load flow, arc flash IEEE 1584)
 
 ## Conclusioni

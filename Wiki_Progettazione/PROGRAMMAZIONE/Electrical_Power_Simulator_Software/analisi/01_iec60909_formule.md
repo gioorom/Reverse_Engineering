@@ -64,6 +64,16 @@ Codice: [`../implementazione/iec60909/`](../implementazione/iec60909/).
     K_G,S = cmax/(1 + x"d·sinφrG) sul generatore e K_T,S = cmax/(1 − x_T·sinφrG)
     sul trasformatore (contributo della rete), entrambi divisi per (1 + pG)
     senza variatore. Il calcolo di questo nodo usa una matrice dedicata.
+  - servizi ausiliari (guasti F2/F3 della norma, sez. 6.7.1): i nodi
+    alimentati dal nodo del generatore senza passare per il trasformatore del
+    gruppo (lato BT dei trasformatori ausiliari e reti a valle) sono calcolati
+    con la stessa matrice dei guasti interni: generatore con K_G,S,
+    trasformatore del gruppo con K_T,S e rete con Z_Qmin (caso massimo); i
+    trasformatori ausiliari sono trasformatori di rete con il loro K_T (cmax
+    del lato BT). I motori ausiliari contribuiscono come gli altri motori. Se
+    i servizi ausiliari sono collegati anche ad altre sorgenti (es.
+    trasformatore di avviamento dalla rete) solo il nodo del generatore è
+    trattato come interno, con un avviso.
 - **K_T** = 0,95·cmax/(1 + 0,6·x_T), con cmax del lato BT; applicato solo al
   calcolo delle correnti **massime** (sez. 6.3.3), anche alla sequenza zero.
 - **K_G** = (Un/UrG)·cmax/(1 + x"d·sin φrG).
@@ -189,7 +199,5 @@ per bifase e monofase.
 
 ## Limiti (non ancora implementati)
 
-- Gruppi di generazione: trasformatori ausiliari e guasti sul lato dei
-  servizi ausiliari.
 - Fattore n della corrente termica per guasti vicini ai generatori (n = 1).
 - Metodo B senza la deroga per R/X < 0,3 in tutti i rami.
