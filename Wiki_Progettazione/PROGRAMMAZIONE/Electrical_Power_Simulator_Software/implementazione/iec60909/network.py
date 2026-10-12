@@ -6,6 +6,20 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 
+def _check_zero_sequence(
+    owner: str, uk0: Optional[float], ur0: Optional[float], uk: float, ur: float
+) -> None:
+    uk0 = uk if uk0 is None else uk0
+    ur0 = ur if ur0 is None else ur0
+    if ur0 >= uk0:
+        raise ValueError(f"{owner}: ur0 deve essere minore di uk0")
+
+
+def _reject_zigzag(owner: str, vector_group: str) -> None:
+    if "Z" in vector_group.upper():
+        raise ValueError(f"{owner}: avvolgimenti a zig-zag non ancora supportati ({vector_group})")
+
+
 @dataclass
 class Bus:
     id: str
@@ -162,12 +176,22 @@ class Network:
             check(t.lv_bus, t.id)
             if t.urr_percent >= t.ukr_percent:
                 raise ValueError(f"{t.id}: urr deve essere minore di ukr")
+            _check_zero_sequence(t.id, t.uk0_percent, t.ur0_percent, t.ukr_percent, t.urr_percent)
+            _reject_zigzag(t.id, t.vector_group)
         for t in self.transformers3w:
             for bus in (t.hv_bus, t.mv_bus, t.lv_bus):
                 check(bus, t.id)
             for pair in ("hv_mv", "hv_lv", "mv_lv"):
                 if getattr(t, f"urr_{pair}_percent") >= getattr(t, f"ukr_{pair}_percent"):
                     raise ValueError(f"{t.id}: urr_{pair} deve essere minore di ukr_{pair}")
+                _check_zero_sequence(
+                    f"{t.id} ({pair})",
+                    getattr(t, f"uk0_{pair}_percent"),
+                    getattr(t, f"ur0_{pair}_percent"),
+                    getattr(t, f"ukr_{pair}_percent"),
+                    getattr(t, f"urr_{pair}_percent"),
+                )
+            _reject_zigzag(t.id, t.vector_group)
         for ln in self.lines:
             check(ln.from_bus, ln.id)
             check(ln.to_bus, ln.id)

@@ -18,6 +18,8 @@ Il repository non ha ancora versioni rilasciate.
   cortocircuito secondo IEC 60909-0:2016 nel pacchetto Python `iec60909`
   (guasti trifase, bifase, bifase a terra e monofase; correnti massime e
   minime; ip con metodi B e C, Ib, Ik, Ith).
+- Verifica indipendente dei tre avvolgimenti con 20 test di calcolo a mano;
+  controlli espliciti su dati omopolari incoerenti e avvolgimenti a zig-zag.
 - Trasformatori a tre avvolgimenti in `iec60909` (schema a stella con
   K_TAB, K_TAC, K_TBC; sequenza zero secondo il gruppo vettoriale), con
   confronto contro pandapower e rete di esempio.

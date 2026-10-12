@@ -146,3 +146,10 @@ def test_esempio_e_validazione_input():
             "buses": [{"id": "A", "un_kv": 20}],
             "external_grids": [{"id": "Q", "bus": "Z", "skq_max_mva": 100}],
         }))
+
+
+def test_dati_omopolari_e_zigzag_non_validi():
+    with pytest.raises(ValueError, match="ur0 deve essere minore di uk0"):
+        calculate(_cabina(uk0_percent=1.0, ur0_percent=2.0))
+    with pytest.raises(ValueError, match="zig-zag"):
+        calculate(_cabina(vector_group="Dzn0"))

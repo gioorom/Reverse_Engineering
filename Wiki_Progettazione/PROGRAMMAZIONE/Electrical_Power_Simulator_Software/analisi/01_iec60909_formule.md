@@ -106,6 +106,7 @@ per bifase e monofase.
 
 ## Limiti (non ancora implementati)
 
+- Avvolgimenti a zig-zag (rifiutati con un errore esplicito).
 - Gruppi di generazione con trasformatore (power station unit, K_S/K_SO),
   generatori con neutro a terra.
 - Ib con i fattori μ e q, Ik con il metodo λ per reti vicine ai generatori.
