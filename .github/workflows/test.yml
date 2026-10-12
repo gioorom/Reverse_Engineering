@@ -1,0 +1,37 @@
+# Esegue la suite di test del pacchetto iec60909 (calcolo cortocircuito IEC 60909-0).
+name: Test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.13"]
+    defaults:
+      run:
+        working-directory: Wiki_Progettazione/PROGRAMMAZIONE/Electrical_Power_Simulator_Software/implementazione
+    steps:
+      - name: Recupero del codice
+        uses: actions/checkout@v4
+
+      - name: Configurazione di Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: Wiki_Progettazione/PROGRAMMAZIONE/Electrical_Power_Simulator_Software/implementazione/pyproject.toml
+
+      - name: Installazione del pacchetto e delle dipendenze di test
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+
+      - name: Esecuzione dei test
+        run: python -m pytest -q
