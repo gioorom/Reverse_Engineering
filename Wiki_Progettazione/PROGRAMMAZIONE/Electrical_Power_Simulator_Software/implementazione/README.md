@@ -173,6 +173,21 @@ motore o generatore statico da cui prendere la corrente fondamentale, oppure
 `tuned_order`, `quality`). Modelli, validazione e limiti:
 [`../analisi/11_armoniche.md`](../analisi/11_armoniche.md).
 
+### Avviamento dei motori
+
+```bash
+python -m iec60909.avviamento esempi/avviamento_motore.json --svg grafici   # dinamico
+python -m iec60909.avviamento rete.json --statico                          # solo caduta di tensione
+```
+
+Sezione `motor_starts`: `id`, `motor` (id del motore), `method` (`dol`,
+`star_delta`, `autotransformer`, `soft_starter`), `switch_speed`, `tap`, `u0`,
+`ramp_s`, `current_limit`, `h_s` (inerzia di motore e carico), `a0`, `a1`, `a2`
+(coppia resistente), `tlr_tr` (coppia di spunto di targa), circuito `rs`, `xs`,
+`xm`, `rr`, `xr` (facoltativo), `t_max_s`, `v_min_motor_pu`, `v_min_bus_pu`,
+`t_lr_max_s`. Modello, validazione e limiti:
+[`../analisi/12_avviamento_motori.md`](../analisi/12_avviamento_motori.md).
+
 ## Risultati per nodo (cortocircuito)
 
 | Grandezza | Significato |
@@ -342,6 +357,8 @@ python -m pytest
   `tests/test_arcflash_estensioni.py`: Lee, corrente continua (calcoli a
   mano), scelta di Ibf, calcolo a più intervalli (confronto con
   arcflash-calc `multistep_E_and_AFB`), fusibili e avvisi sotto 240 V.
+- `tests/test_avviamento.py`: avviamento dei motori, stima del circuito,
+  caduta di tensione a mano, metodi di avviamento, integrazione indipendente.
 - `tests/test_armoniche.py`: armoniche, calcoli a mano, risonanza, filtri,
   12 impulsi, armoniche omopolari, limiti, confronto con OpenDSS.
 - `tests/test_stabilita.py`: stabilità transitoria, criterio delle aree

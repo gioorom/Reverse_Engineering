@@ -11,6 +11,12 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Avviamento dei motori in `iec60909.motorstart`, riga di comando
+  `python -m iec60909.avviamento`: circuito equivalente stimato dai dati di
+  targa (anche con la coppia di spunto), avviamento diretto, stella-triangolo,
+  autotrasformatore e soft starter con limite di corrente, flusso di potenza
+  a ogni passo, caduta di tensione, tempo di avviamento, stallo, verifiche dei
+  limiti, grafici; verifica con calcoli a mano e integrazione indipendente.
 - Armoniche in `iec60909.harmonics`, riga di comando
   `python -m iec60909.armoniche`: sorgenti di corrente armonica con spettri
   predefiniti o propri, reti di sequenza alla frequenza h·f con gli

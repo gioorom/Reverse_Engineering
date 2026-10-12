@@ -297,6 +297,50 @@ class Shunt:
 
 
 @dataclass
+class MotorStart:
+    """Studio di avviamento di un motore della sezione `motors`.
+
+    method: "dol" (diretto), "star_delta" (stella-triangolo, commutazione a
+    `switch_speed`), "autotransformer" (presa `tap`, fino a `switch_speed`),
+    "soft_starter" (rampa di tensione da `u0` in `ramp_s`, limite di corrente
+    `current_limit` × Ir facoltativo). Inerzia di motore e carico `h_s` [s] sulla
+    potenza apparente nominale del motore; coppia resistente
+    T_L = T_r·(a0 + a1·ω + a2·ω²) con ω velocità in p.u. di quella di sincronismo.
+    Circuito equivalente (p.u. sulla potenza apparente nominale): rs, xs, xm,
+    rr, xr; se assenti è stimato dai dati di targa (Ilr/Ir, R/X a rotore
+    bloccato, rendimento, cosφ).
+    Limiti: tensione minima della rete nel punto di allacciamento del motore
+    (a monte dell'avviatore) `v_min_motor_pu` e negli altri nodi `v_min_bus_pu`;
+    tempo massimo a rotore bloccato `t_lr_max_s`.
+    """
+
+    id: str
+    motor: str
+    method: str = "dol"
+    switch_speed: float = 0.85
+    tap: float = 0.65
+    u0: float = 0.4
+    ramp_s: float = 5.0
+    current_limit: Optional[float] = None
+    h_s: float = 0.5
+    a0: float = 0.1
+    a1: float = 0.0
+    a2: float = 0.9
+    rs: Optional[float] = None
+    xs: Optional[float] = None
+    xm: Optional[float] = None
+    rr: Optional[float] = None
+    xr: Optional[float] = None
+    # coppia a rotore bloccato / coppia nominale (dato di targa, facoltativo)
+    tlr_tr: Optional[float] = None
+    t_start_s: float = 0.1
+    t_max_s: float = 30.0
+    v_min_motor_pu: float = 0.8
+    v_min_bus_pu: float = 0.9
+    t_lr_max_s: Optional[float] = None
+
+
+@dataclass
 class HarmonicSource:
     """Sorgente di corrente armonica (carico non lineare trifase equilibrato).
 
@@ -504,6 +548,7 @@ class Network:
     stability_events: list[StabilityEvent] = field(default_factory=list)
     harmonic_sources: list[HarmonicSource] = field(default_factory=list)
     harmonic_filters: list[HarmonicFilter] = field(default_factory=list)
+    motor_starts: list[MotorStart] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}

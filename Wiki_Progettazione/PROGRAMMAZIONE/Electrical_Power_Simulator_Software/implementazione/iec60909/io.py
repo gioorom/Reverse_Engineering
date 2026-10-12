@@ -19,6 +19,7 @@ from .network import (
     Line,
     Load,
     Motor,
+    MotorStart,
     Network,
     ProtectiveDevice,
     Shunt,
@@ -45,6 +46,7 @@ _SECTIONS = {
     "stability_events": StabilityEvent,
     "harmonic_sources": HarmonicSource,
     "harmonic_filters": HarmonicFilter,
+    "motor_starts": MotorStart,
 }
 
 

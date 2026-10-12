@@ -1,0 +1,106 @@
+{
+  "name": "Cabina MT/BT 20/0,4 kV — avviamento del motore",
+  "f_hz": 50,
+  "lv_tolerance_percent": 6,
+  "buses": [
+    {
+      "id": "MT",
+      "un_kv": 20.0
+    },
+    {
+      "id": "QGBT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "QD1",
+      "un_kv": 0.4
+    }
+  ],
+  "external_grids": [
+    {
+      "id": "Rete_ENEL",
+      "bus": "MT",
+      "skq_max_mva": 500,
+      "rx_max": 0.1,
+      "skq_min_mva": 250,
+      "rx_min": 0.1
+    }
+  ],
+  "transformers": [
+    {
+      "id": "TR1",
+      "hv_bus": "MT",
+      "lv_bus": "QGBT",
+      "sr_mva": 0.63,
+      "ur_hv_kv": 20.0,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 6.0,
+      "urr_percent": 1.03,
+      "vector_group": "Dyn11"
+    }
+  ],
+  "lines": [
+    {
+      "id": "C1",
+      "from_bus": "QGBT",
+      "to_bus": "QD1",
+      "length_km": 0.05,
+      "r1_ohm_per_km": 0.0754,
+      "x1_ohm_per_km": 0.072,
+      "r0_ohm_per_km": 0.3016,
+      "x0_ohm_per_km": 0.288,
+      "end_temperature_c": 160,
+      "parallel": 1
+    }
+  ],
+  "motors": [
+    {
+      "id": "M1",
+      "bus": "QD1",
+      "pr_mw": 0.075,
+      "ur_kv": 0.4,
+      "efficiency": 0.94,
+      "cos_phi": 0.86,
+      "ilr_ir": 7.0,
+      "pole_pairs": 2
+    }
+  ],
+  "loads": [
+    {
+      "id": "Carichi_QGBT",
+      "bus": "QGBT",
+      "p_mw": 0.35,
+      "q_mvar": 0.15
+    }
+  ],
+  "motor_starts": [
+    {
+      "id": "M1_diretto",
+      "motor": "M1",
+      "method": "dol",
+      "h_s": 0.6,
+      "tlr_tr": 2.2,
+      "t_lr_max_s": 10
+    },
+    {
+      "id": "M1_stella_triangolo",
+      "motor": "M1",
+      "method": "star_delta",
+      "switch_speed": 0.85,
+      "h_s": 0.6,
+      "tlr_tr": 2.2,
+      "t_lr_max_s": 10
+    },
+    {
+      "id": "M1_soft_starter",
+      "motor": "M1",
+      "method": "soft_starter",
+      "u0": 0.4,
+      "ramp_s": 6,
+      "current_limit": 3.5,
+      "h_s": 0.6,
+      "tlr_tr": 2.2,
+      "t_lr_max_s": 10
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""Cortocircuito (IEC 60909-0:2016), flusso di potenza, arc flash (IEEE 1584-2018) coordinamento delle protezioni, stabilità transitoria e armoniche."""
+"""Cortocircuito (IEC 60909-0:2016), flusso di potenza, arc flash (IEEE 1584-2018) coordinamento delle protezioni, stabilità transitoria, armoniche e avviamento dei motori."""
 
 from .arcflash import ArcFlashResult, CurrentStep, Enclosure, Protection, arc_flash, arc_flash_study
 from .arcflash_dc import dc_arc_flash
@@ -7,6 +7,7 @@ from .coordination import CoordinationResult, coordination_study, trip_time_s
 from .io import load_network, network_from_dict
 from .loadflow import LoadFlowResult, run_load_flow
 from .harmonics import HarmonicResult, frequency_scan, harmonic_analysis
+from .motorstart import MotorStartResult, motor_start_study, simulate_start
 from .stability import StabilityResult, critical_clearing_time, simulate
 from .network import (
     ArcFlashPoint,
@@ -19,6 +20,7 @@ from .network import (
     Line,
     Load,
     Motor,
+    MotorStart,
     Network,
     ProtectiveDevice,
     Shunt,
@@ -47,6 +49,8 @@ __all__ = [
     "Load",
     "LoadFlowResult",
     "Motor",
+    "MotorStart",
+    "MotorStartResult",
     "Network",
     "Protection",
     "ProtectiveDevice",
@@ -67,8 +71,10 @@ __all__ = [
     "frequency_scan",
     "harmonic_analysis",
     "load_network",
+    "motor_start_study",
     "network_from_dict",
     "run_load_flow",
     "simulate",
+    "simulate_start",
     "trip_time_s",
 ]
