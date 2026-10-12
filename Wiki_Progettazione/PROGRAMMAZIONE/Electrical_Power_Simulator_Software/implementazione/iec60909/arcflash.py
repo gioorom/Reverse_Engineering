@@ -15,6 +15,15 @@ Il calcolo va eseguito due volte: con la corrente d'arco piena e con quella
 ridotta, ciascuna con il proprio tempo di eliminazione dell'arco (che dipende
 dalla protezione); si adotta il caso con energia maggiore.
 
+Estensioni:
+- oltre 15 kV il calcolo usa il metodo di Lee (IEEE 1584-2002 eq. 8–9,
+  richiamato dalla 2018 per le tensioni fuori dal campo del modello), con
+  corrente d'arco uguale alla corrente franca;
+- calcolo a più intervalli con correnti franche diverse (es. contributo dei
+  motori che si esaurisce): somma delle energie, tempo di eliminazione dal
+  consumo della protezione Σ Δt_k/t(I_k) = 1;
+- corrente continua (NFPA 70E, allegato D.5) in `iec60909.arcflash_dc`.
+
 Unità: tensioni in kV, correnti in kA, distanze in mm, tempi in ms, energia in
 J/cm² (1 cal/cm² = 4,184 J/cm²).
 """
@@ -154,6 +163,8 @@ class ArcFlashCase:
     i_arc_intermediate_ka: dict[float, float] = field(default_factory=dict)
     e_intermediate_j_cm2: dict[float, float] = field(default_factory=dict)
     afb_intermediate_mm: dict[float, float] = field(default_factory=dict)
+    # intervalli del calcolo: corrente franca, corrente d'arco, durata, energia
+    steps: list[dict] = field(default_factory=list)
 
     @property
     def e_cal_cm2(self) -> float:
@@ -343,15 +354,21 @@ class Protection:
     # dispositivo della sezione protective_devices (impostato da arc_flash_study)
     device: Optional[object] = None
 
-    def clearing_time_ms(self, i_arc_ka: float) -> float:
-        i_ka = i_arc_ka * self.current_ratio
+    def operate_ms(self, i_arc_ka: float, current_ratio: Optional[float] = None) -> Optional[float]:
+        """Tempo di eliminazione (ms) senza il limite max_time_ms; None se la protezione non interviene.
+
+        current_ratio: quota della corrente d'arco vista dalla protezione (default
+        quella della protezione; nel calcolo a più intervalli può cambiare).
+        """
+        ratio = self.current_ratio if current_ratio is None else current_ratio
+        i_ka = i_arc_ka * ratio
         if self.device is not None:
             from .coordination import trip_time_s
 
             t = trip_time_s(self.device, i_ka * 1000.0)
-            return self.max_time_ms if t is None else min(t * 1000.0, self.max_time_ms)
+            return None if t is None else t * 1000.0
         if self.time_ms is not None:
-            return min(self.time_ms, self.max_time_ms)
+            return self.time_ms
         times = []
         if self.curve is not None:
             if self.pickup_ka is None:
@@ -363,25 +380,169 @@ class Protection:
         if self.inst_pickup_ka is not None and i_ka >= self.inst_pickup_ka:
             times.append(self.inst_time_ms)
         if not times:
-            return self.max_time_ms  # la protezione non interviene: tempo massimo
-        return min(min(times) + self.breaker_time_ms, self.max_time_ms)
+            return None
+        return min(times) + self.breaker_time_ms
+
+    def clearing_time_ms(self, i_arc_ka: float, current_ratio: Optional[float] = None) -> float:
+        t = self.operate_ms(i_arc_ka, current_ratio)
+        return self.max_time_ms if t is None else min(t, self.max_time_ms)  # non interviene: tempo massimo
+
+
+# --- metodo di Lee (tensioni oltre 15 kV) ---------------------------------------------------
+
+METHOD_IEEE = "IEEE 1584-2018"
+METHOD_LEE = "Lee"
+# IEEE 1584-2002 eq. 8–9 (richiamate dalla 2018 oltre il campo del modello) e NFPA 70E D.2:
+# E [J/cm²] = 2,142·10⁶·V[kV]·Ibf[kA]·t[s]/D[mm]²; in cal/cm² il coefficiente è 5,12·10⁵
+LEE_K = 2.142e6
+
+
+def lee_energy(v_kv: float, ibf_ka: float, t_ms: float, distance_mm: float) -> float:
+    """Metodo di Lee: energia incidente (J/cm²); l'arco ha la corrente franca Ibf."""
+    return LEE_K * v_kv * ibf_ka * t_ms / 1000.0 / distance_mm**2
+
+
+def lee_boundary(v_kv: float, ibf_ka: float, t_ms: float) -> float:
+    """Metodo di Lee: confine dell'arco (mm), D_B = √(2,142·10⁶·V·Ibf·t/E_B)."""
+    return math.sqrt(LEE_K * v_kv * ibf_ka * t_ms / 1000.0 / E_BOUNDARY_J_CM2)
+
+
+# --- calcolo a più intervalli (corrente variabile durante l'arco) -----------------------------
+
+
+@dataclass
+class CurrentStep:
+    """Intervallo con corrente franca costante.
+
+    duration_ms: durata dell'intervallo (l'ultimo dura comunque fino
+    all'eliminazione dell'arco); current_ratio: quota della corrente d'arco
+    vista dalla protezione nell'intervallo (default quella della protezione).
+    """
+
+    ibf_ka: float
+    duration_ms: Optional[float] = None
+    current_ratio: Optional[float] = None
+
+
+def _check_steps(steps: list[CurrentStep]) -> None:
+    if not steps:
+        raise ValueError("servono uno o più intervalli di corrente")
+    for k, s in enumerate(steps):
+        if s.ibf_ka is None or s.ibf_ka <= 0.0:
+            raise ValueError("ogni intervallo richiede ibf_ka > 0")
+        if k < len(steps) - 1 and (s.duration_ms is None or s.duration_ms <= 0.0):
+            raise ValueError("ogni intervallo tranne l'ultimo richiede duration_ms > 0")
+
+
+def arc_durations_ms(protection: Protection, i_arc_ka: list[float], steps: list[CurrentStep]) -> list[float]:
+    """Durata dell'arco (ms) in ciascun intervallo, con la corrente variabile.
+
+    In ogni intervallo la protezione consuma la frazione Δt_k/t(I_k) del proprio
+    tempo di intervento alla corrente dell'intervallo; l'arco è eliminato quando
+    Σ Δt_k/t(I_k) = 1. Negli intervalli in cui la protezione non interviene non
+    c'è consumo. La durata totale è limitata a max_time_ms; l'elenco restituito
+    termina all'intervallo in cui l'arco si estingue. Con un solo intervallo il
+    risultato coincide con clearing_time_ms.
+    """
+    out: list[float] = []
+    used = 0.0
+    elapsed = 0.0
+    for k, (step, i_arc) in enumerate(zip(steps, i_arc_ka)):
+        dur = math.inf if k == len(steps) - 1 else step.duration_ms
+        t_op = protection.operate_ms(i_arc, step.current_ratio)
+        done = False
+        if t_op is not None:
+            need = (1.0 - used) * t_op
+            if need <= dur:
+                dur, done = need, True
+            else:
+                used += dur / t_op
+        if elapsed + dur >= protection.max_time_ms:
+            out.append(protection.max_time_ms - elapsed)
+            break
+        out.append(dur)
+        elapsed += dur
+        if done:
+            break
+    return out
+
+
+def afb_from_energy(enc: Enclosure, v_key: float, e_j_cm2: float) -> float:
+    """Confine dall'energia alla distanza di lavoro.
+
+    Nelle eq. 3–6 l'energia dipende dalla distanza solo con il fattore D^k12,
+    quindi D_B = D·(E_B/E)^(1/k12): coincide con le eq. 7–10 per un intervallo
+    e vale anche per la somma delle energie di più intervalli.
+    """
+    k12 = _TABLE_E[v_key][enc.configuration][11]
+    return enc.distance_mm * (E_BOUNDARY_J_CM2 / e_j_cm2) ** (1.0 / k12)
+
+
+def ieee_multistep_case(enc: Enclosure, steps: list[CurrentStep], durations_ms: list[float],
+                        reduced: bool = False) -> ArcFlashCase:
+    """IEEE 1584 con più intervalli: somma delle energie (intermedie sopra 600 V).
+
+    Sopra 600 V si sommano le energie intermedie a 600, 2700 e 14 300 V, si
+    ricavano i confini intermedi dalle somme e poi si interpola (come
+    arcflash-calc, multistep.py); fino a 600 V si somma l'energia finale.
+    """
+    parts = [(s, d, arc_flash_case(enc, s.ibf_ka, d, reduced)) for s, d in zip(steps, durations_ms) if d > 0.0]
+    if not parts:
+        raise ValueError("tempo d'arco nullo")
+    rows = [dict(ibf_ka=s.ibf_ka, i_arc_ka=c.i_arc_ka, duration_ms=d, e_j_cm2=c.e_j_cm2) for s, d, c in parts]
+    if len(durations_ms) == 1:
+        c = parts[0][2]
+        c.steps = rows
+        return c
+    if enc.voc_kv > 0.6:
+        e_int = {v: sum(c.e_intermediate_j_cm2[v] for *_, c in parts) for v in _V_INTERMEDIATE}
+        afb_int = {v: afb_from_energy(enc, v, e_int[v]) for v in _V_INTERMEDIATE}
+        e = _interpolate(enc.voc_kv, *(e_int[v] for v in _V_INTERMEDIATE))
+        afb = _interpolate(enc.voc_kv, *(afb_int[v] for v in _V_INTERMEDIATE))
+    else:
+        e_int, afb_int = {}, {}
+        e = sum(c.e_j_cm2 for *_, c in parts)
+        afb = afb_from_energy(enc, 0.6, e)
+    first = arc_currents(enc, steps[0].ibf_ka)
+    i_arc = first[1] if reduced else first[0]
+    inter = first[3] if reduced else first[2]
+    return ArcFlashCase(reduced, i_arc, sum(durations_ms), e, afb, inter, e_int, afb_int, rows)
+
+
+def lee_case(v_kv: float, distance_mm: float, steps: list[CurrentStep], durations_ms: list[float]) -> ArcFlashCase:
+    """Metodo di Lee, anche a più intervalli (energia e argomento del confine sono lineari in Ibf·t)."""
+    rows = [dict(ibf_ka=s.ibf_ka, i_arc_ka=s.ibf_ka, duration_ms=d, e_j_cm2=lee_energy(v_kv, s.ibf_ka, d, distance_mm))
+            for s, d in zip(steps, durations_ms)]
+    ibf_t = sum(s.ibf_ka * d for s, d in zip(steps, durations_ms))
+    e = sum(r["e_j_cm2"] for r in rows)
+    afb = math.sqrt(LEE_K * v_kv * ibf_t / 1000.0 / E_BOUNDARY_J_CM2)
+    return ArcFlashCase(False, steps[0].ibf_ka, sum(durations_ms), e, afb, steps=rows)
 
 
 @dataclass
 class ArcFlashResult:
-    """Risultato completo in un punto: casi con corrente piena e ridotta."""
+    """Risultato completo in un punto.
+
+    IEEE 1584: casi con corrente piena e ridotta; Lee e c.c.: un solo caso
+    (`reduced` e `factors` sono None).
+    """
 
     location: str
     voc_kv: float
     ibf_ka: float
     configuration: str
     distance_mm: float
-    factors: CorrectionFactors
+    factors: Optional[CorrectionFactors]
     full: ArcFlashCase
-    reduced: ArcFlashCase
+    reduced: Optional[ArcFlashCase]
+    method: str = METHOD_IEEE
+    ibf_source: str = ""
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def governing(self) -> ArcFlashCase:
+        if self.reduced is None:
+            return self.full
         return self.full if self.full.e_j_cm2 >= self.reduced.e_j_cm2 else self.reduced
 
     @property
@@ -390,6 +551,8 @@ class ArcFlashResult:
 
     @property
     def afb_mm(self) -> float:
+        if self.reduced is None:
+            return self.full.afb_mm
         return max(self.full.afb_mm, self.reduced.afb_mm)
 
     @property
@@ -402,20 +565,40 @@ class ArcFlashResult:
         return None
 
 
-def arc_flash(enc: Enclosure, ibf_ka: float, protection: Protection, location: str = "") -> ArcFlashResult:
-    """Calcolo completo: corrente d'arco piena e ridotta, ognuna con il suo tempo."""
-    check_range(enc, ibf_ka)
-    i_full, i_red, *_ = arc_currents(enc, ibf_ka)
-    full = arc_flash_case(enc, ibf_ka, protection.clearing_time_ms(i_full), reduced=False)
-    reduced = arc_flash_case(enc, ibf_ka, protection.clearing_time_ms(i_red), reduced=True)
-    return ArcFlashResult(location, enc.voc_kv, ibf_ka, enc.configuration, enc.distance_mm,
-                          correction_factors(enc), full, reduced)
+def arc_flash(enc: Enclosure, ibf_ka: Optional[float], protection: Protection, location: str = "",
+              steps: Optional[list[CurrentStep]] = None) -> ArcFlashResult:
+    """Calcolo completo in c.a. con scelta automatica del metodo.
+
+    Voc fino a 15 kV: IEEE 1584-2018, corrente d'arco piena e ridotta, ognuna
+    con il suo tempo. Voc oltre 15 kV: metodo di Lee (corrente d'arco = Ibf).
+    steps: intervalli con corrente franca diversa (calcolo a più intervalli);
+    se assenti un solo intervallo con ibf_ka.
+    """
+    steps = [CurrentStep(ibf_ka)] if steps is None else list(steps)
+    _check_steps(steps)
+    if enc.voc_kv > 15.0:
+        if enc.distance_mm <= 0.0:
+            raise ValueError("Lee: distanza di lavoro non valida")
+        durations = arc_durations_ms(protection, [s.ibf_ka for s in steps], steps)
+        case = lee_case(enc.voc_kv, enc.distance_mm, steps[:len(durations)], durations)
+        return ArcFlashResult(location, enc.voc_kv, steps[0].ibf_ka, enc.configuration, enc.distance_mm,
+                              None, case, None, method=METHOD_LEE)
+    for s in steps:
+        check_range(enc, s.ibf_ka)
+    currents = [arc_currents(enc, s.ibf_ka) for s in steps]
+    cases = []
+    for reduced in (False, True):
+        i_arc = [c[1] if reduced else c[0] for c in currents]
+        durations = arc_durations_ms(protection, i_arc, steps)
+        cases.append(ieee_multistep_case(enc, steps[:len(durations)], durations, reduced))
+    return ArcFlashResult(location, enc.voc_kv, steps[0].ibf_ka, enc.configuration, enc.distance_mm,
+                          correction_factors(enc), cases[0], cases[1])
 
 
 # --- studio sulla rete ----------------------------------------------------------------
 
 
-def enclosure_for(point: "ArcFlashPoint", voc_kv: float) -> Enclosure:
+def enclosure_for(point: "ArcFlashPoint", voc_kv: float, require_gap: bool = True) -> Enclosure:
     """Geometria del punto: valori tipici della classe di apparecchiatura e dati espliciti."""
     data = dict(height_mm=508.0, width_mm=508.0, depth_mm=508.0)
     if point.equipment_class is not None:
@@ -426,88 +609,234 @@ def enclosure_for(point: "ArcFlashPoint", voc_kv: float) -> Enclosure:
     for key in ("gap_mm", "distance_mm", "height_mm", "width_mm", "depth_mm"):
         if getattr(point, key) is not None:
             data[key] = getattr(point, key)
+    if not require_gap:
+        data.setdefault("gap_mm", 0.0)
     for key in ("gap_mm", "distance_mm"):
         if key not in data:
             raise ValueError(f"{point.id}: serve {key} oppure equipment_class")
     return Enclosure(voc_kv, point.configuration, **data)
 
 
-def arc_flash_study(net: "Network", case: str = "max", **sc_options) -> list[ArcFlashResult]:
+def protection_for(net: "Network", point: "ArcFlashPoint") -> Protection:
+    """Protezione del punto dalla sezione `protection` (tempo, relè o dispositivo)."""
+    prot = dict(point.protection)
+    device_id = prot.pop("device", None)
+    try:
+        protection = Protection(**prot)
+    except TypeError as exc:
+        raise ValueError(f"{point.id}: dati di protezione non validi: {exc}") from None
+    if protection.curve is not None and protection.curve not in IEC_CURVES:
+        raise ValueError(f"{point.id}: curva sconosciuta {protection.curve!r} ({sorted(IEC_CURVES)})")
+    if device_id is not None:
+        from .coordination import validate_device
+
+        devs = {d.id: d for d in net.protective_devices}
+        if device_id not in devs:
+            raise ValueError(f"{point.id}: dispositivo inesistente {device_id!r}")
+        validate_device(devs[device_id])
+        protection.device = devs[device_id]
+    return protection
+
+
+# Corrente franca Ibf dei punti in c.a. (il valore `ibf_ka` del punto ha sempre la precedenza)
+IBF_SOURCES = {
+    "iec60909": 'I"k trifase IEC 60909 (con il fattore di tensione c)',
+    "c1": 'I"k trifase IEC 60909 riscalata a c = 1 (I"k/c)',
+}
+LV_SUSTAIN_KV = 0.24  # sotto 240 V l'arco può non autosostenersi
+LV_SUSTAIN_KVA = 125.0
+LV_SUSTAIN_KA = 2.0
+
+
+def feeding_transformers(net: "Network", bus_id: str) -> list[tuple[str, float]]:
+    """Trasformatori che alimentano il nodo: (id, potenza in kVA).
+
+    Sono i trasformatori con un lato secondario (BT, o MT/BT per i tre
+    avvolgimenti) sui nodi collegati a `bus_id` da sole linee, cioè sullo
+    stesso livello di tensione: il trasformatore sul nodo o a monte nella rete
+    radiale.
+    """
+    adj: dict[str, set[str]] = {b.id: set() for b in net.buses}
+    for ln in net.lines:
+        adj[ln.from_bus].add(ln.to_bus)
+        adj[ln.to_bus].add(ln.from_bus)
+    seen = {bus_id}
+    stack = [bus_id]
+    while stack:
+        for nxt in adj[stack.pop()]:
+            if nxt not in seen:
+                seen.add(nxt)
+                stack.append(nxt)
+    out = [(t.id, t.sr_mva * t.parallel * 1000.0) for t in net.transformers if t.lv_bus in seen]
+    for t3 in net.transformers3w:
+        if t3.lv_bus in seen:
+            out.append((t3.id, t3.sr_hv_lv_mva * 1000.0))
+        elif t3.mv_bus in seen:
+            out.append((t3.id, t3.sr_hv_mv_mva * 1000.0))
+    return out
+
+
+def low_voltage_warnings(net: "Network", point: "ArcFlashPoint", voc_kv: float, ibf_ka: float) -> list[str]:
+    """Avvisi per i punti sotto 240 V in cui l'arco potrebbe non autosostenersi."""
+    if voc_kv >= LV_SUSTAIN_KV:
+        return []
+    out = []
+    trs = feeding_transformers(net, point.bus)
+    kva = sum(p for _, p in trs)
+    if trs and kva < LV_SUSTAIN_KVA:
+        names = ", ".join(t for t, _ in trs)
+        out.append(f"{point.id}: Voc = {voc_kv * 1000:.0f} V < 240 V alimentato da trasformatori ({names}) per "
+                   f"{kva:.0f} kVA in totale, meno di 125 kVA: l'arco potrebbe non autosostenersi "
+                   "(IEEE 1584); il risultato è cautelativo")
+    if ibf_ka < LV_SUSTAIN_KA:
+        out.append(f"{point.id}: Voc = {voc_kv * 1000:.0f} V < 240 V e Ibf = {ibf_ka:.3f} kA < 2 kA: "
+                   "arco sostenuto poco probabile (IEEE 1584-2018); il risultato è cautelativo")
+    return out
+
+
+def arc_flash_study(net: "Network", case: str = "max", ibf: str = "iec60909", **sc_options) -> list[ArcFlashResult]:
     """Arc flash in tutti i punti della sezione `arc_flash` della rete.
 
-    La corrente di cortocircuito franca Ibf è la I"k trifase della IEC 60909
-    nel nodo (caso `case`, opzioni di `calculate`); Voc è la tensione nominale
-    del nodo.
+    Punti in c.a.: Voc è la tensione nominale del nodo e Ibf, salvo il valore
+    `ibf_ka` del punto, la I"k trifase della IEC 60909 nel nodo (caso `case`,
+    opzioni di `calculate`) con `ibf="iec60909"`, oppure la stessa corrente
+    riscalata a c = 1 con `ibf="c1"`. Con `motor_decay_ms` il calcolo ha due
+    intervalli: con i motori fino a quel tempo, poi con la I"k ricalcolata
+    sulla rete senza motori; `steps` impone gli intervalli.
+    Punti in c.c. (`system: "dc"`): vedi `iec60909.arcflash_dc`.
     """
-    from .calc import calculate
+    from .calc import calculate, fault_currents
 
     if not net.arc_flash:
         raise ValueError("la rete non contiene punti arc_flash")
-    sc = calculate(net, case, **sc_options)
+    if ibf not in IBF_SOURCES:
+        raise ValueError(f"origine della corrente franca non valida {ibf!r} ({sorted(IBF_SOURCES)})")
+    for point in net.arc_flash:
+        if point.system not in ("ac", "dc"):
+            raise ValueError(f"{point.id}: system deve essere 'ac' o 'dc'")
+    sc = calculate(net, case, **sc_options) if any(p.system == "ac" for p in net.arc_flash) else None
+    cache: dict[str, object] = {}
+
+    def without_motors():
+        # rete senza motori: Ibf dopo l'esaurimento del loro contributo
+        if "net" not in cache:
+            import copy
+
+            nm = copy.copy(net)
+            nm.motors = []
+            cache["net"] = nm
+            cache["sc"] = calculate(nm, case, **sc_options)
+        return cache["net"], cache["sc"]
+
+    def ratio(network: "Network", point: "ArcFlashPoint", dev) -> float:
+        # quota della corrente di guasto che attraversa il dispositivo (guasto trifase)
+        fc = fault_currents(network, point.bus, case, sc_options.get("zf_ohm", 0j))
+        return abs(fc.branch_ka[(dev.branch, dev.bus)]) / abs(fc.ikss_ka)
+
     out = []
     for point in net.arc_flash:
-        bus = sc.bus(point.bus)
-        enc = enclosure_for(point, bus.un_kv)
-        prot = dict(point.protection)
-        device_id = prot.pop("device", None)
-        try:
-            protection = Protection(**prot)
-        except TypeError as exc:
-            raise ValueError(f"{point.id}: dati di protezione non validi: {exc}") from None
-        if device_id is not None:
-            # dispositivo del coordinamento: vede la quota della corrente di guasto
-            # che lo attraversa (rapporto dalle correnti nei rami del guasto trifase)
-            from .calc import fault_currents
-            from .coordination import validate_device
+        if point.system == "dc":
+            from .arcflash_dc import dc_point
 
-            devs = {d.id: d for d in net.protective_devices}
-            if device_id not in devs:
-                raise ValueError(f"{point.id}: dispositivo inesistente {device_id!r}")
-            dev = devs[device_id]
-            validate_device(dev)
-            fc = fault_currents(net, point.bus, case, sc_options.get("zf_ohm", 0j))
-            protection.device = dev
-            protection.current_ratio = abs(fc.branch_ka[(dev.branch, dev.bus)]) / abs(fc.ikss_ka)
-        if protection.curve is not None and protection.curve not in IEC_CURVES:
-            raise ValueError(f"{point.id}: curva sconosciuta {protection.curve!r} ({sorted(IEC_CURVES)})")
-        out.append(arc_flash(enc, bus.ikss3_ka, protection, location=point.id))
+            out.append(dc_point(net, point))
+            continue
+        if point.vdc_v is not None or point.r_system_ohm is not None:
+            raise ValueError(f"{point.id}: vdc_v e r_system_ohm valgono solo per i punti in c.c.")
+        if point.ibf_ka is not None and (point.motor_decay_ms is not None or point.steps):
+            raise ValueError(f"{point.id}: ibf_ka è alternativo a motor_decay_ms e steps")
+        if point.motor_decay_ms is not None and point.steps:
+            raise ValueError(f"{point.id}: motor_decay_ms e steps sono alternativi")
+        bus = sc.bus(point.bus)
+        protection = protection_for(net, point)
+        dev = protection.device
+        if dev is not None:
+            protection.current_ratio = ratio(net, point, dev)
+        scale = 1.0 / bus.c if ibf == "c1" else 1.0
+        source = IBF_SOURCES[ibf]
+        if point.steps:
+            try:
+                steps = [CurrentStep(**s) for s in point.steps]
+            except TypeError as exc:
+                raise ValueError(f"{point.id}: intervalli non validi: {exc}") from None
+            source = "intervalli imposti nel punto"
+        elif point.ibf_ka is not None:
+            steps = [CurrentStep(point.ibf_ka)]
+            source = "imposta nel punto"
+        elif point.motor_decay_ms is not None:
+            if point.motor_decay_ms <= 0.0:
+                raise ValueError(f"{point.id}: motor_decay_ms deve essere positivo")
+            nm, sc_nm = without_motors()
+            steps = [CurrentStep(float(bus.ikss3_ka) * scale, point.motor_decay_ms),
+                     CurrentStep(float(sc_nm.bus(point.bus).ikss3_ka) * scale, None,
+                                 ratio(nm, point, dev) if dev is not None else None)]
+            source += f"; motori esauriti dopo {point.motor_decay_ms:g} ms"
+        else:
+            steps = [CurrentStep(float(bus.ikss3_ka) * scale)]
+        enc = enclosure_for(point, bus.un_kv, require_gap=bus.un_kv <= 15.0)
+        try:
+            res = arc_flash(enc, None, protection, location=point.id, steps=steps)
+        except ValueError as exc:
+            raise ValueError(f"{point.id}: {exc}") from None
+        res.ibf_source = source
+        res.warnings += low_voltage_warnings(net, point, bus.un_kv, steps[0].ibf_ka)
+        out.append(res)
     return out
 
 
 def results_to_dict(results: list[ArcFlashResult]) -> list[dict]:
     import dataclasses
 
+    def case(c: Optional[ArcFlashCase]) -> Optional[dict]:
+        return None if c is None else dict(dataclasses.asdict(c), e_cal_cm2=c.e_cal_cm2)
+
     rows = []
     for r in results:
         rows.append({
-            "id": r.location, "voc_kv": r.voc_kv, "ibf_ka": r.ibf_ka, "configuration": r.configuration,
-            "distance_mm": r.distance_mm, "factors": dataclasses.asdict(r.factors),
-            "full": dict(dataclasses.asdict(r.full), e_cal_cm2=r.full.e_cal_cm2),
-            "reduced": dict(dataclasses.asdict(r.reduced), e_cal_cm2=r.reduced.e_cal_cm2),
+            "id": r.location, "method": r.method, "voc_kv": r.voc_kv, "ibf_ka": r.ibf_ka,
+            "ibf_source": r.ibf_source, "configuration": r.configuration, "distance_mm": r.distance_mm,
+            "factors": None if r.factors is None else dataclasses.asdict(r.factors),
+            "full": case(r.full), "reduced": case(r.reduced),
             "e_cal_cm2": r.e_cal_cm2, "afb_mm": r.afb_mm, "ppe_category": r.ppe_category,
+            "warnings": r.warnings,
         })
     return rows
 
 
 def results_to_markdown(results: list[ArcFlashResult], title: str = "") -> str:
     out = [
-        f"# Arc flash IEEE 1584-2018{' — ' + title if title else ''}",
+        f"# Arc flash{' — ' + title if title else ''}",
         "",
-        "Energia incidente alla distanza di lavoro; per ogni punto il caso con corrente d'arco "
-        "piena e quello con corrente ridotta (VarCF), ciascuno con il suo tempo d'arco.",
+        "Energia incidente alla distanza di lavoro. IEEE 1584-2018 (0,208–15 kV): caso con corrente "
+        "d'arco piena e caso con corrente ridotta (VarCF), ciascuno con il suo tempo d'arco. Lee (oltre "
+        "15 kV) e corrente continua (NFPA 70E, allegato D.5): un solo caso.",
         "",
-        "| Punto | Voc [kV] | Ibf [kA] | Conf. | D [mm] | Iarc [kA] | t [ms] | E [cal/cm²] "
+        "| Punto | Metodo | Voc [kV] | Ibf [kA] | Conf. | D [mm] | Iarc [kA] | t [ms] | E [cal/cm²] "
         "| Iarc rid. [kA] | t rid. [ms] | E rid. [cal/cm²] | E [cal/cm²] | Confine [mm] | Cat. DPI |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for r in results:
         cat = "oltre 40 cal/cm²" if r.ppe_category is None else str(r.ppe_category)
+        red = ("| — | — | — " if r.reduced is None else
+               f"| {r.reduced.i_arc_ka:.3f} | {r.reduced.t_arc_ms:.1f} | {r.reduced.e_cal_cm2:.2f} ")
         out.append(
-            f"| {r.location} | {r.voc_kv:g} | {r.ibf_ka:.3f} | {r.configuration} | {r.distance_mm:.0f} "
+            f"| {r.location} | {r.method} | {r.voc_kv:g} | {r.ibf_ka:.3f} | {r.configuration} | {r.distance_mm:.0f} "
             f"| {r.full.i_arc_ka:.3f} | {r.full.t_arc_ms:.1f} | {r.full.e_cal_cm2:.2f} "
-            f"| {r.reduced.i_arc_ka:.3f} | {r.reduced.t_arc_ms:.1f} | {r.reduced.e_cal_cm2:.2f} "
-            f"| **{r.e_cal_cm2:.2f}** | {r.afb_mm:.0f} | {cat} |"
+            + red + f"| **{r.e_cal_cm2:.2f}** | {r.afb_mm:.0f} | {cat} |"
         )
+    multi = [r for r in results if any(len(c.steps) > 1 for c in (r.full, r.reduced) if c is not None)]
+    if multi:
+        out += ["", "## Calcolo a più intervalli", "",
+                "| Punto | Caso | Ibf [kA] | Iarc [kA] | Durata [ms] | E [cal/cm²] |", "|---|---|---|---|---|---|"]
+        for r in multi:
+            for name, c in (("piena", r.full), ("ridotta", r.reduced)):
+                if c is None:
+                    continue
+                for s in c.steps:
+                    out.append(f"| {r.location} | {name} | {s['ibf_ka']:.3f} | {s['i_arc_ka']:.3f} "
+                               f"| {s['duration_ms']:.1f} | {s['e_j_cm2'] / J_PER_CAL:.2f} |")
+    warnings = [w for r in results for w in r.warnings]
+    if warnings:
+        out += ["", "## Avvertenze", ""] + [f"- {w}" for w in warnings]
     out += ["", "Categoria DPI secondo NFPA 70E (1: ≤ 4, 2: ≤ 8, 3: ≤ 25, 4: ≤ 40 cal/cm²), a titolo "
             "indicativo: la scelta dei DPI spetta al responsabile della valutazione del rischio."]
     return "\n".join(out) + "\n"

@@ -7,7 +7,8 @@ sulla stessa descrizione della rete:
   della norma;
 - **flusso di potenza** (load flow) con il metodo di Newton-Raphson;
 - **arc flash** (energia incidente e confine dell'arco) secondo
-  **IEEE 1584-2018**;
+  **IEEE 1584-2018**, con il metodo di Lee oltre 15 kV e i metodi
+  dell'allegato D.5 di NFPA 70E in corrente continua;
 - **coordinamento delle protezioni**: sequenza di intervento, selettività,
   sensibilità e curve tempo-corrente di relè, interruttori BT e fusibili.
 
@@ -72,19 +73,33 @@ di reti esterne e generatori). Modelli e limiti:
 ```bash
 python -m iec60909.arco esempi/arc_flash_cabina.json         # Markdown
 python -m iec60909.arco rete.json --json                     # JSON
+python -m iec60909.arco rete.json --ibf c1                   # Ibf = I"k con c = 1
 ```
 
 ```python
-from iec60909 import Enclosure, Protection, arc_flash, arc_flash_study, load_network
+from iec60909 import CurrentStep, Enclosure, Protection, arc_flash, arc_flash_study, dc_arc_flash, load_network
 
 risultati = arc_flash_study(load_network("rete.json"))           # punti della sezione arc_flash
 r = arc_flash(Enclosure(0.4, "VCB", gap_mm=32, distance_mm=610), ibf_ka=25.0,
               protection=Protection(time_ms=100))
 print(r.e_cal_cm2, r.afb_mm, r.ppe_category)
+
+# più intervalli: 25 kA per 30 ms (motori), poi 21 kA fino all'eliminazione
+r = arc_flash(Enclosure(0.4, "VCB", gap_mm=32, distance_mm=610), None, Protection(time_ms=100),
+              steps=[CurrentStep(25.0, 30.0), CurrentStep(21.0)])
+# corrente continua: 250 V, 4 kA, metodo della massima potenza (Doan), arco in cella (fattore 3)
+r = dc_arc_flash(250.0, 457.2, Protection(time_ms=500), ibf_ka=4.0, method="doan")
 ```
 
-Ibf è la I"k trifase IEC 60909 del nodo. Procedura, campo di validità e
-limiti sono in [`../analisi/08_arc_flash_ieee1584.md`](../analisi/08_arc_flash_ieee1584.md).
+Metodo scelto automaticamente: IEEE 1584-2018 da 0,208 a 15 kV, Lee oltre
+15 kV (corrente d'arco = Ibf, un solo caso), NFPA 70E D.5.1 (Doan) o D.5.2
+(Stokes-Oppenlander) per i punti in c.c.; il risultato riporta `method`,
+`ibf_source` e gli avvisi (`warnings`, es. punti sotto 240 V alimentati da
+meno di 125 kVA di trasformazione). Ibf è la I"k trifase IEC 60909 del nodo
+(`ibf="iec60909"`), la stessa riscalata a c = 1 (`ibf="c1"`) oppure il valore
+`ibf_ka` del punto. Con `motor_decay_ms` o `steps` il calcolo è a più
+intervalli: energie sommate, tempo di eliminazione dal consumo della
+protezione Σ Δt_k/t(I_k) = 1. Procedura, campo di validità e limiti sono in [`../analisi/08_arc_flash_ieee1584.md`](../analisi/08_arc_flash_ieee1584.md).
 
 ### Coordinamento delle protezioni
 
@@ -192,7 +207,17 @@ Sezione dell'arc flash (esempio in `esempi/arc_flash_cabina.json`):
   `VI`, `EI`, `LTI`), `pickup_ka`, `tms`, `inst_pickup_ka`, `inst_time_ms`,
   `breaker_time_ms`, `current_ratio` (corrente vista dal relè / corrente
   d'arco), `max_time_ms` (default 2000), oppure `device` (id di un
-  dispositivo di `protective_devices`)
+  dispositivo di `protective_devices`: relè, interruttore o fusibile);
+  `ibf_ka` (corrente franca imposta), `motor_decay_ms` (contributo dei motori
+  esaurito dopo quel tempo: secondo intervallo con la I"k della rete senza
+  motori) oppure `steps` (`[{"ibf_ka", "duration_ms", "current_ratio"}, …]`,
+  l'ultimo dura fino all'eliminazione)
+- punti in corrente continua: `system: "dc"`, `bus` facoltativo, `vdc_v`,
+  `ibf_ka` oppure `r_system_ohm`, `dc_method` (`doan`, default, oppure
+  `stokes`, che richiede `gap_mm`), `distance_mm` (o `equipment_class`),
+  `dc_enclosure_factor` (default 3 in cella, 1 con `configuration` `VOA` o
+  `HOA`), `protection` come sopra (un dispositivo vede tutta la corrente
+  d'arco)
 
 Sezione del coordinamento (esempio in `esempi/coordinamento_cabina.json`):
 
@@ -235,7 +260,10 @@ python -m pytest
   nodi e confronto con pandapower `runpp` (tolleranza 1e-6);
   `tests/test_loadflow_ieee14.py`: rete di prova IEEE a 14 nodi.
 - `tests/test_arcflash.py`: arc flash, esempi svolti dell'allegato D della
-  IEEE 1584-2018 e confronto con arcflash-calc su 864 casi.
+  IEEE 1584-2018 e confronto con arcflash-calc su 864 casi;
+  `tests/test_arcflash_estensioni.py`: Lee, corrente continua (calcoli a
+  mano), scelta di Ibf, calcolo a più intervalli (confronto con
+  arcflash-calc `multistep_E_and_AFB`), fusibili e avvisi sotto 240 V.
 - `tests/test_coordinamento.py`: coordinamento, curve dei dispositivi,
   correnti nei rami, verifiche di selettività, sensibilità e carico.
 
