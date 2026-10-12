@@ -10,7 +10,8 @@ conduttori in parallelo e, a parità, la sezione più piccola che soddisfa:
    temperatura di esercizio θ = θa + (θz − θa)·(Ib/Iz)², più la caduta a monte;
 3. **cortocircuito (IEC 60364-4-43):** (I/n)²·t ≤ k²·S² alla corrente massima
    all'inizio della linea e alla minima alla fine, con t dalla curva del
-   dispositivo; anche per il conduttore di protezione;
+   dispositivo (sotto 0,1 s l'I²t passante del costruttore, se indicato);
+   anche per il conduttore di protezione;
 4. **interruzione automatica (IEC 60364-4-41, sistemi TN):** il dispositivo
    interviene entro il tempo prescritto con la corrente di guasto a terra
    minima alla fine della linea.
@@ -78,7 +79,7 @@ class SizingResult:
         return self.section_mm2 is not None
 
 
-def _rx_ohm_per_km(cs: CableSizing, s: float, temperature_c: float) -> float:
+def _r_ohm_per_km(cs: CableSizing, s: float, temperature_c: float) -> float:
     r20 = tab.resistance_20c(cs.material, s)
     return r20 * (1.0 + ALPHA[cs.material] * (temperature_c - 20.0))
 
@@ -92,6 +93,30 @@ def pe_section(s: float, given: Optional[float] = None) -> float:
     if s <= 35:
         return 16.0
     return tab.next_section(s / 2.0)
+
+
+def voltage_drop_percent(ib_a: float, length_km: float, r_ohm_per_km: float, x_ohm_per_km: float,
+                         cos_phi: float, un_kv: float, parallel: int = 1) -> float:
+    """Caduta di tensione trifase ΔU% = √3·Ib·L·(R·cosφ + X·sinφ)/(n·Un)·100."""
+    sin_phi = math.sqrt(max(0.0, 1.0 - cos_phi**2))
+    dv = math.sqrt(3) * ib_a * length_km * (r_ohm_per_km * cos_phi + x_ohm_per_km * sin_phi) / parallel
+    return dv / (un_kv * 1000.0) * 100.0
+
+
+def min_section_short_circuit(i_a: float, t_s: float, k: float) -> float:
+    """Sezione minima per la tenuta al cortocircuito S = I·√t/k [mm²] (IEC 60364-4-43, 434.5.2)."""
+    return i_a * math.sqrt(t_s) / k
+
+
+# resistività convenzionali a temperatura di servizio per il metodo convenzionale [Ω·mm²/m]
+RHO_CONVENTIONAL = {"cu": 22.5e-3, "al": 36e-3}
+
+
+def max_length_tn(u0_v: float, s_ph_mm2: float, s_pe_mm2: float, ia_a: float, material: str = "cu") -> float:
+    """Lunghezza massima [m] per l'interruzione automatica nei sistemi TN con il metodo
+    convenzionale: Lmax = 0,8·U0·Sph·Spe/(Ia·ρ·(Sph + Spe)), con l'80 % di U0 all'origine del
+    circuito e la reattanza trascurata (valido fino a circa 120 mm²)."""
+    return 0.8 * u0_v * s_ph_mm2 * s_pe_mm2 / (ia_a * RHO_CONVENTIONAL[material] * (s_ph_mm2 + s_pe_mm2))
 
 
 def _device_rating(net: Network, cs: CableSizing) -> tuple[Optional[ProtectiveDevice], Optional[float], Optional[float]]:
@@ -125,6 +150,14 @@ def _trip_time(dev: Optional[ProtectiveDevice], cs: CableSizing, i_a: float) -> 
     return trip_time_s(dev, i_a, "max")
 
 
+def _i2t(cs: CableSizing, i_a: float, t_s: float) -> float:
+    """Energia specifica passante: I²·t, oppure il valore del costruttore sotto 0,1 s
+    (IEC 60364-4-43, 434.5.2)."""
+    if t_s < 0.1 and cs.let_through_a2s is not None:
+        return cs.let_through_a2s
+    return i_a**2 * t_s
+
+
 def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None) -> SizingResult:
     """Dimensiona un cavo; `lf`, `sc_max`, `sc_min` sono i risultati già calcolati
     (flusso di potenza, cortocircuito massimo e minimo) o None."""
@@ -146,14 +179,15 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
             cos_phi = abs(br.p_from_mw) / s if s > 0 else 1.0
     if ib <= 0:
         raise ValueError(f"{cs.id}: corrente di impiego nulla")
-    sin_phi = math.sqrt(max(0.0, 1.0 - cos_phi**2))
     dev, in_a, i2_a = _device_rating(net, cs)
 
     method = cs.method.upper()
-    theta_z = cs.max_temperature_c if cs.max_temperature_c is not None else tab.MAX_TEMPERATURE[cs.insulation]
+    theta_z = cs.max_temperature_c if cs.max_temperature_c is not None else tab.MAX_TEMPERATURE[tab._insulation(cs.insulation)]
+    key = None
     if cs.ampacity_a:
         table = {float(k): float(v) for k, v in cs.ampacity_a.items()}
     else:
+        key = tab.ampacity_key(cs.material, cs.insulation, cs.loaded_conductors, method, cs.arrangement)
         table = tab.ampacity_table(cs.material, cs.insulation, cs.loaded_conductors, method, cs.cores,
                                    cs.arrangement)
     factors = tab.correction_factors(cs.insulation, method, cs.ambient_c, cs.soil_resistivity_km_w,
@@ -184,7 +218,7 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
             res.warnings.append(f"{line.from_bus}: nessun percorso verso terra, guasto a terra non verificato")
 
     sections = sorted(float(s) for s in (cs.sections or table))
-    sections = [s for s in sections if s in table]
+    sections = [s for s in sections if s in table and s in tab.R20[cs.material]]  # con resistenza IEC 60228
     if not sections:
         raise ValueError(f"{cs.id}: nessuna sezione disponibile per la posa indicata")
     best: Optional[Candidate] = None
@@ -201,25 +235,25 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
                 if i2_a > 1.45 * iz + 1e-9:
                     issues.append(f"I2 {i2_a:.1f} A > 1,45·Iz {1.45 * iz:.1f} A")
             theta = ambient + (theta_z - ambient) * min(ib / iz, 1.0) ** 2 if iz > 0 else theta_z
-            r = _rx_ohm_per_km(cs, s, theta)
-            dv = math.sqrt(3) * ib * line.length_km * (r * cos_phi + cs.x_ohm_per_km * sin_phi) / n
-            dv_pct = dv / (un_kv * 1000.0) * 100.0 + cs.upstream_drop_percent
+            r = _r_ohm_per_km(cs, s, theta)
+            dv_pct = voltage_drop_percent(ib, line.length_km, r, cs.x_ohm_per_km, cos_phi, un_kv, n) \
+                + cs.upstream_drop_percent
             if dv_pct > cs.vdrop_max_percent + 1e-9:
                 issues.append(f"ΔU {dv_pct:.2f} % > {cs.vdrop_max_percent:g} %")
             spe = pe_section(s, cs.pe_section_mm2)
-            k_phase = tab.k_factor(cs.material, cs.insulation, s)
-            k_pe = tab.k_factor(cs.material, cs.insulation, spe)
+            k_phase = tab.k_factor(cs.material, tab._insulation(cs.insulation), s)
+            k_pe = tab.k_factor(cs.material, tab._insulation(cs.insulation), spe)
             data = {"theta": theta, "spe": spe, "k": k_phase}
             if need_sc:
                 if res.t_max_s is None:
                     issues.append(f"il dispositivo non interviene con Ik max {res.ik_max_ka:.2f} kA")
-                elif (res.ik_max_ka * 1000.0 / n) ** 2 * res.t_max_s > (k_phase * s) ** 2:
-                    issues.append(f"I²t {(res.ik_max_ka * 1000 / n) ** 2 * res.t_max_s:.3g} A²s > "
+                elif _i2t(cs, res.ik_max_ka * 1000.0 / n, res.t_max_s) > (k_phase * s) ** 2:
+                    issues.append(f"I²t {_i2t(cs, res.ik_max_ka * 1000 / n, res.t_max_s):.3g} A²s > "
                                   f"k²S² {(k_phase * s) ** 2:.3g} A²s (Ik max)")
                 if bmin.z0_ohm is not None:
                     # anello di guasto alla fine della linea, cavo alla temperatura massima di esercizio
-                    rf = _rx_ohm_per_km(cs, s, theta_z) * line.length_km / n
-                    rpe = _rx_ohm_per_km(cs, spe, theta_z) * line.length_km / n
+                    rf = _r_ohm_per_km(cs, s, theta_z) * line.length_km / n
+                    rpe = _r_ohm_per_km(cs, spe, theta_z) * line.length_km / n
                     x = cs.x_ohm_per_km * line.length_km / n
                     zf, zpe = complex(rf, x), complex(rpe, x)
                     ztot = bmin.z1_ohm + bmin.z2_ohm + bmin.z0_ohm + 3 * (zf + zpe)
@@ -229,7 +263,7 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
                     if t1 is None:
                         issues.append(f"il dispositivo non interviene con Ik1 min {ik1:.3f} kA a fine linea")
                     else:
-                        i2t = (ik1 * 1000.0 / n) ** 2 * t1
+                        i2t = _i2t(cs, ik1 * 1000.0 / n, t1)
                         if i2t > (k_phase * s) ** 2:
                             issues.append(f"I²t {i2t:.3g} A²s > k²S² (Ik1 min)")
                         if i2t > (k_pe * spe) ** 2:
@@ -252,6 +286,10 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
     res.ik1_min_end_ka = best_data.get("ik1")
     res.t_min_s = best_data.get("t1")
     res.k_phase = best_data["k"]
+    if key is not None:
+        note = tab.confidence_note(key, best.section_mm2)
+        if note is not None:
+            res.warnings.append(f"portata di {best.section_mm2:g} mm² con confidenza ridotta: {note}")
     return res
 
 

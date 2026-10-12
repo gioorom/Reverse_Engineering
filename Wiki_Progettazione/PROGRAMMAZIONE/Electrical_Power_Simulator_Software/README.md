@@ -9,7 +9,7 @@ pubbliche (nessuna decompilazione di software commerciale).
 Moduli: calcolo delle correnti di cortocircuito secondo IEC 60909-0:2016,
 flusso di potenza (Newton-Raphson), arc flash secondo IEEE 1584-2018 ,
 coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento
-dei motori e affidabilità.
+dei motori, affidabilità e dimensionamento dei cavi.
 
 ## Riferimento di ispirazione
 
@@ -32,6 +32,7 @@ dei motori e affidabilità.
 | Armoniche ([`analisi/11`](analisi/11_armoniche.md)) | EN 50160, IEEE 519-2014 | implementato e testato (calcoli a mano, OpenDSS) |
 | Avviamento dei motori ([`analisi/12`](analisi/12_avviamento_motori.md)) | circuito equivalente, flusso di potenza a ogni passo | implementato e testato (calcoli a mano, scipy) |
 | Affidabilità ([`analisi/13`](analisi/13_affidabilita.md)) | IEEE 1366, FMEA | implementato e testato (RBTS Bus 2, calcoli a mano, Markov, Monte Carlo) |
+| Dimensionamento dei cavi ([`analisi/14`](analisi/14_dimensionamento_cavi.md)) | IEC 60364-5-52, 4-43, 4-41 | implementato e testato (calcoli a mano, esempi pubblicati) |
 
 ## Stato
 
@@ -46,7 +47,8 @@ dei motori e affidabilità.
 - [x] Armoniche: implementazione e test
 - [x] Avviamento dei motori: implementazione e test
 - [x] Affidabilità: implementazione e test
-- [ ] Altri moduli (es. dimensionamento dei cavi)
+- [x] Dimensionamento dei cavi: implementazione e test
+- [ ] Altri moduli
 
 ## Conclusioni
 

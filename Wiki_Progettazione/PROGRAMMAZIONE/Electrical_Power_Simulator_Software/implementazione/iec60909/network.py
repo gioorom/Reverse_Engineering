@@ -336,7 +336,8 @@ class CableSizing:
     resistività termica del terreno, raggruppamento; oppure tabella propria
     `ampacity_a` {sezione mm²: A} (es. cavi MT da catalogo). Protezione:
     dispositivo `device` di protective_devices oppure `in_a` con
-    `i2_ratio` (I2/In).
+    `i2_ratio` (I2/In); `let_through_a2s`: I²t passante dichiarato dal
+    costruttore, usato per interruzioni sotto 0,1 s (dispositivi limitatori).
     """
 
     id: str
@@ -366,6 +367,7 @@ class CableSizing:
     x_ohm_per_km: float = 0.08
     pe_section_mm2: Optional[float] = None
     t_sc_s: Optional[float] = None
+    let_through_a2s: Optional[float] = None
     disconnection_time_s: Optional[float] = None
 
 

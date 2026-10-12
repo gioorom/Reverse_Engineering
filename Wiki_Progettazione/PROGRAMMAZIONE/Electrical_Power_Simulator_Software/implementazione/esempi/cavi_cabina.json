@@ -1,0 +1,190 @@
+{
+  "name": "Partenze BT di una cabina 20/0,4 kV",
+  "f_hz": 50,
+  "lv_tolerance_percent": 10,
+  "buses": [
+    {
+      "id": "MT",
+      "un_kv": 20
+    },
+    {
+      "id": "QG",
+      "un_kv": 0.4
+    },
+    {
+      "id": "QD1",
+      "un_kv": 0.4
+    },
+    {
+      "id": "M1",
+      "un_kv": 0.4
+    },
+    {
+      "id": "IL",
+      "un_kv": 0.4
+    }
+  ],
+  "external_grids": [
+    {
+      "id": "RETE",
+      "bus": "MT",
+      "skq_max_mva": 500,
+      "skq_min_mva": 250,
+      "rx_max": 0.1,
+      "rx_min": 0.1,
+      "x0x1": 1.0,
+      "r0x0": 0.1
+    }
+  ],
+  "transformers": [
+    {
+      "id": "TR",
+      "hv_bus": "MT",
+      "lv_bus": "QG",
+      "sr_mva": 0.63,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 6,
+      "urr_percent": 1.1,
+      "vector_group": "Dyn11"
+    }
+  ],
+  "lines": [
+    {
+      "id": "L_QD1",
+      "from_bus": "QG",
+      "to_bus": "QD1",
+      "length_km": 0.08,
+      "r1_ohm_per_km": 0.524,
+      "x1_ohm_per_km": 0.08,
+      "r0_ohm_per_km": 2.096,
+      "x0_ohm_per_km": 0.32
+    },
+    {
+      "id": "L_M1",
+      "from_bus": "QG",
+      "to_bus": "M1",
+      "length_km": 0.12,
+      "r1_ohm_per_km": 0.524,
+      "x1_ohm_per_km": 0.08,
+      "r0_ohm_per_km": 2.096,
+      "x0_ohm_per_km": 0.32
+    },
+    {
+      "id": "L_IL",
+      "from_bus": "QG",
+      "to_bus": "IL",
+      "length_km": 0.06,
+      "r1_ohm_per_km": 7.41,
+      "x1_ohm_per_km": 0.09,
+      "r0_ohm_per_km": 29.64,
+      "x0_ohm_per_km": 0.36
+    }
+  ],
+  "loads": [
+    {
+      "id": "QD1",
+      "bus": "QD1",
+      "p_mw": 0.18,
+      "q_mvar": 0.07
+    },
+    {
+      "id": "IL",
+      "bus": "IL",
+      "p_mw": 0.012,
+      "q_mvar": 0.002
+    }
+  ],
+  "motors": [
+    {
+      "id": "M1",
+      "bus": "M1",
+      "pr_mw": 0.09,
+      "ur_kv": 0.4,
+      "efficiency": 0.93,
+      "cos_phi": 0.86,
+      "ilr_ir": 7,
+      "pole_pairs": 2
+    }
+  ],
+  "protective_devices": [
+    {
+      "id": "CB_QD1",
+      "branch": "L_QD1",
+      "bus": "QG",
+      "kind": "breaker",
+      "in_a": 400,
+      "ir": 0.8,
+      "tr_s": 10,
+      "isd": 6,
+      "tsd_s": 0.1,
+      "ii": 12,
+      "ti_s": 0.02
+    },
+    {
+      "id": "CB_M1",
+      "branch": "L_M1",
+      "bus": "QG",
+      "kind": "breaker",
+      "in_a": 250,
+      "ir": 0.8,
+      "tr_s": 10,
+      "ii": 12,
+      "ti_s": 0.02
+    },
+    {
+      "id": "MCB_IL",
+      "branch": "L_IL",
+      "bus": "QG",
+      "kind": "breaker",
+      "in_a": 25,
+      "ir": 1.0,
+      "tr_s": 20,
+      "ii": 10,
+      "ti_s": 0.01
+    }
+  ],
+  "cable_sizing": [
+    {
+      "id": "C_QD1",
+      "line": "L_QD1",
+      "material": "cu",
+      "insulation": "xlpe",
+      "method": "E",
+      "grouping": "single_layer_perforated_tray",
+      "circuits": 3,
+      "ambient_c": 35,
+      "device": "CB_QD1",
+      "vdrop_max_percent": 2.0,
+      "disconnection_time_s": 5.0
+    },
+    {
+      "id": "C_M1",
+      "line": "L_M1",
+      "material": "cu",
+      "insulation": "pvc",
+      "method": "D1",
+      "soil_resistivity_km_w": 1.5,
+      "device": "CB_M1",
+      "vdrop_max_percent": 3.0,
+      "disconnection_time_s": 5.0
+    },
+    {
+      "id": "C_IL",
+      "line": "L_IL",
+      "material": "cu",
+      "insulation": "pvc",
+      "method": "B1",
+      "loaded_conductors": 3,
+      "ambient_c": 30,
+      "grouping": "bunched",
+      "circuits": 4,
+      "device": "MCB_IL",
+      "i2_ratio": 1.45,
+      "vdrop_max_percent": 4.0,
+      "upstream_drop_percent": 1.0,
+      "disconnection_time_s": 0.4,
+      "let_through_a2s": 40000
+    }
+  ]
+}

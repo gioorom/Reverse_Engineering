@@ -110,3 +110,139 @@ def test_applica_e_riga_di_comando(tmp_path, capsys):
     assert main([str(f), "--applica", str(tmp_path / "out.json")]) == 0
     assert "| C | L |" in capsys.readouterr().out
     assert network_from_dict(json.loads((tmp_path / "out.json").read_text()))
+
+
+# --- tabelle IEC 60364-5-52 -------------------------------------------------------------
+
+def test_tabelle_iec60364():
+    from iec60909 import cable_tables as tab
+
+    # B.52.4 (PVC, 3 conduttori caricati) e B.52.5 (XLPE), Cu 95 mm²: valori di riferimento
+    # dell'allegato B riportati da più trascrizioni (GOST R 50571.5.52, TiSoft, NBR 5410)
+    pvc = {"A1": 164, "A2": 150, "B1": 207, "B2": 179, "C": 223, "D1": 169, "D2": 193}
+    xlpe = {"A1": 216, "A2": 197, "B1": 269, "B2": 233, "C": 278, "D1": 197, "D2": 226}
+    for m, v in pvc.items():
+        assert tab.ampacity_table("cu", "pvc", 3, m)[95] == v
+    for m, v in xlpe.items():
+        assert tab.ampacity_table("cu", "xlpe", 3, m)[95] == v
+        assert tab.ampacity_table("cu", "epr", 3, m)[95] == v
+    # metodi E, F, G (B.52.10, B.52.12)
+    assert tab.ampacity_table("cu", "pvc", 3, "E")[95] == 238
+    assert tab.ampacity_table("cu", "pvc", 3, "F")[95] == 264
+    assert tab.ampacity_table("cu", "pvc", 3, "G")[95] == 341
+    assert tab.ampacity_table("cu", "xlpe", 3, "E")[95] == 298
+    # fattori: aria 40 °C (B.52.14), terreno 30 °C (B.52.15), resistività (B.52.16), raggruppamento
+    f = tab.correction_factors("pvc", "C", 40, None, "bunched", 3)
+    assert f == {"temperatura": 0.87, "raggruppamento": 0.7}
+    assert tab.correction_factors("xlpe", "D2", 30, 1.0, "touching", 4) == \
+        {"temperatura": 0.93, "terreno": 1.5, "raggruppamento": 0.6}
+    assert tab.correction_factors("xlpe", "D1", None, 1.0, "0.25_m", 2) == {"terreno": 1.18, "raggruppamento": 0.9}
+    # numero di circuiti non tabellato: il successivo (10 -> 12); file singola oltre 9: nessuna riduzione
+    assert tab.correction_factors("pvc", "C", None, None, "bunched", 10)["raggruppamento"] == 0.45
+    assert tab.correction_factors("pvc", "C", None, None, "single_layer_wall_floor", 15)["raggruppamento"] == 0.7
+    with pytest.raises(ValueError, match="grouping"):
+        tab.correction_factors("pvc", "C", None, None, None, 2)
+    with pytest.raises(ValueError, match="non tabellata"):
+        tab.ampacity_key("al", "pvc", 3, "Z")
+    assert 1.5 not in tab.ampacity_table("al", "pvc", 3, "A1")  # alluminio da 2,5 mm²
+    # resistenze IEC 60228 e k della tabella 43A
+    assert tab.resistance_20c("cu", 95) == 0.193 and tab.resistance_20c("al", 240) == 0.125
+    assert tab.k_factor("cu", "pvc", 240) == 115 and tab.k_factor("cu", "pvc", 400) == 103
+    assert tab.k_factor("al", "xlpe") == 94
+
+
+def test_dimensionamento_con_le_tabelle():
+    """Cu/PVC, metodo C, 40 °C, 3 circuiti raggruppati: Iz = I0·0,87·0,7 ≥ 150 A richiede
+    I0 ≥ 246,3 A: 95 mm² (223 A) non basta, 120 mm² (259 A) sì."""
+    net = _rete(ib_a=150.0, ampacity_a={}, method="C", ambient_c=40, grouping="bunched", circuits=3,
+                vdrop_max_percent=10)
+    r = size_cable(net, net.cable_sizing[0])
+    assert r.section_mm2 == 120
+    assert r.iz_a == pytest.approx(259 * 0.87 * 0.7)
+    assert r.factors == {"temperatura": 0.87, "raggruppamento": 0.7}
+    assert not r.warnings
+    # valore a confidenza ridotta: avviso (B.52.5 Al, metodo D1, 300 mm², fonti discordi 266/286 A)
+    net = _rete(ib_a=270.0, ampacity_a={}, material="al", insulation="xlpe", method="D1", vdrop_max_percent=50)
+    r = size_cable(net, net.cable_sizing[0])
+    assert r.section_mm2 == 300 and r.iz_a == 286 and "conflict_resolved" in r.warnings[0]
+
+
+# --- esempi svolti pubblicati -------------------------------------------------------------
+
+def test_esempio_motore_90kw():
+    """Power Projects India, "Cable sizing calculation – low voltage": motore 90 kW, 415 V,
+    cosφ 0,85, η 0,9, cavo 95 mm² Cu/XLPE da 120 m, R = 0,247 Ω/km, X = 0,0734 Ω/km.
+    Pubblicati: Ib 163,67 A, caduta 2,03 % in marcia e 7,10 % all'avviamento (6·Ib, cosφ 0,3),
+    sezione minima al cortocircuito 88,455 mm² (40 kA, 0,1 s, k = 143)."""
+    from iec60909.cables import min_section_short_circuit, voltage_drop_percent
+
+    ib = 90e3 / (math.sqrt(3) * 415 * 0.85 * 0.9)
+    assert ib == pytest.approx(163.67, abs=0.01)
+    # la fonte usa sinφ = 0,53 e 0,96 arrotondati: stessa convenzione per confrontare
+    assert voltage_drop_percent(ib, 0.12, 0.247, 0.0734 * 0.53 / math.sqrt(1 - 0.85**2), 0.85, 0.415) == \
+        pytest.approx(2.03, abs=0.011)
+    assert voltage_drop_percent(6 * ib, 0.12, 0.247, 0.0734 * 0.96 / math.sqrt(1 - 0.3**2), 0.3, 0.415) == \
+        pytest.approx(7.10, abs=0.011)
+    assert min_section_short_circuit(40e3, 0.1, 143) == pytest.approx(88.455, abs=5e-4)
+
+
+@pytest.mark.parametrize("sph, spe, i_n, attese", [
+    (1.5, 1.5, 10, (153, 82, 49)),
+    (2.5, 2.5, 20, (128, 68, 41)),
+    (4, 2.5, 25, (126, 67, 40)),
+    (4, 2.5, 32, (98, 52, 31)),
+    (6, 2.5, 40, (90, 48, 29)),
+    (10, 4, 50, (117, 62, 37)),
+    (16, 6, 63, (142, 76, 45)),
+    (16, 6, 80, (112, 59, 36)),
+    (25, 6, 100, (99, 53, 32)),
+    (35, 10, 125, (127, 68, 41)),
+    (50, 16, 160, (155, 83, 50)),
+    (70, 25, 200, (188, 100, 60)),
+])
+def test_lunghezza_massima_tn(sph, spe, i_n, attese):
+    """AS/NZS 3000:2018 tabella B1 (stessa formula del metodo convenzionale della guida
+    Schneider): interruttori B, C, D con Ia = 4, 7,5, 12,5·In, U0 = 230 V, rame."""
+    from iec60909.cables import max_length_tn
+
+    for mult, l_pub in zip((4, 7.5, 12.5), attese):
+        assert round(max_length_tn(230, sph, spe, mult * i_n)) == l_pub
+
+
+def test_energia_passante_del_costruttore():
+    """Sotto 0,1 s si usa l'I²t passante dichiarato (IEC 60364-4-43, 434.5.2). Rete da 10 MVA:
+    Ik ≈ 14 kA, I²·t con t = 10 ms ≈ 2·10⁶ A²s richiederebbe 16 mm²; con 40 kA²s basta la
+    sezione data dalla portata (B1, 3 conduttori caricati, In 25 A: 4 mm², 28 A)."""
+    from iec60909.network import ProtectiveDevice
+
+    net = _rete(km=0.03, skq=10.0, ib_a=18.0, ampacity_a={}, method="B1", device="MCB", i2_ratio=1.45,
+                vdrop_max_percent=10)
+    net.protective_devices.append(ProtectiveDevice("MCB", "L", "Q", "breaker", in_a=25.0, ir=1.0, tr_s=20.0,
+                                                   ii=10.0, ti_s=0.01))
+    senza = size_cable(net, net.cable_sizing[0])
+    i2t = (senza.ik_max_ka * 1000) ** 2 * 0.01
+    assert senza.section_mm2 == min(s for s in (6, 10, 16, 25) if (115 * s) ** 2 >= i2t)
+    net.cable_sizing[0].let_through_a2s = 40e3
+    con = size_cable(net, net.cable_sizing[0])
+    assert con.section_mm2 == 4 and con.iz_a == 28
+
+
+def test_esempio_cabina(tmp_path, capsys):
+    import json
+    from pathlib import Path
+
+    from iec60909.cavi import main
+
+    esempio = Path(__file__).resolve().parents[1] / "esempi" / "cavi_cabina.json"
+    assert main([str(esempio), "--json", "--applica", str(tmp_path / "rete.json")]) == 0
+    dati = {r["id"]: r for r in json.loads(capsys.readouterr().out)}
+    assert {k: (r["section_mm2"], r["pe_section_mm2"]) for k, r in dati.items()} == \
+        {"C_QD1": (185, 95), "C_M1": (120, 70), "C_IL": (10, 10)}
+    for r in dati.values():
+        assert r["ib_a"] <= r["in_a"] <= r["iz_a"] and r["vdrop_percent"] <= 4.0
+    # la rete con le sezioni applicate si ricarica e il flusso di potenza converge
+    from iec60909 import load_network, run_load_flow
+
+    net = load_network(tmp_path / "rete.json")
+    assert next(ln for ln in net.lines if ln.id == "L_M1").r1_ohm_per_km == 0.153
+    assert run_load_flow(net).converged

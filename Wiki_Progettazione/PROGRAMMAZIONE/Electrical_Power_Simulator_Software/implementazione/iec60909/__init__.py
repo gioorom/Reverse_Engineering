@@ -1,7 +1,8 @@
-"""Cortocircuito (IEC 60909-0:2016), flusso di potenza, arc flash (IEEE 1584-2018) coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento dei motori e affidabilità."""
+"""Cortocircuito (IEC 60909-0:2016), flusso di potenza, arc flash (IEEE 1584-2018) coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento dei motori, affidabilità e dimensionamento dei cavi."""
 
 from .arcflash import ArcFlashResult, CurrentStep, Enclosure, Protection, arc_flash, arc_flash_study
 from .arcflash_dc import dc_arc_flash
+from .cables import SizingResult, apply_sizing, cable_sizing_study, size_cable
 from .calc import BusResult, FaultCurrents, StudyResult, calculate, fault_currents
 from .coordination import CoordinationResult, coordination_study, trip_time_s
 from .io import load_network, network_from_dict
@@ -13,6 +14,7 @@ from .stability import StabilityResult, critical_clearing_time, simulate
 from .network import (
     ArcFlashPoint,
     Bus,
+    CableSizing,
     EarthingTransformer,
     ExternalGrid,
     Generator,
@@ -37,6 +39,7 @@ __all__ = [
     "ArcFlashPoint",
     "ArcFlashResult",
     "Bus",
+    "CableSizing",
     "CoordinationResult",
     "CurrentStep",
     "BusResult",
@@ -60,6 +63,7 @@ __all__ = [
     "ReliabilityData",
     "ReliabilityResult",
     "Shunt",
+    "SizingResult",
     "StabilityEvent",
     "StabilityResult",
     "StaticGenerator",
@@ -67,8 +71,10 @@ __all__ = [
     "Switch",
     "Transformer",
     "Transformer3W",
+    "apply_sizing",
     "arc_flash",
     "arc_flash_study",
+    "cable_sizing_study",
     "calculate",
     "coordination_study",
     "critical_clearing_time",
@@ -83,5 +89,6 @@ __all__ = [
     "run_load_flow",
     "simulate",
     "simulate_start",
+    "size_cable",
     "trip_time_s",
 ]

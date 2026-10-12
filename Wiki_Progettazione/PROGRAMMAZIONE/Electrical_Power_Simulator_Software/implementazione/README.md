@@ -206,6 +206,25 @@ o fusibili. Opzioni: `--primo-ordine` (senza sovrapposizioni),
 protezione). Metodo, validazione e limiti:
 [`../analisi/13_affidabilita.md`](../analisi/13_affidabilita.md).
 
+### Dimensionamento dei cavi
+
+```bash
+python -m iec60909.cavi esempi/cavi_cabina.json
+python -m iec60909.cavi rete.json --applica rete_dimensionata.json   # salva le sezioni scelte
+```
+
+Sezione `cable_sizing`: `id`, `line`, `ib_a` e `cos_phi` (default dal flusso di
+potenza), `material` (`cu`, `al`), `insulation` (`pvc`, `xlpe`, `epr`),
+`method` (A1, A2, B1, B2, C, D1, D2, E, F, G), `loaded_conductors`,
+`arrangement`, `ambient_c`, `soil_resistivity_km_w`, `grouping`, `circuits`,
+`cores`, `k_extra`, `ampacity_a` (tabella propria), `sections`,
+`max_parallel`, `device` o `in_a` con `i2_ratio`, `vdrop_max_percent`,
+`upstream_drop_percent`, `x_ohm_per_km`, `pe_section_mm2`, `t_sc_s`,
+`let_through_a2s`, `disconnection_time_s`. Portate e fattori dalla
+IEC 60364-5-52 allegato B, con fonti e confidenza di ogni valore in
+`strumenti/dati/iec60364_5_52.json`. Metodo, fonti, validazione e limiti:
+[`../analisi/14_dimensionamento_cavi.md`](../analisi/14_dimensionamento_cavi.md).
+
 ## Risultati per nodo (cortocircuito)
 
 | Grandezza | Significato |
@@ -376,6 +395,8 @@ python -m pytest
   `tests/test_arcflash_estensioni.py`: Lee, corrente continua (calcoli a
   mano), scelta di Ibf, calcolo a più intervalli (confronto con
   arcflash-calc `multistep_E_and_AFB`), fusibili e avvisi sotto 240 V.
+- `tests/test_cavi.py`: dimensionamento dei cavi, calcoli a mano, tabelle IEC 60364-5-52,
+  esempi pubblicati (motore 90 kW, lunghezze massime TN di AS/NZS 3000).
 - `tests/test_affidabilita.py`: affidabilità, RBTS Bus 2 (indici pubblicati),
   calcoli a mano, secondo ordine contro Markov e Monte Carlo.
 - `tests/test_avviamento.py`: avviamento dei motori, stima del circuito,

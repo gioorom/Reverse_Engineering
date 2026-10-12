@@ -11,6 +11,15 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Dimensionamento dei cavi BT in `iec60909.cables`, riga di comando
+  `python -m iec60909.cavi`: portata con le tabelle dell'allegato B della
+  IEC 60364-5-52 e i fattori di correzione (temperatura, terreno,
+  raggruppamento), coordinamento con la protezione, caduta di tensione,
+  tenuta al cortocircuito (anche del conduttore di protezione) e
+  interruzione automatica nei sistemi TN con le correnti IEC 60909, conduttori
+  in parallelo, applicazione delle sezioni alla rete; tabelle da trascrizioni
+  pubbliche con fonti e confidenza di ogni valore; verifica con calcoli a mano
+  ed esempi pubblicati. Nuova funzione `io.network_to_dict`.
 - Affidabilità in `iec60909.reliability`, riga di comando
   `python -m iec60909.affidabilita`: analisi dei modi di guasto con
   intervento delle protezioni, sezionamento e contro-alimentazione dai punti
