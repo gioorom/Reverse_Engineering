@@ -17,7 +17,10 @@ def _check_zero_sequence(
 
 def _reject_zigzag(owner: str, vector_group: str) -> None:
     if "Z" in vector_group.upper():
-        raise ValueError(f"{owner}: avvolgimenti a zig-zag non ancora supportati ({vector_group})")
+        raise ValueError(
+            f"{owner}: avvolgimenti a zig-zag supportati solo nei trasformatori a due "
+            f"avvolgimenti ({vector_group})"
+        )
 
 
 @dataclass
@@ -169,6 +172,20 @@ class Motor:
 
 
 @dataclass
+class EarthingTransformer:
+    """Trasformatore di messa a terra (es. zig-zag) collegato a un nodo.
+
+    Interviene solo in sequenza zero: derivazione verso terra di impedenza
+    omopolare per fase `z0_ohm` ([R, X] in Ω) più 3·`zn_ohm` (impedenza di neutro).
+    """
+
+    id: str
+    bus: str
+    z0_ohm: tuple[float, float]
+    zn_ohm: complex = 0.0
+
+
+@dataclass
 class StaticGenerator:
     """Generatore statico (IEC 60909-0, 6.9).
 
@@ -205,6 +222,7 @@ class Network:
     generators: list[Generator] = field(default_factory=list)
     motors: list[Motor] = field(default_factory=list)
     static_generators: list[StaticGenerator] = field(default_factory=list)
+    earthing_transformers: list[EarthingTransformer] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}
@@ -227,7 +245,6 @@ class Network:
             if t.urr_percent >= t.ukr_percent:
                 raise ValueError(f"{t.id}: urr deve essere minore di ukr")
             _check_zero_sequence(t.id, t.uk0_percent, t.ur0_percent, t.ukr_percent, t.urr_percent)
-            _reject_zigzag(t.id, t.vector_group)
         for t in self.transformers3w:
             for bus in (t.hv_bus, t.mv_bus, t.lv_bus):
                 check(bus, t.id)
@@ -266,6 +283,10 @@ class Network:
             units.add(t.id)
         for m in self.motors:
             check(m.bus, m.id)
+        for et in self.earthing_transformers:
+            check(et.bus, et.id)
+            if len(et.z0_ohm) != 2 or et.z0_ohm[0] < 0 or et.z0_ohm[1] <= 0:
+                raise ValueError(f"{et.id}: z0_ohm deve essere [R >= 0, X > 0]")
         for sg in self.static_generators:
             check(sg.bus, sg.id)
             if sg.kind == "PF":

@@ -60,7 +60,7 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
 - `external_grids`: `id`, `bus`, `skq_max_mva`, `rx_max`, `skq_min_mva`, `rx_min`,
   `x0x1` e `r0x0` (sequenza zero; se assenti la rete non dà corrente omopolare)
 - `transformers`: `id`, `hv_bus`, `lv_bus`, `sr_mva`, `ur_hv_kv`, `ur_lv_kv`,
-  `ukr_percent`, `urr_percent`, `vector_group` (es. `Dyn11`, `YNd5`, `YNyn0`),
+  `ukr_percent`, `urr_percent`, `vector_group` (es. `Dyn11`, `YNd5`, `YNyn0`, `Dzn0`, `ZNyn11`),
   `uk0_percent`, `ur0_percent` (default = valori diretti), `zn_hv_ohm`, `zn_lv_ohm`
   (impedenza di neutro, numero o `[R, X]`), `parallel`
 - `transformers3w` (tre avvolgimenti): `id`, `hv_bus`, `mv_bus`, `lv_bus`,
@@ -82,6 +82,8 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
   generazione: `unit_transformer` (id del trasformatore elevatore, lato BT sul
   nodo del generatore), `oltc` (variatore sotto carico, default vero),
   `pg_percent`, `pt_percent`
+- `earthing_transformers` (messa a terra, es. zig-zag): `id`, `bus`, `z0_ohm`
+  (`[R, X]` omopolare per fase), `zn_ohm`
 - `static_generators`: `id`, `bus`, `kind` (`PF` convertitore pieno con
   `ikss_ka`, corrente iniziale massima riferita alla tensione del nodo; `WD`
   eolico a doppia alimentazione con `kappa_wd`, `i_wd_max_ka`, `rx`, `ur_kv`),

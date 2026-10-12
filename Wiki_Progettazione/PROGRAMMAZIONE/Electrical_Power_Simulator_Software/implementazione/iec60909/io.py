@@ -10,6 +10,7 @@ from typing import Any
 from .calc import StudyResult
 from .network import (
     Bus,
+    EarthingTransformer,
     ExternalGrid,
     Generator,
     Line,
@@ -29,6 +30,7 @@ _SECTIONS = {
     "generators": Generator,
     "motors": Motor,
     "static_generators": StaticGenerator,
+    "earthing_transformers": EarthingTransformer,
 }
 
 

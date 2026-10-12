@@ -76,7 +76,7 @@ class StudyResult:
 def _parse_vector_group(group: str) -> tuple[str, str]:
     g = group.strip().rstrip("0123456789")
     upper = g.upper()
-    for hv in ("YN", "Y", "D", "Z"):
+    for hv in ("YN", "ZN", "Y", "D", "Z"):
         if upper.startswith(hv):
             lv = upper[len(hv):]
             if lv in ("YN", "Y", "D", "ZN", "Z"):
@@ -311,13 +311,28 @@ class _Builder:
             hv, lv = _parse_vector_group(t.vector_group)
             zn_hv = 3.0 * complex(t.zn_hv_ohm) / self.zbase(t.hv_bus)
             zn_lv = 3.0 * complex(t.zn_lv_ohm) / self.zbase(t.lv_bus)
-            if hv == "YN" and lv == "YN":
+            if "ZN" in (hv, lv):
+                # Avvolgimento a zig-zag con neutro: la corrente omopolare si chiude
+                # nelle due metà dell'avvolgimento stesso, quindi è una derivazione
+                # verso terra sul suo nodo (Z0 del trasformatore + 3·Zn) e i due lati
+                # sono disaccoppiati in sequenza zero.
+                if hv == "ZN":
+                    shunt(t.hv_bus, (z0 * ratio**2 + zn_hv) / t.parallel)
+                if lv == "ZN":
+                    shunt(t.lv_bus, (z0 + zn_lv) / t.parallel)
+            elif hv == "YN" and lv == "YN":
                 branch(t.hv_bus, t.lv_bus, (z0 + zn_lv + zn_hv / ratio**2) / t.parallel, ratio)
             elif hv == "YN" and lv == "D":
                 shunt(t.hv_bus, (z0 * ratio**2 + zn_hv) / t.parallel)
             elif hv == "D" and lv == "YN":
                 shunt(t.lv_bus, (z0 + zn_lv) / t.parallel)
-            # Altri gruppi (Yy, Yyn, YNy, Dd, Dy, Yd, ...): sequenza zero interrotta.
+            # Altri gruppi (Yy, Yyn, YNy, Dd, Dy, Yd, Z senza neutro, ...): sequenza
+            # zero interrotta.
+
+        if seq == 0:
+            # trasformatori di messa a terra (zig-zag o YNd dedicati)
+            for et in self.net.earthing_transformers:
+                shunt(et.bus, (complex(*et.z0_ohm) + 3.0 * complex(et.zn_ohm)) / self.zbase(et.bus))
 
         for t in self.net.transformers3w:
             star = _star_node(t)

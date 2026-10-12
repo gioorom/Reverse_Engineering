@@ -4,6 +4,7 @@ from .calc import BusResult, StudyResult, calculate
 from .io import load_network, network_from_dict
 from .network import (
     Bus,
+    EarthingTransformer,
     ExternalGrid,
     Generator,
     Line,
@@ -17,6 +18,7 @@ from .network import (
 __all__ = [
     "Bus",
     "BusResult",
+    "EarthingTransformer",
     "ExternalGrid",
     "Generator",
     "Line",

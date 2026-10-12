@@ -69,22 +69,15 @@ Codice: [`../implementazione/iec60909/`](../implementazione/iec60909/).
   Esclusi dal calcolo delle correnti minime.
 - **Linee, caso minimo**: R a fine guasto, k_θ = 1 + 0,004·(θe − 20 °C).
 - **Gruppi vettoriali (sequenza zero)**: YNyn → ramo serie; YNd → derivazione
-  lato AT; Dyn → derivazione lato BT; altri gruppi → sequenza zero interrotta.
-
-## Correnti di guasto
-
-| Guasto | Formula |
-|---|---|
-| Trifase | I"k3 = c·Un / (√3·\|Z1\|) |
-| Bifase isolato | I"k2 = c·Un / \|Z1 + Z2\| |
-| Monofase a terra | I"k1 = √3·c·Un / \|Z1 + Z2 + Z0\| |
-| Bifase a terra (verso terra) | I"kE2E = √3·c·Un·\|Z2\| / \|Z1·Z2 + Z1·Z0 + Z2·Z0\| |
-
-Le correnti nelle fasi guaste del bifase a terra sono calcolate con le
-componenti simmetriche.
-
-### Generatori statici
-
+  lato AT; Dyn → derivazione lato BT; avvolgimento a zig-zag con neutro (ZN,
+  es. Dzn, YNzn, ZNd, ZNyn) → derivazione verso terra sul suo lato con Z0 del
+  trasformatore + 3·Zn, lati disaccoppiati (lo zig-zag compensa gli
+  amperspire omopolari, quindi l'altro avvolgimento non riceve omopolare
+  attraverso il trasformatore); in sequenza diretta e inversa lo zig-zag si
+  comporta come una stella; altri gruppi (Yy, Yyn, Dd, Z senza neutro, …) →
+  sequenza zero interrotta.
+- **Trasformatori di messa a terra** (`earthing_transformers`, es. zig-zag su
+  una rete a neutro isolato): solo in sequenza zero, derivazione Z0 + 3·Zn.
 - **Convertitore pieno** (fotovoltaico, eolico full converter, accumuli;
   `kind = "PF"`): sorgente di corrente di sequenza diretta con I"k_PF
   massima data dal costruttore. Nel punto di guasto k la tensione
@@ -192,7 +185,8 @@ per bifase e monofase.
 
 ## Limiti (non ancora implementati)
 
-- Avvolgimenti a zig-zag (rifiutati con un errore esplicito).
+- Avvolgimenti a zig-zag nei trasformatori a tre avvolgimenti (rifiutati con
+  un errore esplicito).
 - Gruppi di generazione: trasformatori ausiliari e guasti sul lato dei
   servizi ausiliari.
 - Fattore n della corrente termica per guasti vicini ai generatori (n = 1).

@@ -154,8 +154,8 @@ def test_esempio_e_validazione_input():
 def test_dati_omopolari_e_zigzag_non_validi():
     with pytest.raises(ValueError, match="ur0 deve essere minore di uk0"):
         calculate(_cabina(uk0_percent=1.0, ur0_percent=2.0))
-    with pytest.raises(ValueError, match="zig-zag"):
-        calculate(_cabina(vector_group="Dzn0"))
+    # lo zig-zag è supportato nei trasformatori a due avvolgimenti
+    assert calculate(_cabina(vector_group="Dzn0")).bus("BT").ikss1_ka > 0
 
 
 def test_generatore_con_neutro_a_terra():
