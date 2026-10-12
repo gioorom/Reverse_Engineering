@@ -172,3 +172,25 @@ def test_convertitore_pieno():
     for b in result.buses:
         assert b.ikss3_ka == pytest.approx(ref[b.bus].ikss_ka, rel=REL), b.bus
         assert b.ip3_ka == pytest.approx(ref[b.bus].ip_ka, rel=REL), b.bus
+
+
+def _rami_poco_resistivi():
+    """RETE_MAGLIATA con linee a R/X < 0,3: tutti i rami hanno R/X < 0,3."""
+    data = copy.deepcopy(RETE_MAGLIATA)
+    for ln in data["lines"]:
+        ln["r1_ohm_per_km"] = 0.2 * ln["x1_ohm_per_km"]  # 0,256 a fine guasto (caso minimo)
+    return data
+
+
+@pytest.mark.parametrize("case", ["max", "min"])
+def test_metodo_b_deroga_rx_minore_di_0_3(case):
+    """Con R/X < 0,3 in tutti i rami il fattore 1,15 non si applica. pandapower
+    (topologia "auto") omette 1,15 se almeno un percorso ha R/X < 0,3: con tutti
+    i rami sotto 0,3 i due criteri coincidono."""
+    data = _rami_poco_resistivi()
+    result = calculate(network_from_dict(data), case, "B")
+    ref = run(data, "3ph", case, topology="auto", ip=True, kappa_method="B")
+    meshed = run(data, "3ph", case, ip=True, kappa_method="B")
+    for b in result.buses:
+        assert b.ip3_ka == pytest.approx(ref[b.bus].ip_ka, rel=REL), b.bus
+        assert b.ip3_ka < meshed[b.bus].ip_ka  # senza la deroga: 1,15·κ

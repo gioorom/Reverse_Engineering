@@ -11,6 +11,8 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Deroga del metodo B in `iec60909`: senza il fattore 1,15 quando tutti i
+  rami hanno R/X < 0,3; confronto con pandapower.
 - Fattore n della corrente termica equivalente Ith in `iec60909`
   (decadimento della componente alternata per i guasti alimentati da un solo
   generatore).

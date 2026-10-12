@@ -139,8 +139,15 @@ ip = κ·√2·I"k, con κ = 1,02 + 0,98·e^(−3R/X). Lo stesso κ del trifase 
 per bifase e monofase.
 
 - **Metodo B**: κ dal rapporto R/X di Z1 nel punto di guasto, moltiplicato per
-  1,15 e limitato a 1,8 (BT) o 2,0 (MT/AT). Cautelativo: il fattore 1,15 è
-  applicato sempre.
+  1,15 e limitato a 1,8 (BT) o 2,0 (MT/AT). Deroga della norma: se R/X < 0,3
+  in tutti i rami il fattore 1,15 non si applica. Sono rami tutti gli elementi
+  della rete in sequenza diretta (linee, trasformatori, reti esterne,
+  generatori, motori, generatori eolici WD), con le resistenze del caso di
+  calcolo (nel caso minimo R delle linee a fine guasto) e l'eventuale
+  impedenza di guasto. pandapower (topologia "auto") omette 1,15 se almeno un
+  percorso verso la sorgente ha R/X < 0,3: criterio meno cautelativo, che
+  coincide con quello della norma quando tutti i rami sono sotto 0,3
+  (confronto in `test_pandapower.py`).
 - **Metodo C** (predefinito): frequenza equivalente fc = 20 Hz (50 Hz) o
   24 Hz (60 Hz); R/X = (Rc/Xc)·(fc/f), dove Zc è calcolata con le reattanze
   scalate di fc/f.
@@ -210,6 +217,8 @@ per bifase e monofase.
   2. con κ = 2 (metodo B al limite) pandapower restituisce Ith = I"k (m = 0)
      invece del limite corretto m = 2.
 
-## Limiti (non ancora implementati)
+## Limiti
 
-- Metodo B senza la deroga per R/X < 0,3 in tutti i rami.
+Tutte le funzioni elencate come limiti nelle versioni precedenti sono
+implementate. Il fattore n della corrente termica è ricostruito dalla
+definizione (vedi sopra) e va confrontato con l'all. A della norma.

@@ -96,10 +96,10 @@ def to_pandapower(data):
     return net, ids
 
 
-def run(data, fault, case, **kwargs):
+def run(data, fault, case, topology="meshed", **kwargs):
     from pandapower.shortcircuit import calc_sc
 
     net, ids = to_pandapower(data)
     calc_sc(net, fault=fault, case=case, lv_tol_percent=data.get("lv_tolerance_percent", 6),
-            topology="meshed", **kwargs)
+            topology=topology, **kwargs)
     return {name: net.res_bus_sc.loc[idx] for name, idx in ids.items()}

@@ -271,8 +271,13 @@ class _Builder:
         n = len(self.idx)
         y = np.zeros((n, n), dtype=complex)
         grounded = np.zeros(n, dtype=bool)
+        if seq == 1 and x_scale == 1.0 and motors:
+            self.max_rx = 0.0  # R/X massimo dei rami (deroga del metodo B)
 
         def scale(z: complex) -> complex:
+            if seq == 1 and x_scale == 1.0 and motors:
+                rx = z.real / z.imag if z.imag > 0 else math.inf
+                self.max_rx = max(self.max_rx, rx)
             return complex(z.real, z.imag * x_scale)
 
         def shunt(bus: str, z: complex) -> None:
@@ -487,6 +492,10 @@ def _calculate(
     b = _Builder(net, case, warnings, inside_unit)
 
     z1_full = _full_z(b.build(1))
+    rx_rami = b.max_rx
+    if zf_ohm:
+        # l'impedenza di guasto è in serie al percorso della corrente: conta come ramo
+        rx_rami = max(rx_rami, zf_ohm.real / zf_ohm.imag if zf_ohm.imag > 0 else math.inf)
     z1 = np.diag(z1_full).copy()
     isolated = [net.buses[i].id for i in np.nonzero(~np.isfinite(z1[: len(net.buses)]))[0]]
     if isolated:
@@ -548,7 +557,9 @@ def _calculate(
             k = factors.kappa(zci.real / zci.imag * fc / net.f_hz)
         else:
             k_limit = 1.8 if bus.un_kv <= factors.LV_LIMIT_KV else 2.0
-            k = min(1.15 * factors.kappa(z1i.real / z1i.imag), k_limit)
+            # deroga: con R/X < 0,3 in tutti i rami il fattore 1,15 non serve
+            k_b = 1.0 if rx_rami < 0.3 else 1.15
+            k = min(k_b * factors.kappa(z1i.real / z1i.imag), k_limit)
         # picco: κ solo sulla quota della rete, i convertitori non hanno componente continua
         peak = math.sqrt(2.0) * (k * share + (1.0 - share))
         ip3 = peak * ik3
