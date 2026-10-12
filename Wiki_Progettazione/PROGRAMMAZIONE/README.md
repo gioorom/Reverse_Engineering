@@ -21,4 +21,4 @@ repository: nel README del progetto annota solo dove si trovano e la versione.
 
 | Progetto | Target | Stato |
 | -------- | ------ | ----- |
-| —        | —      | —     |
+| [ETAP_Power_Simulator](ETAP_Power_Simulator/) | ETAP Power Simulator (Windows) | Obiettivo da definire |
