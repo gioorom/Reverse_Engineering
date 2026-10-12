@@ -1,10 +1,24 @@
 # Istruzioni per Claude
 
-- Lingua di lavoro: italiano.
-- Cartella di lavoro principale: `Wiki_Progettazione/PROGRAMMAZIONE/`.
-  Crea lì file e sottocartelle, salvo diversa indicazione.
-- Strumento di reverse engineering: REA (`rea-agents`), registrato come server
-  MCP in `.mcp.json`. Usa la CLI `rea` (o `npx -y rea-agents@6.4.0 <comando>`)
-  quando gli strumenti MCP non sono disponibili.
-- Non versionare binari, eseguibili o archivi da analizzare (vedi `.gitignore`):
-  i risultati delle analisi vanno documentati in Markdown dentro `PROGRAMMAZIONE`.
+Lingua di lavoro: italiano.
+
+## Flusso di lavoro
+
+1. L'utente fornisce qualcosa da analizzare (applicazione, file, sito, funzionalità).
+2. Crea una sottocartella dedicata in `Wiki_Progettazione/PROGRAMMAZIONE/`
+   (nome: il programma, es. `Wiki_Progettazione/PROGRAMMAZIONE/NomeProgramma/`)
+   partendo da `_MODELLO_PROGETTO/`, e lavora solo lì.
+3. Mentre lavori, carica i progressi su GitHub (`gioorom/Reverse_Engineering`):
+   commit e push a ogni passo significativo (analisi completata, conclusione,
+   pezzo di implementazione), non solo alla fine.
+4. Aggiorna la tabella "Progetti" in `Wiki_Progettazione/PROGRAMMAZIONE/README.md`.
+
+## Strumenti
+
+- Reverse engineering: REA (`rea-agents`), registrato come server MCP in
+  `.mcp.json`. Se gli strumenti MCP non sono disponibili usa la CLI `rea`
+  (o `npx -y rea-agents@6.4.0 <comando>`).
+- Non versionare binari, eseguibili, installer o archivi da analizzare
+  (vedi `.gitignore`): tienili fuori dal repository (in una sessione cloud,
+  nella scratchpad) e documenta nel README del progetto da dove provengono e
+  la versione.
