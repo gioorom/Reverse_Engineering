@@ -225,6 +225,21 @@ IEC 60364-5-52 allegato B, con fonti e confidenza di ogni valore in
 `strumenti/dati/iec60364_5_52.json`. Metodo, fonti, validazione e limiti:
 [`../analisi/14_dimensionamento_cavi.md`](../analisi/14_dimensionamento_cavi.md).
 
+### Portate dei cavi MT/AT (IEC 60287)
+
+```bash
+python -m iec60909.portate_mt rete.json
+```
+
+Sezione `cable_ratings`: `id`, `cable` (costruzione per strati: conduttore,
+semiconduttori, isolante, schermo a fili, nastro o guaina, letto, guaina
+esterna) e `installation` (`kind` `buried`, `ducts` o `air`, `formation`
+`trefoil` o `flat`, `transposed`, profondità, interasse, terreno, `bonding`,
+tubi, coefficienti dell'aria, canaletta, altri cavi vicini). Nel
+dimensionamento, `ratings` elenca le voci da usare come portate per sezione.
+Metodo, validazione sui casi CIGRE TB 880 e limiti:
+[`../analisi/15_portate_cavi_mt.md`](../analisi/15_portate_cavi_mt.md).
+
 ## Risultati per nodo (cortocircuito)
 
 | Grandezza | Significato |
@@ -395,6 +410,7 @@ python -m pytest
   `tests/test_arcflash_estensioni.py`: Lee, corrente continua (calcoli a
   mano), scelta di Ibf, calcolo a più intervalli (confronto con
   arcflash-calc `multistep_E_and_AFB`), fusibili e avvisi sotto 240 V.
+- `tests/test_portate_mt.py`: portate IEC 60287 sui casi della CIGRE TB 880.
 - `tests/test_cavi.py`: dimensionamento dei cavi, calcoli a mano, tabelle IEC 60364-5-52,
   esempi pubblicati (motore 90 kW, lunghezze massime TN di AS/NZS 3000).
 - `tests/test_affidabilita.py`: affidabilità, RBTS Bus 2 (indici pubblicati),

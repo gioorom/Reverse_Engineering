@@ -11,6 +11,13 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Portate dei cavi MT/AT secondo IEC 60287 in `iec60909.iec60287`, riga di
+  comando `python -m iec60909.portate_mt`: cavi unipolari descritti per
+  strati, resistenza in c.a., perdite dielettriche e negli schermi (correnti
+  di circolazione e parassite, trifoglio e piano con o senza trasposizione),
+  posa interrata, in tubi e in aria (anche in canaletta), mutuo riscaldamento,
+  portata del cavo più caldo; collegamento al dimensionamento dei cavi;
+  verifica sui casi della CIGRE TB 880.
 - Dimensionamento dei cavi BT in `iec60909.cables`, riga di comando
   `python -m iec60909.cavi`: portata con le tabelle dell'allegato B della
   IEC 60364-5-52 e i fattori di correzione (temperatura, terreno,

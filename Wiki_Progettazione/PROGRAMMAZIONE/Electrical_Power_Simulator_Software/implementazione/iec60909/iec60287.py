@@ -41,6 +41,8 @@ class CableConstruction:
     conductor_screen_mm: float = 0.0
     insulation_mm: float = 5.5
     insulation_screen_mm: float = 0.0
+    under_screen_mm: float = 0.0  # nastri tra semiconduttore esterno e schermo (parte di T1)
+    under_screen_rho_t: float = 6.0
     insulation_eps: float = 2.5  # IEC 60287-1-1 tabella 3, XLPE
     insulation_tan_delta: float = 0.004  # XLPE fino a 18/30 kV (0,001 oltre)
     insulation_rho_t: float = 3.5  # K·m/W
@@ -49,19 +51,22 @@ class CableConstruction:
     screen_material: str = "cu"
     screen_area_mm2: Optional[float] = None  # fili/nastro; per la guaina π·d·t
     screen_thickness_mm: float = 0.5  # spessore dello strato (diametro dei fili)
+    screen_lay_factor: float = 1.0  # lunghezza effettiva dei fili per metro di cavo (cordatura)
     bedding_mm: float = 0.0
     bedding_rho_t: float = 6.0
     oversheath_mm: float = 3.0
     oversheath_rho_t: float = 3.5
     max_temperature_c: float = 90.0
-    t1_factor: float = 1.0
-    t3_factor: Optional[float] = None  # default: 1,6 a trifoglio interrato a contatto (IEC 60287-2-1, 4.2.4.3.2)
+    # fattori su T1 e T3 (None: automatici per il trifoglio interrato a contatto, IEC 60287-2-1
+    # 4.2.4.3: T3 × 1,6; con schermo a fili e U0 ≤ 35 kV anche T1 × 1,07, edizione 2023)
+    t1_factor: Optional[float] = None
+    t3_factor: Optional[float] = None
 
     def diameters_mm(self) -> dict[str, float]:
         dc = self.conductor_diameter_mm
         d1 = dc + 2 * self.conductor_screen_mm
         di = d1 + 2 * self.insulation_mm
-        d3 = di + 2 * self.insulation_screen_mm
+        d3 = di + 2 * self.insulation_screen_mm + 2 * self.under_screen_mm
         ds = d3 + 2 * self.screen_thickness_mm
         da = ds + 2 * self.bedding_mm
         de = da + 2 * self.oversheath_mm
@@ -176,7 +181,7 @@ def _screen_area_m2(c: CableConstruction) -> float:
 
 
 def screen_resistance(c: CableConstruction, theta_s: float) -> float:
-    rs0 = RHO_20[c.screen_material] / _screen_area_m2(c)
+    rs0 = RHO_20[c.screen_material] / _screen_area_m2(c) * c.screen_lay_factor
     return rs0 * (1.0 + ALPHA_20[c.screen_material] * (theta_s - 20.0))
 
 
@@ -254,17 +259,28 @@ def screen_loss_factors(c: CableConstruction, inst: Installation, r_ac: float,
     return lam_circ, lam_eddy, notes
 
 
-def t1_insulation(c: CableConstruction) -> float:
-    """T1 per strati: semiconduttore interno, isolante, semiconduttore esterno (IEC 60287-2-1, 4.1.2.1)."""
+def _trefoil_touching_buried(inst: Installation) -> bool:
+    return inst.kind == "buried" and inst.formation == "trefoil" and inst.spacing_mm is None
+
+
+def t1_insulation(c: CableConstruction, inst: Optional[Installation] = None) -> float:
+    """T1 per strati: semiconduttore interno, isolante, semiconduttore esterno, nastri sotto lo
+    schermo (IEC 60287-2-1, 4.1.2.1)."""
     rho_sc = c.semicon_rho_t if c.semicon_rho_t is not None else c.insulation_rho_t
     d = c.diameters_mm()
+    d_is = d["insulation"] + 2 * c.insulation_screen_mm
     t = 0.0
     for rho, thick, under in ((rho_sc, c.conductor_screen_mm, d["conductor"]),
                               (c.insulation_rho_t, c.insulation_mm, d["conductor_screen"]),
-                              (rho_sc, c.insulation_screen_mm, d["insulation"])):
+                              (rho_sc, c.insulation_screen_mm, d["insulation"]),
+                              (c.under_screen_rho_t, c.under_screen_mm, d_is)):
         if thick > 0:
             t += rho / (2.0 * math.pi) * math.log(1.0 + 2.0 * thick / under)
-    return t * c.t1_factor
+    factor = c.t1_factor
+    if factor is None:
+        wires = inst is not None and _trefoil_touching_buried(inst) and c.screen_kind == "wires" and inst.u0_kv <= 35
+        factor = 1.07 if wires else 1.0
+    return t * factor
 
 
 def t2_bedding(c: CableConstruction) -> float:
@@ -279,8 +295,7 @@ def t3_oversheath(c: CableConstruction, inst: Installation) -> float:
     t3 = c.oversheath_rho_t / (2.0 * math.pi) * math.log(1.0 + 2.0 * c.oversheath_mm / d["under_oversheath"])
     factor = c.t3_factor
     if factor is None:
-        touching = inst.kind == "buried" and inst.formation == "trefoil" and inst.spacing_mm is None
-        factor = 1.6 if touching else 1.0
+        factor = 1.6 if _trefoil_touching_buried(inst) else 1.0
     return t3 * factor
 
 
@@ -354,7 +369,7 @@ def rating(c: CableConstruction, inst: Installation, max_iter: int = 500, tol: f
     ambient = inst.air_temperature_c if inst.kind == "air" else inst.soil_temperature_c
     r, ys, yp = ac_resistance(c, inst, theta)
     wd = dielectric_loss(c, inst)
-    t1, t2, t3 = t1_insulation(c), t2_bedding(c), t3_oversheath(c, inst)
+    t1, t2, t3 = t1_insulation(c, inst), t2_bedding(c), t3_oversheath(c, inst)
     de = c.diameters_mm()["outer"]
     t4_ext = t4_external(c, inst) if inst.kind != "air" else [0.0] * 3
     t4_duct = 0.0

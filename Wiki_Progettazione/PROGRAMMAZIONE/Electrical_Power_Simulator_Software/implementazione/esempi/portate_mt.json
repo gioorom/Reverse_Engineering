@@ -1,0 +1,15 @@
+{
+  "name": "Cavi MT 12/20 kV in alluminio, posa interrata a trifoglio",
+  "buses": [],
+  "cable_ratings": [
+    {"id": "ARE4H5E_1x185", "cable": {"conductor_material": "al", "area_mm2": 185, "conductor_diameter_mm": 15.9,
+      "conductor_screen_mm": 0.5, "insulation_mm": 5.5, "insulation_screen_mm": 0.5, "screen_kind": "tape",
+      "screen_material": "al", "screen_area_mm2": 20, "screen_thickness_mm": 0.3, "oversheath_mm": 2.5},
+     "installation": {"kind": "buried", "formation": "trefoil", "depth_m": 0.8, "soil_rho_t": 1.5, "u0_kv": 11.547}},
+    {"id": "ARE4H5E_1x185_tubo", "cable": {"conductor_material": "al", "area_mm2": 185, "conductor_diameter_mm": 15.9,
+      "conductor_screen_mm": 0.5, "insulation_mm": 5.5, "insulation_screen_mm": 0.5, "screen_kind": "tape",
+      "screen_material": "al", "screen_area_mm2": 20, "screen_thickness_mm": 0.3, "oversheath_mm": 2.5},
+     "installation": {"kind": "ducts", "formation": "trefoil", "depth_m": 0.8, "soil_rho_t": 1.5, "u0_kv": 11.547,
+       "duct_inner_mm": 94, "duct_outer_mm": 110}}
+  ]
+}

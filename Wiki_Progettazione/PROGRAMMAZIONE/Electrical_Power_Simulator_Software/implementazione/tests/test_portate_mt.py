@@ -122,3 +122,29 @@ def test_piano_trasposto_e_simmetria():
             assert lam[0] == lam[1] == lam[2]
         else:
             assert lam[1] < min(lam[0], lam[2])
+
+
+def test_cigre_tb880_caso_4_schermo_a_fili():
+    """Caso 4 (TB 880 §8, pp. 195-205): 33 kV, 240 mm² Cu, XLPE 7,7 mm, schermo a fili di rame
+    35,63 mm² su un nastro da 0,5 mm (ρ 6), trifoglio interrato a contatto a 1 m, 20 °C, 1 K·m/W.
+    IEC 60287-2-1:2023: T1 × 1,07 (schermo a fili, U0 ≤ 35 kV) e T3 × 1,6. Dalla brochure
+    (citata dalla suite CableSketch): T1 = 0,4110322351, T3 = 0,1241941899, I = 537,4631 A.
+    La guaina esterna è descritta in CIGRE in tre sottostrati: qui uno solo con la resistività
+    equivalente che dà il T3 base pubblicato (0,0776213687). La resistenza dei fili non tiene
+    conto della cordatura (passo non disponibile): portata entro lo 0,2 %."""
+    rho_eq = 0.0776213687 * 2 * math.pi / math.log(44.0 / 38.6)
+    c = CableConstruction(area_mm2=240, conductor_diameter_mm=18.4, r20_ohm_per_km=0.0754, conductor_screen_mm=0.5,
+                          insulation_mm=7.7, insulation_screen_mm=0.5, under_screen_mm=0.5, under_screen_rho_t=6.0,
+                          semicon_rho_t=2.5, screen_kind="wires", screen_area_mm2=35.63, screen_thickness_mm=0.9,
+                          oversheath_mm=2.7, oversheath_rho_t=rho_eq)
+    assert c.diameters_mm()["outer"] == pytest.approx(44.0)
+    r = rating(c, Installation(u0_kv=33 / math.sqrt(3)))
+    assert r.t1 == pytest.approx(0.4110322351, abs=2e-5)
+    assert r.t3 == pytest.approx(0.1241941899, abs=1e-9)
+    assert r.t4 == pytest.approx(1.8525, abs=1e-4)
+    assert r.ys == pytest.approx(0.00884, abs=5e-6) and r.yp == pytest.approx(0.00662, abs=5e-6)
+    assert r.wd_w_per_m == pytest.approx(0.1084, abs=1e-4)
+    assert r.current_a == pytest.approx(537.4631099368, rel=2e-3)
+    # senza i fattori dell'edizione 2023 la portata sale
+    c.t1_factor, c.t3_factor = 1.0, 1.6
+    assert rating(c, Installation(u0_kv=33 / math.sqrt(3))).current_a > r.current_a

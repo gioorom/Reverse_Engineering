@@ -1,7 +1,7 @@
 [project]
 name = "iec60909"
 version = "0.1.0"
-description = "Cortocircuito IEC 60909-0:2016, flusso di potenza, arc flash IEEE 1584-2018, coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento dei motori, affidabilità e dimensionamento dei cavi"
+description = "Cortocircuito IEC 60909-0:2016, flusso di potenza, arc flash IEEE 1584-2018, coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento dei motori, affidabilità, dimensionamento dei cavi e portate MT (IEC 60287)"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = ["numpy>=1.24"]
@@ -19,6 +19,7 @@ iec60909-armoniche = "iec60909.armoniche:main"
 iec60909-avviamento = "iec60909.avviamento:main"
 iec60909-affidabilita = "iec60909.affidabilita:main"
 iec60909-cavi = "iec60909.cavi:main"
+iec60909-portate-mt = "iec60909.portate_mt:main"
 
 [build-system]
 requires = ["setuptools>=77"]

@@ -9,7 +9,7 @@ pubbliche (nessuna decompilazione di software commerciale).
 Moduli: calcolo delle correnti di cortocircuito secondo IEC 60909-0:2016,
 flusso di potenza (Newton-Raphson), arc flash secondo IEEE 1584-2018 ,
 coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento
-dei motori, affidabilità e dimensionamento dei cavi.
+dei motori, affidabilità, dimensionamento dei cavi e portate dei cavi MT.
 
 ## Riferimento di ispirazione
 
@@ -33,6 +33,7 @@ dei motori, affidabilità e dimensionamento dei cavi.
 | Avviamento dei motori ([`analisi/12`](analisi/12_avviamento_motori.md)) | circuito equivalente, flusso di potenza a ogni passo | implementato e testato (calcoli a mano, scipy) |
 | Affidabilità ([`analisi/13`](analisi/13_affidabilita.md)) | IEEE 1366, FMEA | implementato e testato (RBTS Bus 2, calcoli a mano, Markov, Monte Carlo) |
 | Dimensionamento dei cavi ([`analisi/14`](analisi/14_dimensionamento_cavi.md)) | IEC 60364-5-52, 4-43, 4-41 | implementato e testato (calcoli a mano, esempi pubblicati) |
+| Portate dei cavi MT/AT ([`analisi/15`](analisi/15_portate_cavi_mt.md)) | IEC 60287-1-1, 60287-2-1 | implementato e testato (CIGRE TB 880) |
 
 ## Stato
 
@@ -48,6 +49,7 @@ dei motori, affidabilità e dimensionamento dei cavi.
 - [x] Avviamento dei motori: implementazione e test
 - [x] Affidabilità: implementazione e test
 - [x] Dimensionamento dei cavi: implementazione e test
+- [x] Portate dei cavi MT/AT (IEC 60287): implementazione e test
 - [ ] Altri moduli
 
 ## Conclusioni
