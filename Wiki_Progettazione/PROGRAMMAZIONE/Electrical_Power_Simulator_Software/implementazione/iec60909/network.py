@@ -48,6 +48,43 @@ class Transformer:
 
 
 @dataclass
+class Transformer3W:
+    """Trasformatore a tre avvolgimenti (AT, MT, BT).
+
+    Le tensioni di cortocircuito di ogni coppia di avvolgimenti sono riferite
+    alla potenza nominale di quella coppia (sr_hv_mv_mva, sr_hv_lv_mva,
+    sr_mv_lv_mva). Gruppo vettoriale con tre avvolgimenti, es. "YNynd5".
+    """
+
+    id: str
+    hv_bus: str
+    mv_bus: str
+    lv_bus: str
+    ur_hv_kv: float
+    ur_mv_kv: float
+    ur_lv_kv: float
+    sr_hv_mv_mva: float
+    sr_hv_lv_mva: float
+    sr_mv_lv_mva: float
+    ukr_hv_mv_percent: float
+    ukr_hv_lv_percent: float
+    ukr_mv_lv_percent: float
+    urr_hv_mv_percent: float
+    urr_hv_lv_percent: float
+    urr_mv_lv_percent: float
+    vector_group: str = "YNynd5"
+    uk0_hv_mv_percent: Optional[float] = None
+    uk0_hv_lv_percent: Optional[float] = None
+    uk0_mv_lv_percent: Optional[float] = None
+    ur0_hv_mv_percent: Optional[float] = None
+    ur0_hv_lv_percent: Optional[float] = None
+    ur0_mv_lv_percent: Optional[float] = None
+    zn_hv_ohm: complex = 0.0
+    zn_mv_ohm: complex = 0.0
+    zn_lv_ohm: complex = 0.0
+
+
+@dataclass
 class Line:
     """Linea aerea o cavo."""
 
@@ -100,6 +137,7 @@ class Network:
     buses: list[Bus] = field(default_factory=list)
     external_grids: list[ExternalGrid] = field(default_factory=list)
     transformers: list[Transformer] = field(default_factory=list)
+    transformers3w: list[Transformer3W] = field(default_factory=list)
     lines: list[Line] = field(default_factory=list)
     generators: list[Generator] = field(default_factory=list)
     motors: list[Motor] = field(default_factory=list)
@@ -124,6 +162,12 @@ class Network:
             check(t.lv_bus, t.id)
             if t.urr_percent >= t.ukr_percent:
                 raise ValueError(f"{t.id}: urr deve essere minore di ukr")
+        for t in self.transformers3w:
+            for bus in (t.hv_bus, t.mv_bus, t.lv_bus):
+                check(bus, t.id)
+            for pair in ("hv_mv", "hv_lv", "mv_lv"):
+                if getattr(t, f"urr_{pair}_percent") >= getattr(t, f"ukr_{pair}_percent"):
+                    raise ValueError(f"{t.id}: urr_{pair} deve essere minore di ukr_{pair}")
         for ln in self.lines:
             check(ln.from_bus, ln.id)
             check(ln.to_bus, ln.id)

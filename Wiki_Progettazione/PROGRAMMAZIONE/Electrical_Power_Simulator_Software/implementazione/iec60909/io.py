@@ -8,12 +8,22 @@ from pathlib import Path
 from typing import Any
 
 from .calc import StudyResult
-from .network import Bus, ExternalGrid, Generator, Line, Motor, Network, Transformer
+from .network import (
+    Bus,
+    ExternalGrid,
+    Generator,
+    Line,
+    Motor,
+    Network,
+    Transformer,
+    Transformer3W,
+)
 
 _SECTIONS = {
     "buses": Bus,
     "external_grids": ExternalGrid,
     "transformers": Transformer,
+    "transformers3w": Transformer3W,
     "lines": Line,
     "generators": Generator,
     "motors": Motor,
@@ -32,7 +42,7 @@ def _build(cls: type, data: dict[str, Any]) -> Any:
     if unknown:
         raise ValueError(f"{cls.__name__}: campi sconosciuti {sorted(unknown)}")
     kwargs = dict(data)
-    for key in ("zn_hv_ohm", "zn_lv_ohm"):
+    for key in ("zn_hv_ohm", "zn_mv_ohm", "zn_lv_ohm"):
         if key in kwargs:
             kwargs[key] = _complex(kwargs[key])
     return cls(**kwargs)

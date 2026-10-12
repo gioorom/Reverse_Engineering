@@ -31,6 +31,25 @@ def to_pandapower(data):
             mag0_percent=100, mag0_rx=0, si0_hv_partial=0.9,
             parallel=t.get("parallel", 1),
         )
+    for t in data.get("transformers3w", []):
+        sn_hv = max(t["sr_hv_mv_mva"], t["sr_hv_lv_mva"])
+        sn_mv = max(t["sr_hv_mv_mva"], t["sr_mv_lv_mva"])
+        sn_lv = max(t["sr_hv_lv_mva"], t["sr_mv_lv_mva"])
+        assert (min(sn_hv, sn_mv), min(sn_mv, sn_lv), min(sn_hv, sn_lv)) == (
+            t["sr_hv_mv_mva"], t["sr_mv_lv_mva"], t["sr_hv_lv_mva"]
+        ), "potenze di coppia non rappresentabili in pandapower"
+        kw = {}
+        for pp_side, pair in (("hv", "hv_mv"), ("mv", "mv_lv"), ("lv", "hv_lv")):
+            kw[f"vk_{pp_side}_percent"] = t[f"ukr_{pair}_percent"]
+            kw[f"vkr_{pp_side}_percent"] = t[f"urr_{pair}_percent"]
+            kw[f"vk0_{pp_side}_percent"] = t.get(f"uk0_{pair}_percent", t[f"ukr_{pair}_percent"])
+            kw[f"vkr0_{pp_side}_percent"] = t.get(f"ur0_{pair}_percent", t[f"urr_{pair}_percent"])
+        pp.create_transformer3w_from_parameters(
+            net, ids[t["hv_bus"]], ids[t["mv_bus"]], ids[t["lv_bus"]],
+            vn_hv_kv=t["ur_hv_kv"], vn_mv_kv=t["ur_mv_kv"], vn_lv_kv=t["ur_lv_kv"],
+            sn_hv_mva=sn_hv, sn_mv_mva=sn_mv, sn_lv_mva=sn_lv, pfe_kw=0, i0_percent=0,
+            vector_group="".join(c for c in t["vector_group"] if not c.isdigit()), **kw,
+        )
     for ln in data.get("lines", []):
         pp.create_line_from_parameters(
             net, ids[ln["from_bus"]], ids[ln["to_bus"]], length_km=ln["length_km"],

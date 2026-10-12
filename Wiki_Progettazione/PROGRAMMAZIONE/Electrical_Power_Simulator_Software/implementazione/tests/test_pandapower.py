@@ -7,7 +7,7 @@ import pytest
 
 from iec60909 import calculate, network_from_dict
 
-from .reti import RETE_MAGLIATA
+from .reti import RETE_MAGLIATA, RETE_TRE_AVVOLGIMENTI
 
 pytest.importorskip("pandapower")
 from .pp_ref import run  # noqa: E402
@@ -80,3 +80,35 @@ def test_corrente_termica_metodo_b_sotto_il_limite():
             assert b.ith_ka == pytest.approx(ref[b.bus].ith_ka, rel=REL), b.bus
             checked += 1
     assert checked >= 3
+
+
+def _tre_avvolgimenti(vector_group):
+    data = copy.deepcopy(RETE_TRE_AVVOLGIMENTI)
+    data["transformers3w"][0]["vector_group"] = vector_group
+    return data
+
+
+@pytest.mark.parametrize("case", ["max", "min"])
+@pytest.mark.parametrize("vector_group", ["YNynd5", "YNyd5", "Yynd5", "YNdd5", "Ddd0"])
+def test_tre_avvolgimenti_trifase_bifase_picco(case, vector_group):
+    data = _tre_avvolgimenti(vector_group)
+    result = calculate(network_from_dict(data), case)
+    ref3 = run(data, "3ph", case, ip=True, kappa_method="C")
+    ref2 = run(data, "2ph", case)
+    for b in result.buses:
+        assert b.ikss3_ka == pytest.approx(ref3[b.bus].ikss_ka, rel=REL), b.bus
+        assert b.ip3_ka == pytest.approx(ref3[b.bus].ip_ka, rel=REL), b.bus
+        assert b.ikss2_ka == pytest.approx(ref2[b.bus].ikss_ka, rel=REL), b.bus
+
+
+@pytest.mark.parametrize("case", ["max", "min"])
+@pytest.mark.parametrize("vector_group", ["YNynd5", "Yynd5"])
+def test_tre_avvolgimenti_monofase(case, vector_group):
+    # Per YNyd, YNdd e Ddd pandapower 3.5.6 non modella correttamente la sequenza
+    # zero del trasformatore a tre avvolgimenti (es. Ddd: Z0 ≈ 0 al nodo AT); quei
+    # casi sono verificati con calcoli a mano in test_tre_avvolgimenti.py.
+    data = _tre_avvolgimenti(vector_group)
+    result = calculate(network_from_dict(data), case)
+    ref = run(data, "1ph", case)
+    for b in result.buses:
+        assert b.ikss1_ka == pytest.approx(ref[b.bus].ikss_ka, rel=REL), b.bus

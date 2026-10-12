@@ -59,6 +59,13 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
   `ukr_percent`, `urr_percent`, `vector_group` (es. `Dyn11`, `YNd5`, `YNyn0`),
   `uk0_percent`, `ur0_percent` (default = valori diretti), `zn_hv_ohm`, `zn_lv_ohm`
   (impedenza di neutro, numero o `[R, X]`), `parallel`
+- `transformers3w` (tre avvolgimenti): `id`, `hv_bus`, `mv_bus`, `lv_bus`,
+  `ur_hv_kv`, `ur_mv_kv`, `ur_lv_kv`, potenze di coppia `sr_hv_mv_mva`,
+  `sr_hv_lv_mva`, `sr_mv_lv_mva`, tensioni di cortocircuito di coppia
+  `ukr_hv_mv_percent`, `ukr_hv_lv_percent`, `ukr_mv_lv_percent` e
+  `urr_..._percent` (riferite alla potenza della coppia), facoltativi
+  `uk0_..._percent`/`ur0_..._percent`, `vector_group` (es. `YNynd5`),
+  `zn_hv_ohm`, `zn_mv_ohm`, `zn_lv_ohm`. Esempio: `esempi/stazione_tre_avvolgimenti.json`
 - `lines`: `id`, `from_bus`, `to_bus`, `length_km`, `r1_ohm_per_km`,
   `x1_ohm_per_km`, `r0_ohm_per_km`, `x0_ohm_per_km`, `end_temperature_c`
   (temperatura a fine guasto per il caso minimo), `parallel`
@@ -77,6 +84,7 @@ python -m pytest
   della norma (tolleranza 1e-9).
 - `tests/test_pandapower.py`: confronto con pandapower su una rete magliata
   110/20/0,4 kV con trasformatori in parallelo a rapporto fuori nominale,
-  anello MT, generatore, motore MT e cabina BT (tolleranza 1e-6).
+  anello MT, generatore, motore MT e cabina BT, e su una stazione con
+  trasformatore a tre avvolgimenti in cinque gruppi vettoriali (tolleranza 1e-6).
 
 Dettagli delle formule, ipotesi e limiti: [`../analisi/01_iec60909_formule.md`](../analisi/01_iec60909_formule.md).

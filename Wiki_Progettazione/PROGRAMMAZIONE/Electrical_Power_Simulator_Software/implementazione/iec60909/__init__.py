@@ -2,7 +2,16 @@
 
 from .calc import BusResult, StudyResult, calculate
 from .io import load_network, network_from_dict
-from .network import Bus, ExternalGrid, Generator, Line, Motor, Network, Transformer
+from .network import (
+    Bus,
+    ExternalGrid,
+    Generator,
+    Line,
+    Motor,
+    Network,
+    Transformer,
+    Transformer3W,
+)
 
 __all__ = [
     "Bus",
@@ -14,6 +23,7 @@ __all__ = [
     "Network",
     "StudyResult",
     "Transformer",
+    "Transformer3W",
     "calculate",
     "load_network",
     "network_from_dict",

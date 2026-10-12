@@ -1,0 +1,71 @@
+{
+  "name": "Stazione con trasformatore a tre avvolgimenti",
+  "f_hz": 50,
+  "buses": [
+    {
+      "id": "AT",
+      "un_kv": 132.0
+    },
+    {
+      "id": "MT",
+      "un_kv": 20.0
+    },
+    {
+      "id": "MT2",
+      "un_kv": 20.0
+    },
+    {
+      "id": "TER",
+      "un_kv": 10.0
+    }
+  ],
+  "external_grids": [
+    {
+      "id": "Q",
+      "bus": "AT",
+      "skq_max_mva": 5000,
+      "rx_max": 0.1,
+      "skq_min_mva": 3000,
+      "rx_min": 0.1,
+      "x0x1": 1.5,
+      "r0x0": 0.1
+    }
+  ],
+  "transformers3w": [
+    {
+      "id": "T3W",
+      "hv_bus": "AT",
+      "mv_bus": "MT",
+      "lv_bus": "TER",
+      "ur_hv_kv": 138.0,
+      "ur_mv_kv": 21.0,
+      "ur_lv_kv": 10.5,
+      "sr_hv_mv_mva": 63.0,
+      "sr_hv_lv_mva": 20.0,
+      "sr_mv_lv_mva": 20.0,
+      "ukr_hv_mv_percent": 13.0,
+      "ukr_hv_lv_percent": 21.0,
+      "ukr_mv_lv_percent": 7.0,
+      "urr_hv_mv_percent": 0.35,
+      "urr_hv_lv_percent": 0.5,
+      "urr_mv_lv_percent": 0.4,
+      "uk0_hv_mv_percent": 11.0,
+      "uk0_hv_lv_percent": 18.0,
+      "uk0_mv_lv_percent": 6.0,
+      "vector_group": "YNynd5"
+    }
+  ],
+  "lines": [
+    {
+      "id": "L1",
+      "from_bus": "MT",
+      "to_bus": "MT2",
+      "length_km": 4,
+      "r1_ohm_per_km": 0.125,
+      "x1_ohm_per_km": 0.112,
+      "r0_ohm_per_km": 0.5,
+      "x0_ohm_per_km": 0.45,
+      "end_temperature_c": 90
+    }
+  ]
+}

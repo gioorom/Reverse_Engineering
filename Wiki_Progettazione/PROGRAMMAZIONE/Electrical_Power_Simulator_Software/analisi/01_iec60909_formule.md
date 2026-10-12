@@ -39,6 +39,15 @@ Codice: [`../implementazione/iec60909/`](../implementazione/iec60909/).
 | Generatore | Z_GK = K_G·(R_Gf + jX"d) | aperta (neutro isolato) |
 | Motore asincrono | Z_M = Ur²/(I_LR/I_r · Sr), Sr = Pr/(η·cosφ) | aperta |
 
+- **Trasformatore a tre avvolgimenti**: impedenze di coppia Z_AB, Z_AC, Z_BC
+  (riferite al lato AT, ciascuna con la potenza nominale della propria coppia),
+  corrette con K_TAB, K_TAC, K_TBC = 0,95·cmax/(1 + 0,6·x_coppia) (solo
+  correnti massime, cmax del nodo a tensione minore della coppia) e convertite
+  nello schema a stella: Z_A = ½(Z_AB + Z_AC − Z_BC), Z_B = ½(Z_AB + Z_BC − Z_AC),
+  Z_C = ½(Z_AC + Z_BC − Z_AB). Il centro stella è un nodo interno con tensione
+  di base Ur_AT; ogni avvolgimento è un ramo con il proprio rapporto nominale.
+  Sequenza zero: avvolgimento YN → ramo serie (+3·Zn); avvolgimento D →
+  derivazione verso terra dal centro stella; Y senza neutro → aperto.
 - **K_T** = 0,95·cmax/(1 + 0,6·x_T), con cmax del lato BT; applicato solo al
   calcolo delle correnti **massime** (sez. 6.3.3), anche alla sequenza zero.
 - **K_G** = (Un/UrG)·cmax/(1 + x"d·sin φrG).
@@ -98,7 +107,7 @@ per bifase e monofase.
 ## Limiti (non ancora implementati)
 
 - Gruppi di generazione con trasformatore (power station unit, K_S/K_SO),
-  trasformatori a tre avvolgimenti, generatori con neutro a terra.
+  generatori con neutro a terra.
 - Ib con i fattori μ e q, Ik con il metodo λ per reti vicine ai generatori.
 - Componente continua i_DC, impedenza di guasto, contributo di inverter/eolico.
 - Metodo B senza la deroga per R/X < 0,3 in tutti i rami.

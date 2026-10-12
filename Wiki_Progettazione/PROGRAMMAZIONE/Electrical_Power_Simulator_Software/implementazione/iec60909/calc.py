@@ -11,13 +11,14 @@ from __future__ import annotations
 
 import cmath
 import math
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
 import numpy as np
 
 from . import factors
-from .network import Network, Transformer
+from .network import Network, Transformer, Transformer3W
 
 S_BASE_MVA = 100.0
 _A = cmath.exp(2j * math.pi / 3)
@@ -78,6 +79,17 @@ def _parse_vector_group(group: str) -> tuple[str, str]:
     raise ValueError(f"gruppo vettoriale non riconosciuto: {group!r}")
 
 
+def _parse_vector_group_3w(group: str) -> tuple[str, str, str]:
+    tokens = re.findall(r"(YN|ZN|Y|D|Z)\d*", group.strip(), flags=re.IGNORECASE)
+    if len(tokens) != 3 or not re.fullmatch(r"((YN|ZN|Y|D|Z)\d*){3}", group.strip(), re.IGNORECASE):
+        raise ValueError(f"gruppo vettoriale a tre avvolgimenti non riconosciuto: {group!r}")
+    return tuple(t.upper() for t in tokens)  # type: ignore[return-value]
+
+
+def _star_node(t: Transformer3W) -> str:
+    return f"{t.id}::stella"
+
+
 class _Builder:
     """Costruisce le matrici delle ammettenze nodali di una sequenza."""
 
@@ -87,6 +99,11 @@ class _Builder:
         self.warnings = warnings
         self.idx = net.bus_index()
         self.un = {b.id: b.un_kv for b in net.buses}
+        # Nodo interno (centro stella) di ogni trasformatore a tre avvolgimenti,
+        # con tensione di base pari alla tensione nominale dell'avvolgimento AT.
+        for t in net.transformers3w:
+            self.idx[_star_node(t)] = len(self.idx)
+            self.un[_star_node(t)] = t.ur_hv_kv
 
     def zbase(self, bus_id: str) -> float:
         return self.un[bus_id] ** 2 / S_BASE_MVA
@@ -118,6 +135,35 @@ class _Builder:
         ratio = (t.ur_hv_kv / t.ur_lv_kv) / (self.un[t.hv_bus] / self.un[t.lv_bus])
         return z1, z0, ratio
 
+    def _transformer3w_star(self, t: Transformer3W, zero: bool) -> dict[str, complex]:
+        """Impedenze degli avvolgimenti dello schema a stella, in Ω riferiti al lato AT.
+
+        Le impedenze di coppia Z_AB, Z_AC, Z_BC sono corrette con K_TAB, K_TAC,
+        K_TBC (solo correnti massime) e poi trasformate nello schema a stella.
+        """
+        pairs = {"hv_mv": t.mv_bus, "hv_lv": t.lv_bus, "mv_lv": t.lv_bus}
+        z_pair = {}
+        for pair, lower_bus in pairs.items():
+            sr = getattr(t, f"sr_{pair}_mva")
+            uk = getattr(t, f"ukr_{pair}_percent")
+            ur = getattr(t, f"urr_{pair}_percent")
+            kt = 1.0
+            if self.case == "max":
+                kt = factors.transformer_kt(self.c_max(lower_bus), math.sqrt(uk**2 - ur**2) / 100.0)
+            if zero:
+                uk0 = getattr(t, f"uk0_{pair}_percent")
+                ur0 = getattr(t, f"ur0_{pair}_percent")
+                uk = uk0 if uk0 is not None else uk
+                ur = ur0 if ur0 is not None else ur
+            zr = t.ur_hv_kv**2 / sr
+            z_pair[pair] = kt * complex(ur / 100.0 * zr, math.sqrt(uk**2 - ur**2) / 100.0 * zr)
+        hm, hl, ml = z_pair["hv_mv"], z_pair["hv_lv"], z_pair["mv_lv"]
+        return {
+            "hv": 0.5 * (hm + hl - ml),
+            "mv": 0.5 * (hm + ml - hl),
+            "lv": 0.5 * (hl + ml - hm),
+        }
+
     def build(
         self, seq: int, x_scale: float = 1.0, motors: bool = True
     ) -> tuple[np.ndarray, np.ndarray]:
@@ -125,7 +171,7 @@ class _Builder:
 
         ``x_scale`` scala le reattanze (metodo C, fc/f).
         """
-        n = len(self.net.buses)
+        n = len(self.idx)
         y = np.zeros((n, n), dtype=complex)
         grounded = np.zeros(n, dtype=bool)
 
@@ -175,6 +221,26 @@ class _Builder:
             elif hv == "D" and lv == "YN":
                 shunt(t.lv_bus, (z0 + zn_lv) / t.parallel)
             # Altri gruppi (Yy, Yyn, YNy, Dd, Dy, Yd, ...): sequenza zero interrotta.
+
+        for t in self.net.transformers3w:
+            star = _star_node(t)
+            windings = {"hv": t.hv_bus, "mv": t.mv_bus, "lv": t.lv_bus}
+            z_star = self._transformer3w_star(t, zero=seq == 0)
+            connections = dict(zip(windings, _parse_vector_group_3w(t.vector_group)))
+            for w, bus in windings.items():
+                ur_w = getattr(t, f"ur_{w}_kv")
+                # impedenza dell'avvolgimento riportata al suo lato e rapporto fuori nominale
+                z_w = z_star[w] * (ur_w / t.ur_hv_kv) ** 2 / self.zbase(bus)
+                ratio = self.un[bus] / ur_w
+                if seq in (1, 2):
+                    branch(star, bus, z_w, ratio)
+                elif connections[w] == "YN":
+                    zn = 3.0 * complex(getattr(t, f"zn_{w}_ohm")) / self.zbase(bus)
+                    branch(star, bus, z_w + zn, ratio)
+                elif connections[w] == "D":
+                    # il triangolo chiude la corrente omopolare: derivazione dal centro stella
+                    shunt(star, z_star[w] / self.zbase(star))
+                # Y o Z senza neutro: avvolgimento aperto in sequenza zero
 
         for ln in self.net.lines:
             k_theta = 1.0
@@ -256,7 +322,7 @@ def calculate(
     b = _Builder(net, case, warnings)
 
     z1 = _diag_z(b.build(1))
-    isolated = [net.buses[i].id for i in np.nonzero(~np.isfinite(z1))[0]]
+    isolated = [net.buses[i].id for i in np.nonzero(~np.isfinite(z1[: len(net.buses)]))[0]]
     if isolated:
         raise ValueError(f"nodi non collegati ad alcuna sorgente: {isolated}")
     z2 = _diag_z(b.build(2))
