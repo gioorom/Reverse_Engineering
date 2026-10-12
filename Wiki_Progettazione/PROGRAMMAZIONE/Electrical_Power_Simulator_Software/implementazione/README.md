@@ -188,6 +188,24 @@ Sezione `motor_starts`: `id`, `motor` (id del motore), `method` (`dol`,
 `t_lr_max_s`. Modello, validazione e limiti:
 [`../analisi/12_avviamento_motori.md`](../analisi/12_avviamento_motori.md).
 
+### Affidabilità
+
+```bash
+python -m iec60909.affidabilita esempi/affidabilita_dorsale.json --dettagli --costo-kwh 10
+python -m iec60909.affidabilita esempi/affidabilita_rbts_bus2.json --json
+```
+
+Sezioni `reliability_data` (`element`: id di ramo, nodo o sorgente, oppure
+`@lines`, `@transformers`, `@transformers3w`, `@buses`, `@external_grids`,
+`@generators`; `failure_rate` o `failure_rate_per_km`, `repair_time_h`,
+`temporary_rate`) e `switches` (`id`, `branch`, `bus`, `kind`: `switch`,
+`breaker`, `fuse`; `normally_open`, `switching_time_h`); nei `loads`
+`customers` e `average_mw`. I `protective_devices` valgono come interruttori
+o fusibili. Opzioni: `--primo-ordine` (senza sovrapposizioni),
+`--senza-generatori`, `--manovra` (tempo di manovra dei dispositivi di
+protezione). Metodo, validazione e limiti:
+[`../analisi/13_affidabilita.md`](../analisi/13_affidabilita.md).
+
 ## Risultati per nodo (cortocircuito)
 
 | Grandezza | Significato |
@@ -273,7 +291,8 @@ Campi usati solo dal flusso di potenza (tutti facoltativi, esempio in
 - `loads`: `id`, `bus`, `p_mw`, `q_mvar`, `count`, quote ZIP in %
   `const_z_p_percent`, `const_i_p_percent`, `const_z_q_percent`,
   `const_i_q_percent` (impedenza e corrente costante; il resto a potenza
-  costante, default 0)
+  costante, default 0); per l'affidabilità `customers`
+  (default 1) e `average_mw` (default p_mw·count)
 - `shunts`: `id`, `bus`, `q_mvar` (assorbita a tensione nominale: > 0
   reattore, < 0 condensatori), `p_mw`
 
@@ -357,6 +376,8 @@ python -m pytest
   `tests/test_arcflash_estensioni.py`: Lee, corrente continua (calcoli a
   mano), scelta di Ibf, calcolo a più intervalli (confronto con
   arcflash-calc `multistep_E_and_AFB`), fusibili e avvisi sotto 240 V.
+- `tests/test_affidabilita.py`: affidabilità, RBTS Bus 2 (indici pubblicati),
+  calcoli a mano, secondo ordine contro Markov e Monte Carlo.
 - `tests/test_avviamento.py`: avviamento dei motori, stima del circuito,
   caduta di tensione a mano, metodi di avviamento, integrazione indipendente.
 - `tests/test_armoniche.py`: armoniche, calcoli a mano, risonanza, filtri,

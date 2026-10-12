@@ -8,8 +8,8 @@ pubbliche (nessuna decompilazione di software commerciale).
 
 Moduli: calcolo delle correnti di cortocircuito secondo IEC 60909-0:2016,
 flusso di potenza (Newton-Raphson), arc flash secondo IEEE 1584-2018 ,
-coordinamento delle protezioni, stabilità transitoria, armoniche e avviamento
-dei motori.
+coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento
+dei motori e affidabilità.
 
 ## Riferimento di ispirazione
 
@@ -31,6 +31,7 @@ dei motori.
 | Stabilità transitoria ([`analisi/10`](analisi/10_stabilita_transitoria.md)) | equazione di oscillazione, modelli classico e a un asse | implementato e testato (aree uguali, scipy, ANDES) |
 | Armoniche ([`analisi/11`](analisi/11_armoniche.md)) | EN 50160, IEEE 519-2014 | implementato e testato (calcoli a mano, OpenDSS) |
 | Avviamento dei motori ([`analisi/12`](analisi/12_avviamento_motori.md)) | circuito equivalente, flusso di potenza a ogni passo | implementato e testato (calcoli a mano, scipy) |
+| Affidabilità ([`analisi/13`](analisi/13_affidabilita.md)) | IEEE 1366, FMEA | implementato e testato (RBTS Bus 2, calcoli a mano, Markov, Monte Carlo) |
 
 ## Stato
 
@@ -44,7 +45,8 @@ dei motori.
 - [x] Stabilità transitoria: implementazione e test
 - [x] Armoniche: implementazione e test
 - [x] Avviamento dei motori: implementazione e test
-- [ ] Altri moduli (es. affidabilità, dimensionamento dei cavi)
+- [x] Affidabilità: implementazione e test
+- [ ] Altri moduli (es. dimensionamento dei cavi)
 
 ## Conclusioni
 

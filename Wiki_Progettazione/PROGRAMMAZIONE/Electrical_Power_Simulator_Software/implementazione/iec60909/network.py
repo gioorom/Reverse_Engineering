@@ -280,6 +280,49 @@ class Load:
     const_i_p_percent: float = 0.0
     const_z_q_percent: float = 0.0
     const_i_q_percent: float = 0.0
+    # Affidabilità: clienti alimentati e potenza media [MW] per l'energia non
+    # fornita (default: p_mw·count)
+    customers: int = 1
+    average_mw: Optional[float] = None
+
+
+@dataclass
+class ReliabilityData:
+    """Dati di guasto di un elemento (affidabilità).
+
+    `element`: id di un ramo (linea, trasformatore, trasformatore a tre
+    avvolgimenti), di un nodo o di una sorgente (rete esterna, generatore);
+    oppure un default per categoria: "@lines", "@transformers",
+    "@transformers3w", "@buses", "@external_grids", "@generators".
+    Tasso di guasto permanente `failure_rate` [1/anno] o, per le linee,
+    `failure_rate_per_km` [1/(km·anno)]; tempo di riparazione (o di
+    sostituzione) `repair_time_h`; tasso dei guasti transitori eliminati dalla
+    richiusura `temporary_rate` [1/anno] (interruzioni momentanee).
+    """
+
+    element: str
+    repair_time_h: float
+    failure_rate: Optional[float] = None
+    failure_rate_per_km: Optional[float] = None
+    temporary_rate: float = 0.0
+
+
+@dataclass
+class Switch:
+    """Organo di manovra all'estremo `bus` del ramo `branch`.
+
+    kind: "switch" (sezionatore, manovrato dopo il guasto), "breaker"
+    (interruttore, apre automaticamente sul guasto) o "fuse" (fusibile, come
+    l'interruttore). `normally_open`: punto di apertura (contro-alimentazione).
+    `switching_time_h`: tempo per la manovra.
+    """
+
+    id: str
+    branch: str
+    bus: str
+    kind: str = "switch"
+    normally_open: bool = False
+    switching_time_h: float = 1.0
 
 
 @dataclass
@@ -549,6 +592,8 @@ class Network:
     harmonic_sources: list[HarmonicSource] = field(default_factory=list)
     harmonic_filters: list[HarmonicFilter] = field(default_factory=list)
     motor_starts: list[MotorStart] = field(default_factory=list)
+    reliability_data: list[ReliabilityData] = field(default_factory=list)
+    switches: list[Switch] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}

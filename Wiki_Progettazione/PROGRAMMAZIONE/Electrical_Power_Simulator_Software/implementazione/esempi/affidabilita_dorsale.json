@@ -1,0 +1,462 @@
+{
+  "name": "Dorsali MT con contro-alimentazione",
+  "f_hz": 50,
+  "buses": [
+    {
+      "id": "CP",
+      "un_kv": 20
+    },
+    {
+      "id": "A1",
+      "un_kv": 20
+    },
+    {
+      "id": "A1_BT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "A2",
+      "un_kv": 20
+    },
+    {
+      "id": "A2_BT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "A3",
+      "un_kv": 20
+    },
+    {
+      "id": "A3_BT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "A4",
+      "un_kv": 20
+    },
+    {
+      "id": "A4_BT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "B1",
+      "un_kv": 20
+    },
+    {
+      "id": "B1_BT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "B2",
+      "un_kv": 20
+    },
+    {
+      "id": "B2_BT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "B3",
+      "un_kv": 20
+    },
+    {
+      "id": "B3_BT",
+      "un_kv": 0.4
+    }
+  ],
+  "external_grids": [
+    {
+      "id": "RETE",
+      "bus": "CP",
+      "skq_max_mva": 250,
+      "rx_max": 0.1
+    }
+  ],
+  "lines": [
+    {
+      "id": "LA1",
+      "from_bus": "CP",
+      "to_bus": "A1",
+      "length_km": 1.2,
+      "r1_ohm_per_km": 0.16,
+      "x1_ohm_per_km": 0.11
+    },
+    {
+      "id": "LA2",
+      "from_bus": "A1",
+      "to_bus": "A2",
+      "length_km": 0.8,
+      "r1_ohm_per_km": 0.16,
+      "x1_ohm_per_km": 0.11
+    },
+    {
+      "id": "LA3",
+      "from_bus": "A2",
+      "to_bus": "A3",
+      "length_km": 1.5,
+      "r1_ohm_per_km": 0.16,
+      "x1_ohm_per_km": 0.11
+    },
+    {
+      "id": "LA4",
+      "from_bus": "A3",
+      "to_bus": "A4",
+      "length_km": 1.0,
+      "r1_ohm_per_km": 0.16,
+      "x1_ohm_per_km": 0.11
+    },
+    {
+      "id": "LB1",
+      "from_bus": "CP",
+      "to_bus": "B1",
+      "length_km": 2.0,
+      "r1_ohm_per_km": 0.16,
+      "x1_ohm_per_km": 0.11
+    },
+    {
+      "id": "LB2",
+      "from_bus": "B1",
+      "to_bus": "B2",
+      "length_km": 3.5,
+      "r1_ohm_per_km": 0.36,
+      "x1_ohm_per_km": 0.35
+    },
+    {
+      "id": "LB3",
+      "from_bus": "B2",
+      "to_bus": "B3",
+      "length_km": 1.8,
+      "r1_ohm_per_km": 0.16,
+      "x1_ohm_per_km": 0.11
+    },
+    {
+      "id": "L_AB",
+      "from_bus": "A4",
+      "to_bus": "B3",
+      "length_km": 1.4,
+      "r1_ohm_per_km": 0.16,
+      "x1_ohm_per_km": 0.11
+    }
+  ],
+  "transformers": [
+    {
+      "id": "TR_A1",
+      "hv_bus": "A1",
+      "lv_bus": "A1_BT",
+      "sr_mva": 0.4,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 4,
+      "urr_percent": 1.1,
+      "vector_group": "Dyn11"
+    },
+    {
+      "id": "TR_A2",
+      "hv_bus": "A2",
+      "lv_bus": "A2_BT",
+      "sr_mva": 0.4,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 4,
+      "urr_percent": 1.1,
+      "vector_group": "Dyn11"
+    },
+    {
+      "id": "TR_A3",
+      "hv_bus": "A3",
+      "lv_bus": "A3_BT",
+      "sr_mva": 0.63,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 6,
+      "urr_percent": 1.1,
+      "vector_group": "Dyn11"
+    },
+    {
+      "id": "TR_A4",
+      "hv_bus": "A4",
+      "lv_bus": "A4_BT",
+      "sr_mva": 0.4,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 4,
+      "urr_percent": 1.1,
+      "vector_group": "Dyn11"
+    },
+    {
+      "id": "TR_B1",
+      "hv_bus": "B1",
+      "lv_bus": "B1_BT",
+      "sr_mva": 0.4,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 4,
+      "urr_percent": 1.1,
+      "vector_group": "Dyn11"
+    },
+    {
+      "id": "TR_B2",
+      "hv_bus": "B2",
+      "lv_bus": "B2_BT",
+      "sr_mva": 0.4,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 4,
+      "urr_percent": 1.1,
+      "vector_group": "Dyn11"
+    },
+    {
+      "id": "TR_B3",
+      "hv_bus": "B3",
+      "lv_bus": "B3_BT",
+      "sr_mva": 0.4,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.4,
+      "ukr_percent": 4,
+      "urr_percent": 1.1,
+      "vector_group": "Dyn11"
+    }
+  ],
+  "loads": [
+    {
+      "id": "U_A1",
+      "bus": "A1_BT",
+      "p_mw": 0.288,
+      "q_mvar": 0.09,
+      "average_mw": 0.18,
+      "customers": 120
+    },
+    {
+      "id": "U_A2",
+      "bus": "A2_BT",
+      "p_mw": 0.192,
+      "q_mvar": 0.06,
+      "average_mw": 0.12,
+      "customers": 85
+    },
+    {
+      "id": "U_A3",
+      "bus": "A3_BT",
+      "p_mw": 0.72,
+      "q_mvar": 0.225,
+      "average_mw": 0.45,
+      "customers": 1
+    },
+    {
+      "id": "U_A4",
+      "bus": "A4_BT",
+      "p_mw": 0.336,
+      "q_mvar": 0.105,
+      "average_mw": 0.21,
+      "customers": 150
+    },
+    {
+      "id": "U_B1",
+      "bus": "B1_BT",
+      "p_mw": 0.144,
+      "q_mvar": 0.045,
+      "average_mw": 0.09,
+      "customers": 60
+    },
+    {
+      "id": "U_B2",
+      "bus": "B2_BT",
+      "p_mw": 0.096,
+      "q_mvar": 0.03,
+      "average_mw": 0.06,
+      "customers": 40
+    },
+    {
+      "id": "U_B3",
+      "bus": "B3_BT",
+      "p_mw": 0.224,
+      "q_mvar": 0.07,
+      "average_mw": 0.14,
+      "customers": 95
+    }
+  ],
+  "switches": [
+    {
+      "id": "INT_A",
+      "branch": "LA1",
+      "bus": "CP",
+      "kind": "breaker",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "IMS_LA1_A1",
+      "branch": "LA1",
+      "bus": "A1",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "FU_TR_A1",
+      "branch": "TR_A1",
+      "bus": "A1",
+      "kind": "fuse"
+    },
+    {
+      "id": "IMS_LA2_A1",
+      "branch": "LA2",
+      "bus": "A1",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "IMS_LA2_A2",
+      "branch": "LA2",
+      "bus": "A2",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "FU_TR_A2",
+      "branch": "TR_A2",
+      "bus": "A2",
+      "kind": "fuse"
+    },
+    {
+      "id": "IMS_LA3_A2",
+      "branch": "LA3",
+      "bus": "A2",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "IMS_LA3_A3",
+      "branch": "LA3",
+      "bus": "A3",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "FU_TR_A3",
+      "branch": "TR_A3",
+      "bus": "A3",
+      "kind": "fuse"
+    },
+    {
+      "id": "IMS_LA4_A3",
+      "branch": "LA4",
+      "bus": "A3",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "IMS_LA4_A4",
+      "branch": "LA4",
+      "bus": "A4",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "FU_TR_A4",
+      "branch": "TR_A4",
+      "bus": "A4",
+      "kind": "fuse"
+    },
+    {
+      "id": "INT_B",
+      "branch": "LB1",
+      "bus": "CP",
+      "kind": "breaker",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "IMS_LB1_B1",
+      "branch": "LB1",
+      "bus": "B1",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "FU_TR_B1",
+      "branch": "TR_B1",
+      "bus": "B1",
+      "kind": "fuse"
+    },
+    {
+      "id": "IMS_LB2_B1",
+      "branch": "LB2",
+      "bus": "B1",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "IMS_LB2_B2",
+      "branch": "LB2",
+      "bus": "B2",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "FU_TR_B2",
+      "branch": "TR_B2",
+      "bus": "B2",
+      "kind": "fuse"
+    },
+    {
+      "id": "IMS_LB3_B2",
+      "branch": "LB3",
+      "bus": "B2",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "IMS_LB3_B3",
+      "branch": "LB3",
+      "bus": "B3",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    },
+    {
+      "id": "FU_TR_B3",
+      "branch": "TR_B3",
+      "bus": "B3",
+      "kind": "fuse"
+    },
+    {
+      "id": "NA_AB",
+      "branch": "L_AB",
+      "bus": "A4",
+      "kind": "switch",
+      "normally_open": true,
+      "switching_time_h": 1.0
+    },
+    {
+      "id": "IMS_L_AB_B3",
+      "branch": "L_AB",
+      "bus": "B3",
+      "kind": "switch",
+      "switching_time_h": 0.5
+    }
+  ],
+  "reliability_data": [
+    {
+      "element": "@lines",
+      "failure_rate_per_km": 0.04,
+      "repair_time_h": 8.0
+    },
+    {
+      "element": "@transformers",
+      "failure_rate": 0.01,
+      "repair_time_h": 48.0
+    },
+    {
+      "element": "@buses",
+      "failure_rate": 0.001,
+      "repair_time_h": 4.0
+    },
+    {
+      "element": "RETE",
+      "failure_rate": 0.2,
+      "repair_time_h": 1.5
+    },
+    {
+      "element": "LB2",
+      "failure_rate_per_km": 0.12,
+      "repair_time_h": 5.0,
+      "temporary_rate": 2.0
+    }
+  ]
+}

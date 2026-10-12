@@ -11,6 +11,15 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Affidabilità in `iec60909.reliability`, riga di comando
+  `python -m iec60909.affidabilita`: analisi dei modi di guasto con
+  intervento delle protezioni, sezionamento e contro-alimentazione dai punti
+  normalmente aperti, guasti transitori, sovrapposizioni del secondo ordine,
+  indici dei carichi e di sistema (SAIFI, SAIDI, CAIDI, ASAI, MAIFI, ENS,
+  AENS, costo), contributo di ogni elemento; nuove sezioni `reliability_data`
+  e `switches`, clienti e carico medio nei carichi; verifica sul Roy
+  Billinton Test System Bus 2 (indici pubblicati), con calcoli a mano,
+  Markov e Monte Carlo.
 - Avviamento dei motori in `iec60909.motorstart`, riga di comando
   `python -m iec60909.avviamento`: circuito equivalente stimato dai dati di
   targa (anche con la coppia di spunto), avviamento diretto, stella-triangolo,

@@ -22,9 +22,11 @@ from .network import (
     MotorStart,
     Network,
     ProtectiveDevice,
+    ReliabilityData,
     Shunt,
     StabilityEvent,
     StaticGenerator,
+    Switch,
     Transformer,
     Transformer3W,
 )
@@ -47,6 +49,8 @@ _SECTIONS = {
     "harmonic_sources": HarmonicSource,
     "harmonic_filters": HarmonicFilter,
     "motor_starts": MotorStart,
+    "reliability_data": ReliabilityData,
+    "switches": Switch,
 }
 
 

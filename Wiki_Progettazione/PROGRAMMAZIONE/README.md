@@ -30,4 +30,4 @@ del progetto annota solo dove si trovano e la versione.
 
 | Progetto | Target | Stato |
 | -------- | ------ | ----- |
-| [Electrical Power Simulator Software](Electrical_Power_Simulator_Software/) | Simulatore reti elettriche (ispirato a ETAP) | Cortocircuito IEC 60909, flusso di potenza, arc flash IEEE 1584 e coordinamento delle protezioni, stabilità transitoria, armoniche e avviamento dei motori implementati e testati |
+| [Electrical Power Simulator Software](Electrical_Power_Simulator_Software/) | Simulatore reti elettriche (ispirato a ETAP) | Cortocircuito IEC 60909, flusso di potenza, arc flash IEEE 1584 e coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento dei motori e affidabilità implementati e testati |
