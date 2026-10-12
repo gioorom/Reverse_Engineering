@@ -234,3 +234,13 @@ def rating(c: CableConstruction, inst: Installation, max_iter: int = 50, tol: fl
             break
         theta_s = new_theta_s
     return RatingResult(i, r, ys, yp, i * i * r, wd, lam_c + lam_e, lam_c, lam_e, t1, t2, t3, t4, theta_s, it)
+
+
+def rating_of(cr) -> tuple[CableConstruction, RatingResult]:
+    """Portata di una voce di cable_ratings."""
+    try:
+        c = CableConstruction(**cr.cable)
+        inst = Installation(**cr.installation)
+    except TypeError as e:
+        raise ValueError(f"{cr.id}: {e}") from None
+    return c, rating(c, inst)

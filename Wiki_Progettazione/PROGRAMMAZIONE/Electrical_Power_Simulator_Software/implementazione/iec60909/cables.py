@@ -150,6 +150,26 @@ def _trip_time(dev: Optional[ProtectiveDevice], cs: CableSizing, i_a: float) -> 
     return trip_time_s(dev, i_a, "max")
 
 
+def _mv_ratings(net: Network, cs: CableSizing) -> tuple[dict[float, float], float]:
+    """Portate IEC 60287 dei cavi indicati in `ratings` (una per sezione)."""
+    from .iec60287 import rating_of
+
+    table: dict[float, float] = {}
+    temps = set()
+    for rid in cs.ratings:
+        cr = next((r for r in net.cable_ratings if r.id == rid), None)
+        if cr is None:
+            raise ValueError(f"{cs.id}: portata inesistente {rid!r} in cable_ratings")
+        c, res = rating_of(cr)
+        if c.area_mm2 in table:
+            raise ValueError(f"{cs.id}: due portate per la sezione {c.area_mm2:g} mm²")
+        table[float(c.area_mm2)] = res.current_a
+        temps.add(c.max_temperature_c)
+    if len(temps) != 1:
+        raise ValueError(f"{cs.id}: i cavi di ratings devono avere la stessa temperatura massima")
+    return table, temps.pop()
+
+
 def _i2t(cs: CableSizing, i_a: float, t_s: float) -> float:
     """Energia specifica passante: I²·t, oppure il valore del costruttore sotto 0,1 s
     (IEC 60364-4-43, 434.5.2)."""
@@ -184,7 +204,11 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
     method = cs.method.upper()
     theta_z = cs.max_temperature_c if cs.max_temperature_c is not None else tab.MAX_TEMPERATURE[tab._insulation(cs.insulation)]
     key = None
-    if cs.ampacity_a:
+    if cs.ratings:
+        table, theta_mv = _mv_ratings(net, cs)
+        if cs.max_temperature_c is None:
+            theta_z = theta_mv
+    elif cs.ampacity_a:
         table = {float(k): float(v) for k, v in cs.ampacity_a.items()}
     else:
         key = tab.ampacity_key(cs.material, cs.insulation, cs.loaded_conductors, method, cs.arrangement)

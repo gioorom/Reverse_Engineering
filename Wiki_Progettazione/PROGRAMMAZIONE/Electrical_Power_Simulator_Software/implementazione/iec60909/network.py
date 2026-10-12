@@ -326,6 +326,19 @@ class Switch:
 
 
 @dataclass
+class CableRating:
+    """Portata IEC 60287 di un circuito di tre cavi unipolari MT/AT.
+
+    `cable`: costruzione del cavo (campi di iec60287.CableConstruction);
+    `installation`: posa (campi di iec60287.Installation).
+    """
+
+    id: str
+    cable: dict = field(default_factory=dict)
+    installation: dict = field(default_factory=dict)
+
+
+@dataclass
 class CableSizing:
     """Dimensionamento del cavo della linea `line` (alimentata da from_bus).
 
@@ -356,6 +369,7 @@ class CableSizing:
     circuits: int = 1
     k_extra: float = 1.0
     ampacity_a: dict = field(default_factory=dict)
+    ratings: list = field(default_factory=list)  # id di cable_ratings (cavi MT, IEC 60287)
     max_temperature_c: Optional[float] = None
     sections: list = field(default_factory=list)
     max_parallel: int = 1
@@ -640,6 +654,7 @@ class Network:
     motor_starts: list[MotorStart] = field(default_factory=list)
     reliability_data: list[ReliabilityData] = field(default_factory=list)
     switches: list[Switch] = field(default_factory=list)
+    cable_ratings: list[CableRating] = field(default_factory=list)
     cable_sizing: list[CableSizing] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
