@@ -1,7 +1,7 @@
 # iec60909 — calcolo delle correnti di cortocircuito
 
 Reimplementazione del calcolo di cortocircuito della **IEC 60909-0:2016**
-(lo stesso calcolo del modulo Short Circuit IEC di ETAP), scritta dalle formule
+per Electrical Power Simulator Software, scritta dalle formule
 della norma e verificata contro [pandapower](https://www.pandapower.org/),
 un'implementazione open source indipendente della stessa norma.
 
@@ -10,7 +10,7 @@ un'implementazione open source indipendente della stessa norma.
 Richiede Python 3.10+ e numpy.
 
 ```bash
-cd Wiki_Progettazione/PROGRAMMAZIONE/ETAP_Power_Simulator/implementazione
+cd Wiki_Progettazione/PROGRAMMAZIONE/Electrical_Power_Simulator_Software/implementazione
 pip install -e .            # solo il calcolo
 pip install -e ".[test]"    # anche pytest e pandapower per i test
 ```

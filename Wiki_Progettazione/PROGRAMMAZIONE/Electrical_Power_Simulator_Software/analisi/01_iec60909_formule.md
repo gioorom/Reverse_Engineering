@@ -1,8 +1,7 @@
 # 01 — IEC 60909-0:2016: formule implementate
 
-Il calcolo di cortocircuito IEC di ETAP non è stato decompilato: è stato
-reimplementato dalle formule pubbliche della norma IEC 60909-0:2016. ETAP potrà
-servire solo come termine di confronto sui risultati.
+Il calcolo di cortocircuito è implementato dalle formule pubbliche della norma
+IEC 60909-0:2016, senza decompilare software commerciale.
 
 Codice: [`../implementazione/iec60909/`](../implementazione/iec60909/).
 

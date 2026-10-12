@@ -21,4 +21,4 @@ repository: nel README del progetto annota solo dove si trovano e la versione.
 
 | Progetto | Target | Stato |
 | -------- | ------ | ----- |
-| [ETAP_Power_Simulator](ETAP_Power_Simulator/) | ETAP Power Simulator (Windows) | Cortocircuito IEC 60909 reimplementato e testato |
+| [Electrical Power Simulator Software](Electrical_Power_Simulator_Software/) | Simulatore reti elettriche (ispirato a ETAP) | Cortocircuito IEC 60909 implementato e testato |
