@@ -11,7 +11,13 @@ Wiki_Progettazione/
 └── PROGRAMMAZIONE/   ← cartella di lavoro principale
 .mcp.json             ← registra REA come server MCP per Claude Code
 CLAUDE.md             ← istruzioni per Claude
+scripts/setup-cloud.sh ← installa REA + Ghidra nelle sessioni cloud
 ```
+
+## Sessioni cloud
+
+Il container cloud è temporaneo: a ogni nuova sessione esegui (o inserisci
+nello script di setup dell'ambiente) `bash scripts/setup-cloud.sh`.
 
 ## Setup sul PC (Windows)
 
@@ -34,8 +40,17 @@ cd Reverse_Engineering
 claude
 ```
 
-Per l'analisi di binari nativi serve un motore: Ghidra (gratuito, imposta
-`GHIDRA_INSTALL_DIR`), IDA o Hopper. L'analisi di JavaScript/Electron, .NET e
+Per l'analisi di binari nativi serve Ghidra 12.1.4 (gratuito):
+scarica `ghidra_12.1.4_PUBLIC_20260921.zip` dalle
+[release ufficiali](https://github.com/NationalSecurityAgency/ghidra/releases/tag/Ghidra_12.1.4_build),
+estrailo (es. in `C:\tools\`), installa un JDK 21 a 64 bit e imposta la
+variabile d'ambiente utente:
+
+```powershell
+setx GHIDRA_INSTALL_DIR "C:\tools\ghidra_12.1.4_PUBLIC"
+```
+
+Poi riapri il terminale e verifica con `rea doctor`. L'analisi di JavaScript/Electron, .NET e
 siti web non richiede motori esterni.
 
 ## Sincronizzazione PC ↔ GitHub ↔ cloud

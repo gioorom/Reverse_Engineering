@@ -18,6 +18,9 @@ Lingua di lavoro: italiano.
 - Reverse engineering: REA (`rea-agents`), registrato come server MCP in
   `.mcp.json`. Se gli strumenti MCP non sono disponibili usa la CLI `rea`
   (o `npx -y rea-agents@6.4.0 <comando>`).
+- Binari nativi: Ghidra 12.1.4. In una sessione cloud, se `rea doctor` non
+  trova Ghidra o `rea` manca, esegui prima `bash scripts/setup-cloud.sh` e
+  imposta `GHIDRA_INSTALL_DIR=/opt/ghidra_12.1.4_PUBLIC`.
 - Non versionare binari, eseguibili, installer o archivi da analizzare
   (vedi `.gitignore`): tienili fuori dal repository (in una sessione cloud,
   nella scratchpad) e documenta nel README del progetto da dove provengono e
