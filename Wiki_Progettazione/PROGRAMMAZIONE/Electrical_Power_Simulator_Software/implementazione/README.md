@@ -75,7 +75,10 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
   `x2_percent` (sequenza inversa, default X"d), `x0_percent` e `zn_ohm`
   (centro stella a terra; senza `x0_percent` il neutro è isolato); per Ik con
   un solo generatore: `xd_sat_percent` e `ufmax_ratio` (1,3 o 1,6) oppure
-  `lambda_max` e `lambda_min` letti dalle curve della norma
+  `lambda_max` e `lambda_min` letti dalle curve della norma; per un gruppo di
+  generazione: `unit_transformer` (id del trasformatore elevatore, lato BT sul
+  nodo del generatore), `oltc` (variatore sotto carico, default vero),
+  `pg_percent`, `pt_percent`
 - `motors`: `id`, `bus`, `pr_mw`, `ur_kv`, `efficiency`, `cos_phi`, `ilr_ir`,
   `pole_pairs` (obbligatorio per motori MT), `rx` (facoltativo), `count`,
   `x2_percent` e `rx2` (sequenza inversa da dati di targa, default Z2 = Z1)

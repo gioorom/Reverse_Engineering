@@ -59,13 +59,48 @@ def _winding(conn: str, grounding: Optional[str]) -> str:
     c = conn.strip().upper()
     if c.startswith("D"):
         return "D"
-    return "YN" if (grounding or "").strip() == "Solid" else "Y"
+    return "YN" if _grounded(grounding) else "Y"
+
+
+_FT_KM = 0.3048e-3  # 1 ft in km
+
+
+def _grounded(grounding: Optional[str]) -> bool:
+    return (grounding or "").strip().lower() in ("solid", "resistor", "reactor")
+
+
+def _neutral_ohm(grounding: Optional[str], amp: Any, kv: float) -> complex:
+    """Impedenza di neutro di un trasformatore: Un/(√3·I) resistiva o reattiva."""
+    g = (grounding or "").strip().lower()
+    if g in ("resistor", "reactor") and _num(amp) > 0:
+        z = kv * 1000.0 / (math.sqrt(3.0) * _num(amp))
+        return complex(z, 0.0) if g == "resistor" else complex(0.0, z)
+    return 0j
+
+
+def _tap_z_factor(row: dict[str, Any], tap_percent: float) -> float:
+    """Variazione dell'impedenza con la presa (Minus5PercTap/Plus5PercTap, lineare)."""
+    if tap_percent < 0:
+        return 1.0 + _num(row.get("Minus5PercTap")) / 100.0 * (-tap_percent / 5.0)
+    if tap_percent > 0:
+        return 1.0 + _num(row.get("Plus5PercTap")) / 100.0 * (tap_percent / 5.0)
+    return 1.0
+
+
+def _neutral_fields(prefix: str, grounding: Optional[str], amp: Any, kv: float) -> dict[str, Any]:
+    zn = _neutral_ohm(grounding, amp, kv)
+    if zn == 0:
+        return {}
+    return {f"zn_{prefix}_ohm": [zn.real, zn.imag]}
 
 
 def _earthing(machine: dict[str, Any], kv: float, x0: Any) -> dict[str, Any]:
-    """Neutro a terra tramite resistenza (GNDType 3): Rn = Un/(√3·I)."""
+    """Neutro delle macchine: GNDType 3 resistenza Rn = Un/(√3·I) (verificato);
+    GNDType 2 neutro franco a terra (dedotto, non verificato sui dati di ETAP)."""
     if machine.get("GNDType") == 3 and _num(machine.get("GNDAmp")) > 0:
         return {"x0_percent": _num(x0), "zn_ohm": kv * 1000.0 / (math.sqrt(3.0) * _num(machine["GNDAmp"]))}
+    if machine.get("GNDType") == 2 and _num(x0) > 0:
+        return {"x0_percent": _num(x0)}
     return {}
 
 
@@ -91,25 +126,29 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
 
     for c in _rows(db, "IConnect"):
         if str(c["Type"]).strip().lower().startswith("tie"):
-            a, b = root(c["From"]), root(c["ToSec"])
+            a, b = root(str(c["From"]).strip()), root(str(c["ToSec"]).strip())
             if a != b:
                 parent[b] = a
     alias = {bus: root(bus) for bus in parent}
 
-    def node(bus: str) -> str:
-        return alias.get(bus, bus)
+    def node(bus: Any) -> str:
+        b = str(bus).strip()
+        return alias.get(b, b)
 
     study = (_rows(db, "ISCStudyCase") or [{}])[0]
     adjust = (_rows(db, "IAdjustments") or [{}])[0]
     apply_tol = bool(adjust.get("applyXfmrZTol"))
+    english = str(study.get("Unit") or "").strip().lower().startswith("eng")
+    c_lv = _num(study.get("CFact1"))
     net: dict[str, Any] = {
         "name": f"ETAP {Path(path).name}",
         "f_hz": round(_num(study.get("Freq")) or 50.0),
-        "lv_tolerance_percent": 6,
+        # cmax in BT 1,10 → tolleranza +10 %, altrimenti +6 %
+        "lv_tolerance_percent": 10 if abs(c_lv - 1.10) < 1e-3 else 6,
         "buses": [
-            {"id": b["IDBus"], "un_kv": _num(b["NomlkV"])}
+            {"id": str(b["IDBus"]).strip(), "un_kv": _num(b["NomlkV"])}
             for b in _rows(db, "IBus")
-            if b["IDBus"] not in alias
+            if str(b["IDBus"]).strip() not in alias
         ],
         "external_grids": [],
         "transformers": [],
@@ -120,7 +159,7 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
     }
     for u in _rows(db, "IUtility"):
         grid: dict[str, Any] = {
-            "id": u["ID"],
+            "id": str(u["ID"]).strip(),
             "bus": node(u["ConnectedBus"]),
             "skq_max_mva": _num(u["MVA3ph"]),
             "rx_max": 1.0 / _num(u["X/R3ph"]),
@@ -132,10 +171,12 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
 
     for t in _rows(db, "IXFMR2"):
         tol = 1.0 - _num(t.get("Tol%")) / 100.0 if apply_tol else 1.0
-        z, z0 = _num(t["PosZ"]) * tol, _num(t["ZeroZ"]) * tol
+        tap = _num(t.get("Prim%Tap")) + _num(t.get("Sec%Tap"))
+        k = tol * _tap_z_factor(t, tap)
+        z, z0 = _num(t["PosZ"]) * k, _num(t["ZeroZ"]) * k
         hv, lv = str(t["Conn"]).split("/")
         net["transformers"].append({
-            "id": t["ID"],
+            "id": str(t["ID"]).strip(),
             "hv_bus": node(t["FromBus"]),
             "lv_bus": node(t["ToBus"]),
             "sr_mva": _num(t["MVA"]),
@@ -146,12 +187,15 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
             "uk0_percent": z0,
             "ur0_percent": z0 / math.sqrt(1.0 + _num(t["ZeroX/R"]) ** 2),
             "vector_group": _winding(hv, t.get("PrimGrdType")) + _winding(lv, t.get("SecGrdType")).lower(),
+            **_neutral_fields("hv", t.get("PrimGrdType"), t.get("PrimGrdAmp"), _num(t["PrimkV"])),
+            **_neutral_fields("lv", t.get("SecGrdType"), t.get("SecGrdAmp"), _num(t["SeckV"])),
         })
 
     for t in _rows(db, "IXFMR3"):
         power = {"P": _num(t["PMVA"]), "S": _num(t["SMVA"]), "T": _num(t["TMVA"])}
+        tol3 = 1.0 - _num(t.get("Tolerance")) / 100.0 if apply_tol else 1.0
         data: dict[str, Any] = {
-            "id": t["ID"],
+            "id": str(t["ID"]).strip(),
             "hv_bus": node(t["Prim"]),
             "mv_bus": node(t["Second"]),
             "lv_bus": node(t["Tri"]),
@@ -161,35 +205,42 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
             "vector_group": _winding(t["PConn"], t.get("PrimGrdType"))
             + _winding(t["SConn"], t.get("SecGrdType")).lower()
             + _winding(t["TConn"], t.get("TerGrdType")).lower(),
+            **_neutral_fields("hv", t.get("PrimGrdType"), t.get("PrimGrdAmp"), _num(t["PrimkV"])),
+            **_neutral_fields("mv", t.get("SecGrdType"), t.get("SecGrdAmp"), _num(t["SeckV"])),
+            **_neutral_fields("lv", t.get("TerGrdType"), t.get("TerGrdAmp"), _num(t["TerkV"])),
         }
         for ours, etap, a, b in (("hv_mv", "PS", "P", "S"), ("hv_lv", "TP", "P", "T"), ("mv_lv", "ST", "S", "T")):
             sr = min(power[a], power[b])
             data[f"sr_{ours}_mva"] = sr
             for prefix, seq in (("r", "Pos"), ("0", "Zero")):
-                z = _num(t[f"{etap}{seq}Z"]) * sr / power["P"]
+                z = _num(t[f"{etap}{seq}Z"]) * sr / power["P"] * tol3
                 data[f"uk{prefix}_{ours}_percent"] = z
                 data[f"ur{prefix}_{ours}_percent"] = z / math.sqrt(1.0 + _num(t[f"{etap}{seq}X/R"]) ** 2)
         net["transformers3w"].append(data)
 
+    # unità metriche: Length in m, impedenze in Ω/km;
+    # unità inglesi: Length in ft, impedenze in Ω/1000 ft
+    length_km = _FT_KM if english else 1e-3
+    per_km = 1.0 / (1000.0 * _FT_KM) if english else 1.0
     for c in _rows(db, "Icable"):
         line: dict[str, Any] = {
-            "id": c["ID"],
+            "id": str(c["ID"]).strip(),
             "from_bus": node(c["FromBus"]),
             "to_bus": node(c["ToBus"]),
-            "length_km": _num(c["Length"]) / 1000.0,
-            "r1_ohm_per_km": _num(c["RPos"]),
-            "x1_ohm_per_km": _num(c["XPos"]),
+            "length_km": _num(c["Length"]) * length_km,
+            "r1_ohm_per_km": _num(c["RPos"]) * per_km,
+            "x1_ohm_per_km": _num(c["XPos"]) * per_km,
             "parallel": int(_num(c.get("No/Ph")) or 1),
         }
         if _num(c.get("XZero")) > 0:
-            line["r0_ohm_per_km"] = _num(c["RZero"])
-            line["x0_ohm_per_km"] = _num(c["XZero"])
+            line["r0_ohm_per_km"] = _num(c["RZero"]) * per_km
+            line["x0_ohm_per_km"] = _num(c["XZero"]) * per_km
         net["lines"].append(line)
 
     for g in _rows(db, "ISynGen"):
         xd = _num(g["Xdpp"]) / 100.0 * _num(g["KV"]) ** 2 / _num(g["MVA"])
         net["generators"].append({
-            "id": g["ID"],
+            "id": str(g["ID"]).strip(),
             "bus": node(g["ConnectedBus"]),
             "sr_mva": _num(g["MVA"]),
             "ur_kv": _num(g["KV"]),
@@ -202,10 +253,11 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
         })
     # IEC 60909: i motori sincroni si trattano come generatori sincroni
     for m in _rows(db, "ISynMotor"):
-        sr = _num(m["kVA"]) / 1000.0
+        # kVA del motore sincrono riferiti alla singola macchina
+        sr = _num(m["kVA"]) / 1000.0 * max(1, int(_num(m.get("Quantity")) or 1))
         xd = _num(m["Xdpp"]) / 100.0 * _num(m["kV"]) ** 2 / sr
         net["generators"].append({
-            "id": m["ID"],
+            "id": str(m["ID"]).strip(),
             "bus": node(m["ConnectedBus"]),
             "sr_mva": sr,
             "ur_kv": _num(m["kV"]),
@@ -216,14 +268,17 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
             **_earthing(m, _num(m["kV"]), m.get("X0")),
         })
     for m in _rows(db, "IIndMachine"):
+        if m.get("Status") not in (None, 1):
+            continue  # motore non in servizio
         kva = _num(m["kVA"])  # potenza apparente nominale, già comprensiva della quantità
         qty = max(1, int(_num(m.get("Quantity")) or 1))
-        # potenza attiva di targa: FlagHP/kW = 1 → HP, 2 → kW
-        p_kw = _num(m.get("HP/kW")) * (0.7457 if m.get("FlagHP/kW") == 1 else 1.0)
+        # potenza attiva di targa da kVA·η·cosφ (indipendente dall'unità HP/kW,
+        # il cui indicatore FlagHP/kW cambia significato con il sistema di unità)
+        p_kw = kva * _num(m.get("EFF100")) / 100.0 * _num(m.get("PF100")) / 100.0
         if not 0.0 < p_kw <= kva:
             p_kw = kva
         motor: dict[str, Any] = {
-            "id": m["ID"],
+            "id": str(m["ID"]).strip(),
             "bus": node(m["ConnectedBus"]),
             # Sr = Pr/(η·cosφ) = kVA: η·cosφ = Pr/kVA, con cosφ = 1
             "pr_mw": p_kw / 1000.0 / qty,
@@ -240,6 +295,22 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
             motor["x2_percent"] = _num(m["X2"])
             motor["rx2"] = _num(m["R"]) / _num(m["X2"])
         net["motors"].append(motor)
+    # carichi concentrati: la sola quota motori (MTR%) diventa un motore equivalente
+    # con Sr = kVA·MTR%, I_LR/Ir = 100/|Z"| (Z" in %) e R/X = 1/(Xpp/R)
+    for lump in _rows(db, "ILump"):
+        sr_kva = _num(lump["kVA"]) * _num(lump.get("MTR%")) / 100.0
+        if sr_kva <= 0.0:
+            continue
+        net["motors"].append({
+            "id": f"{str(lump['ID']).strip()}_motori",
+            "bus": node(lump["ConnectedBus"]),
+            "pr_mw": sr_kva / 1000.0,
+            "ur_kv": _num(lump["KV"]),
+            "efficiency": 1.0,
+            "cos_phi": 1.0,
+            "ilr_ir": 100.0 / math.hypot(_num(lump["Xpp"]), _num(lump["R"])),
+            "rx": 1.0 / _num(lump["Xpp/R"]),
+        })
     return net, alias
 
 
@@ -262,13 +333,13 @@ def compare(path: str | Path, kappa_method: str = "C") -> tuple[StudyResult, lis
     data, alias = network_from_etap(path)
     result = calculate(network_from_dict(data), "max", kappa_method)
     with closing(_open(path)) as db:
-        sum2 = {r["FaultedBus"]: r for r in _rows(db, "SCIECLGSum2")}
-        clip = {r["FaultedBus"]: r for r in _rows(db, "ClippingCurrent")}
+        sum2 = {str(r["FaultedBus"]).strip(): r for r in _rows(db, "SCIECLGSum2")}
+        clip = {str(r["FaultedBus"]).strip(): r for r in _rows(db, "ClippingCurrent")}
         sum1 = _rows(db, "SCIECLGSum1")
         duty = _rows(db, "SCIEC3phSum")
     out: list[Comparison] = []
     for e in sum1:
-        bus = e["FaultedBus"]
+        bus = str(e["FaultedBus"]).strip()
         r = result.bus(alias.get(bus, bus))
         z = sum2.get(bus, {})
         pairs = [
@@ -301,7 +372,7 @@ def _compare_duty(
     out: list[Comparison] = []
     by_tmin: dict[float, StudyResult] = {}
     for e in duty:
-        bus = e["FaultedBus"]
+        bus = str(e["FaultedBus"]).strip()
         r = result.bus(alias.get(bus, bus))
         tmin = _num(e.get("DeviceTD"))
         if tmin <= 0.0:

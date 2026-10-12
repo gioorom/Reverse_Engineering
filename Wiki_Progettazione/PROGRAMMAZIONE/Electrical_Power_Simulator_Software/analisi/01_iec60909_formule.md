@@ -48,6 +48,18 @@ Codice: [`../implementazione/iec60909/`](../implementazione/iec60909/).
   di base Ur_AT; ogni avvolgimento è un ramo con il proprio rapporto nominale.
   Sequenza zero: avvolgimento YN → ramo serie (+3·Zn); avvolgimento D →
   derivazione verso terra dal centro stella; Y senza neutro → aperto.
+- **Gruppo di generazione** (generatore con trasformatore elevatore dedicato,
+  `unit_transformer`): al posto di K_G e K_T un unico fattore per generatore
+  e trasformatore, Z_S = K·(t_r²·Z_G + Z_THV):
+  - con variatore sotto carico: K_S = (UnQ²/UrG²)·(UrTLV²/UrTHV²)·cmax /
+    (1 + |x"d − x_T|·sinφrG);
+  - senza variatore: K_SO = UnQ/(UrG·(1 + pG))·(UrTLV/UrTHV)·(1 − pT)·cmax /
+    (1 + x"d·sinφrG), con pG campo di regolazione della tensione del
+    generatore e pT presa fissa permanente del trasformatore;
+  - guasto tra generatore e trasformatore (nodo del generatore):
+    K_G,S = cmax/(1 + x"d·sinφrG) sul generatore e K_T,S = cmax/(1 − x_T·sinφrG)
+    sul trasformatore (contributo della rete), entrambi divisi per (1 + pG)
+    senza variatore. Il calcolo di questo nodo usa una matrice dedicata.
 - **K_T** = 0,95·cmax/(1 + 0,6·x_T), con cmax del lato BT; applicato solo al
   calcolo delle correnti **massime** (sez. 6.3.3), anche alla sequenza zero.
 - **K_G** = (Un/UrG)·cmax/(1 + x"d·sin φrG).
@@ -132,8 +144,8 @@ per bifase e monofase.
 ## Limiti (non ancora implementati)
 
 - Avvolgimenti a zig-zag (rifiutati con un errore esplicito).
-- Gruppi di generazione con trasformatore (power station unit, K_S/K_SO),
-  inclusi λ e μ del gruppo.
+- Gruppi di generazione: trasformatori ausiliari e guasti sul lato dei
+  servizi ausiliari.
 - Fattore n della corrente termica per guasti vicini ai generatori (n = 1).
 - Componente continua i_DC, impedenza di guasto, contributo di inverter/eolico.
 - Metodo B senza la deroga per R/X < 0,3 in tutti i rami.

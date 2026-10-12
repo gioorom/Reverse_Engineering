@@ -138,6 +138,14 @@ class Generator:
     ufmax_ratio: float = 1.3
     lambda_max: Optional[float] = None
     lambda_min: Optional[float] = None
+    # Gruppo di generazione (power station unit): id del trasformatore elevatore
+    # dedicato (lato BT sul nodo del generatore), presenza del variatore sotto
+    # carico, campo di regolazione della tensione del generatore pG e presa
+    # fissa permanente del trasformatore pT (solo senza variatore).
+    unit_transformer: Optional[str] = None
+    oltc: bool = True
+    pg_percent: float = 0.0
+    pt_percent: float = 0.0
 
 
 @dataclass
@@ -215,8 +223,22 @@ class Network:
             un = {b.id: b.un_kv for b in self.buses}
             if abs(un[ln.from_bus] - un[ln.to_bus]) > 1e-9:
                 raise ValueError(f"{ln.id}: collega nodi con tensioni nominali diverse")
+        transformers = {t.id: t for t in self.transformers}
+        units: set[str] = set()
         for g in self.generators:
             check(g.bus, g.id)
+            if g.unit_transformer is None:
+                continue
+            t = transformers.get(g.unit_transformer)
+            if t is None:
+                raise ValueError(f"{g.id}: trasformatore del gruppo inesistente {g.unit_transformer!r}")
+            if t.lv_bus != g.bus:
+                raise ValueError(f"{g.id}: il lato BT di {t.id} deve essere sul nodo del generatore")
+            if t.parallel != 1:
+                raise ValueError(f"{t.id}: il trasformatore di un gruppo non può avere parallel > 1")
+            if t.id in units:
+                raise ValueError(f"{t.id}: trasformatore assegnato a più gruppi")
+            units.add(t.id)
         for m in self.motors:
             check(m.bus, m.id)
         if not (self.external_grids or self.generators):

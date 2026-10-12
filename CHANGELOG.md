@@ -11,6 +11,22 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Gruppi di generazione con trasformatore dedicato in `iec60909`: K_S/K_SO
+  per i guasti esterni, K_G,S/K_T,S per i guasti tra generatore e
+  trasformatore; confronto con pandapower.
+- Ib con i fattori μ e q (formula per reti magliate, tmin a scelta) e Ik con
+  la regola delle reti magliate o con λ per i guasti alimentati da un solo
+  generatore; confronto con lo studio di duty di ETAP.
+- Importatore degli studi di cortocircuito IEC di ETAP (`iec60909.etap`):
+  conversione della rete dai database SQLite `.SI2S`/`.SI1S` e confronto dei
+  risultati; lo studio SC_909 della demo di ETAP 2024 è riprodotto entro
+  lo 0,025 % (lo studio IEC-909 di Example-New entro lo 0,005 % con una
+  conversione dedicata).
+- Generatori con sequenza inversa di targa e neutro a terra; motori con
+  sequenza inversa di targa.
+- Analisi della demo di ETAP 2024 e del formato dei suoi file di uscita
+  (`analisi/02`–`06`).
+- Test automatici su GitHub Actions (Python 3.10 e 3.13).
 - Licenza MIT.
 - Presentazione del repository: README riscritto, `CONTRIBUTING.md`,
   `CHANGELOG.md`, `.editorconfig`, modelli per pull request e issue in
@@ -19,6 +35,8 @@ Il repository non ha ancora versioni rilasciate.
   cortocircuito secondo IEC 60909-0:2016 nel pacchetto Python `iec60909`
   (guasti trifase, bifase, bifase a terra e monofase; correnti massime e
   minime; ip con metodi B e C, Ib, Ik, Ith).
+- Correzione: correnti di fase del guasto bifase a terra senza percorso verso
+  terra (ora pari a I"k2 invece di zero).
 - Verifica indipendente dei tre avvolgimenti con 20 test di calcolo a mano;
   controlli espliciti su dati omopolari incoerenti e avvolgimenti a zig-zag.
 - Trasformatori a tre avvolgimenti in `iec60909` (schema a stella con

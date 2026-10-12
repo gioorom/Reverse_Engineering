@@ -94,10 +94,14 @@ def _star_node(t: Transformer3W) -> str:
 class _Builder:
     """Costruisce le matrici delle ammettenze nodali di una sequenza."""
 
-    def __init__(self, net: Network, case: str, warnings: list[str]):
+    def __init__(
+        self, net: Network, case: str, warnings: list[str], inside_unit: Optional[str] = None
+    ):
         self.net = net
         self.case = case
         self.warnings = warnings
+        # generatore del gruppo nel cui interno (nodo del generatore) si calcola il guasto
+        self.inside_unit = inside_unit
         self.idx = net.bus_index()
         self.un = {b.id: b.un_kv for b in net.buses}
         # Nodo interno (centro stella) di ogni trasformatore a tre avvolgimenti,
@@ -105,6 +109,32 @@ class _Builder:
         for t in net.transformers3w:
             self.idx[_star_node(t)] = len(self.idx)
             self.un[_star_node(t)] = t.ur_hv_kv
+        # gruppi di generazione: fattore del trasformatore (per id trafo) e del
+        # generatore (per id generatore)
+        self.unit_k: dict[str, float] = {}
+        self.unit_k_gen: dict[str, float] = {}
+        transformers = {t.id: t for t in net.transformers}
+        for g in net.generators:
+            if g.unit_transformer is None:
+                continue
+            t = transformers[g.unit_transformer]
+            k_out, k_g_in, k_t_in = factors.power_station_factors(
+                un_q_kv=self.un[t.hv_bus],
+                ur_g_kv=g.ur_kv,
+                ur_t_hv_kv=t.ur_hv_kv,
+                ur_t_lv_kv=t.ur_lv_kv,
+                c_max_q=self.c_max(t.hv_bus),
+                c_max_g=self.c_max(g.bus),
+                xd2_pu=g.xd2_percent / 100.0,
+                xt_pu=math.sqrt(t.ukr_percent**2 - t.urr_percent**2) / 100.0,
+                cos_phi=g.cos_phi,
+                oltc=g.oltc,
+                pg=g.pg_percent / 100.0,
+                pt=g.pt_percent / 100.0,
+            )
+            inside = g.id == inside_unit
+            self.unit_k[t.id] = k_t_in if inside else k_out
+            self.unit_k_gen[g.id] = k_g_in if inside else k_out
 
     def zbase(self, bus_id: str) -> float:
         return self.un[bus_id] ** 2 / S_BASE_MVA
@@ -124,7 +154,10 @@ class _Builder:
         rk = t.urr_percent / 100.0 * zr
         xk = math.sqrt(zk**2 - rk**2)
         kt = 1.0
-        if self.case == "max":
+        if t.id in self.unit_k:
+            # trasformatore di un gruppo di generazione: K_S/K_SO o K_T,S invece di K_T
+            kt = self.unit_k[t.id]
+        elif self.case == "max":
             x_t = math.sqrt(t.ukr_percent**2 - t.urr_percent**2) / 100.0
             kt = factors.transformer_kt(self.c_max(t.lv_bus), x_t)
         z1 = kt * complex(rk, xk) / self.zbase(t.lv_bus)
@@ -140,9 +173,12 @@ class _Builder:
         """Impedenza del generatore in p.u. (sequenza 1, 2 o 0 senza neutro)."""
         xd = g.xd2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
         rg = g.rg_ohm if g.rg_ohm is not None else factors.generator_rx(g.ur_kv, g.sr_mva) * xd
-        kg = factors.generator_kg(
-            self.un[g.bus], g.ur_kv, self.c_max(g.bus), g.xd2_percent / 100.0, g.cos_phi
-        )
+        if g.id in self.unit_k_gen:
+            kg = self.unit_k_gen[g.id]  # gruppo di generazione: K_S/K_SO o K_G,S
+        else:
+            kg = factors.generator_kg(
+                self.un[g.bus], g.ur_kv, self.c_max(g.bus), g.xd2_percent / 100.0, g.cos_phi
+            )
         x = xd
         if seq == 2 and g.x2_percent is not None:
             # reattanza di sequenza inversa di targa, es. X(2) = (X"d + X"q)/2
@@ -359,8 +395,29 @@ def calculate(
     kappa_method = kappa_method.upper()
     if kappa_method not in ("B", "C"):
         raise ValueError("kappa_method deve essere 'B' o 'C'")
+    result = _calculate(net, case, kappa_method, tk_s, tmin_s, None)
+    # Guasti all'interno dei gruppi di generazione (nodo del generatore):
+    # fattori K_G,S e K_T,S invece di K_S/K_SO.
+    for g in net.generators:
+        if g.unit_transformer is None:
+            continue
+        inside = _calculate(net, case, kappa_method, tk_s, tmin_s, g.id)
+        k = next(i for i, r in enumerate(result.buses) if r.bus == g.bus)
+        result.buses[k] = inside.bus(g.bus)
+        result.warnings += [w for w in inside.warnings if w not in result.warnings]
+    return result
+
+
+def _calculate(
+    net: Network,
+    case: str,
+    kappa_method: str,
+    tk_s: float,
+    tmin_s: float,
+    inside_unit: Optional[str],
+) -> StudyResult:
     warnings: list[str] = []
-    b = _Builder(net, case, warnings)
+    b = _Builder(net, case, warnings, inside_unit)
 
     z1_full = _full_z(b.build(1))
     z1 = np.diag(z1_full).copy()

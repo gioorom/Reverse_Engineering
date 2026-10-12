@@ -137,3 +137,44 @@ def generator_lambda(
     lam_min = 1.0 / (xd_sat_pu + x_ext)
     # la corrente permanente non supera quella iniziale
     return min(lam_max, ikg_over_irg), min(lam_min, ikg_over_irg)
+
+
+def power_station_factors(
+    *,
+    un_q_kv: float,
+    ur_g_kv: float,
+    ur_t_hv_kv: float,
+    ur_t_lv_kv: float,
+    c_max_q: float,
+    c_max_g: float,
+    xd2_pu: float,
+    xt_pu: float,
+    cos_phi: float,
+    oltc: bool,
+    pg: float = 0.0,
+    pt: float = 0.0,
+) -> tuple[float, float, float]:
+    """Fattori dei gruppi di generazione (generatore + trasformatore dedicato).
+
+    Restituisce (K_esterno, K_G_interno, K_T_interno):
+    - guasti fuori dal gruppo: Z_S = K·(t_r²·Z_G + Z_THV), con
+      K_S = (UnQ²/UrG²)·(UrTLV²/UrTHV²)·cmax/(1 + |x"d − x_T|·sinφ) (variatore
+      sotto carico) oppure
+      K_SO = UnQ/(UrG·(1 + pG))·(UrTLV/UrTHV)·(1 − pT)·cmax/(1 + x"d·sinφ);
+    - guasti tra generatore e trasformatore: K_G,S = cmax/(1 + x"d·sinφ) e
+      K_T,S = cmax/(1 − x_T·sinφ), divisi per (1 + pG) senza variatore.
+    """
+    sin_phi = math.sqrt(max(0.0, 1.0 - cos_phi**2))
+    if oltc:
+        k_out = (un_q_kv**2 / ur_g_kv**2) * (ur_t_lv_kv**2 / ur_t_hv_kv**2) * c_max_q / (
+            1.0 + abs(xd2_pu - xt_pu) * sin_phi
+        )
+        scale = 1.0
+    else:
+        k_out = (un_q_kv / (ur_g_kv * (1.0 + pg))) * (ur_t_lv_kv / ur_t_hv_kv) * (1.0 - pt) * c_max_q / (
+            1.0 + xd2_pu * sin_phi
+        )
+        scale = 1.0 / (1.0 + pg)
+    k_g_in = scale * c_max_g / (1.0 + xd2_pu * sin_phi)
+    k_t_in = scale * c_max_g / (1.0 - xt_pu * sin_phi)
+    return k_out, k_g_in, k_t_in
