@@ -165,6 +165,7 @@ python -m pytest
   anello MT, generatore, motore MT e cabina BT, e su una stazione con
   trasformatore a tre avvolgimenti in cinque gruppi vettoriali (tolleranza 1e-6).
 - `tests/test_loadflow.py`: flusso di potenza, soluzione in forma chiusa su due
-  nodi e confronto con pandapower `runpp` (tolleranza 1e-6).
+  nodi e confronto con pandapower `runpp` (tolleranza 1e-6);
+  `tests/test_loadflow_ieee14.py`: rete di prova IEEE a 14 nodi.
 
 Dettagli delle formule, ipotesi e limiti: [`../analisi/01_iec60909_formule.md`](../analisi/01_iec60909_formule.md).

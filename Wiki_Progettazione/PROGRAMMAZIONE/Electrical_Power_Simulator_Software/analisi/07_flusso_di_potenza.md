@@ -86,7 +86,13 @@ potenza attiva impressa (la reattiva va alla rete).
   flussi, correnti, carichi e perdite coincidono entro 1e-6 (di fatto
   all'arrotondamento), anche con i limiti di potenza reattiva e con il
   generatore PQ.
-- Rete di prova IEEE a 14 nodi: vedi `tests/test_loadflow_ieee14.py`.
+- Rete di prova IEEE a 14 nodi (`tests/test_loadflow_ieee14.py`, dati da
+  `pandapower.networks.case14()`, 60 Hz, trasformatori a rapporto fuori
+  nominale): coincide con pandapower entro 1e-13 su moduli e angoli, anche con
+  i limiti di potenza reattiva attivi, e con la soluzione pubblicata (MATPOWER:
+  moduli a 3 decimali, angoli a 2 decimali, perdite 13,393 MW). La soluzione
+  storica del file IEEE CDF differisce leggermente da quella esatta dei suoi
+  dati (es. nodo 4: 1,019 contro 1,0177): si usano i valori di MATPOWER.
 
 Durante il confronto è emerso che in pandapower 3.x il variatore va creato con
 `tap_changer_type="Ratio"`: senza, le prese sono ignorate (scarto dell'1–3 %
