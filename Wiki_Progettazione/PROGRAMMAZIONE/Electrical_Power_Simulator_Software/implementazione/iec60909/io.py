@@ -11,6 +11,7 @@ from .calc import StudyResult
 from .network import (
     ArcFlashPoint,
     Bus,
+    CableSizing,
     EarthingTransformer,
     ExternalGrid,
     Generator,
@@ -51,6 +52,7 @@ _SECTIONS = {
     "motor_starts": MotorStart,
     "reliability_data": ReliabilityData,
     "switches": Switch,
+    "cable_sizing": CableSizing,
 }
 
 

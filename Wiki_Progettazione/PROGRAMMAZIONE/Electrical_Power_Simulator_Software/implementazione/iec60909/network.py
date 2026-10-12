@@ -326,6 +326,50 @@ class Switch:
 
 
 @dataclass
+class CableSizing:
+    """Dimensionamento del cavo della linea `line` (alimentata da from_bus).
+
+    Corrente di impiego `ib_a` (default: corrente del flusso di potenza) e
+    cosφ (default: dal flusso di potenza). Posa secondo IEC 60364-5-52:
+    `method` (A1, A2, B1, B2, C, D1, D2, E, F, G), `material` (cu, al),
+    `insulation` (pvc, xlpe), conduttori caricati, temperatura ambiente,
+    resistività termica del terreno, raggruppamento; oppure tabella propria
+    `ampacity_a` {sezione mm²: A} (es. cavi MT da catalogo). Protezione:
+    dispositivo `device` di protective_devices oppure `in_a` con
+    `i2_ratio` (I2/In).
+    """
+
+    id: str
+    line: str
+    ib_a: Optional[float] = None
+    cos_phi: Optional[float] = None
+    material: str = "cu"
+    insulation: str = "pvc"
+    method: str = "C"
+    cores: str = "multi"
+    arrangement: Optional[str] = None
+    loaded_conductors: int = 3
+    ambient_c: Optional[float] = None
+    soil_resistivity_km_w: Optional[float] = None
+    grouping: Optional[str] = None
+    circuits: int = 1
+    k_extra: float = 1.0
+    ampacity_a: dict = field(default_factory=dict)
+    max_temperature_c: Optional[float] = None
+    sections: list = field(default_factory=list)
+    max_parallel: int = 1
+    device: Optional[str] = None
+    in_a: Optional[float] = None
+    i2_ratio: Optional[float] = None
+    vdrop_max_percent: float = 4.0
+    upstream_drop_percent: float = 0.0
+    x_ohm_per_km: float = 0.08
+    pe_section_mm2: Optional[float] = None
+    t_sc_s: Optional[float] = None
+    disconnection_time_s: Optional[float] = None
+
+
+@dataclass
 class Shunt:
     """Derivazione a impedenza costante (reattori, condensatori di rifasamento).
 
@@ -594,6 +638,7 @@ class Network:
     motor_starts: list[MotorStart] = field(default_factory=list)
     reliability_data: list[ReliabilityData] = field(default_factory=list)
     switches: list[Switch] = field(default_factory=list)
+    cable_sizing: list[CableSizing] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}
