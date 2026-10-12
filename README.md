@@ -46,7 +46,7 @@ Reverse_Engineering/
 
 | Progetto | Descrizione | Stato |
 | -------- | ----------- | ----- |
-| [Electrical Power Simulator Software](Wiki_Progettazione/PROGRAMMAZIONE/Electrical_Power_Simulator_Software/) | Simulatore di reti elettriche ispirato a ETAP Power Simulator, ricostruito dalle norme tecniche pubbliche (nessuna decompilazione di software commerciale). Primo modulo: pacchetto Python `iec60909` per il calcolo delle correnti di cortocircuito secondo IEC 60909-0:2016, validato con calcoli a mano e con pandapower. | Cortocircuito IEC 60909 implementato e testato, inclusi i trasformatori a tre avvolgimenti |
+| [Electrical Power Simulator Software](Wiki_Progettazione/PROGRAMMAZIONE/Electrical_Power_Simulator_Software/) | Simulatore di reti elettriche ispirato a ETAP Power Simulator, ricostruito dalle norme tecniche pubbliche (nessuna decompilazione di software commerciale). Pacchetto Python `iec60909`: correnti di cortocircuito secondo IEC 60909-0:2016 e flusso di potenza (Newton-Raphson), validati con calcoli a mano, con pandapower e (cortocircuito) con gli studi della demo di ETAP. | Cortocircuito IEC 60909 e flusso di potenza implementati e testati |
 
 L'elenco aggiornato è anche in
 [`Wiki_Progettazione/PROGRAMMAZIONE/README.md`](Wiki_Progettazione/PROGRAMMAZIONE/README.md).

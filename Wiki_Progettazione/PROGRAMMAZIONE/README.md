@@ -30,4 +30,4 @@ del progetto annota solo dove si trovano e la versione.
 
 | Progetto | Target | Stato |
 | -------- | ------ | ----- |
-| [Electrical Power Simulator Software](Electrical_Power_Simulator_Software/) | Simulatore reti elettriche (ispirato a ETAP) | Cortocircuito IEC 60909 implementato e testato |
+| [Electrical Power Simulator Software](Electrical_Power_Simulator_Software/) | Simulatore reti elettriche (ispirato a ETAP) | Cortocircuito IEC 60909 e flusso di potenza implementati e testati |

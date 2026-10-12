@@ -11,6 +11,11 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Flusso di potenza (Newton-Raphson) in `iec60909.loadflow`, riga di comando
+  `python -m iec60909.flusso`: reti esterne di saldo, generatori PV/PQ con
+  limiti di Q, carichi, motori, generatori statici, condensatori, linee con
+  capacità, trasformatori con prese e magnetizzazione, trasformatori a tre
+  avvolgimenti; confronto con pandapower e soluzione in forma chiusa.
 - Deroga del metodo B in `iec60909`: senza il fattore 1,15 quando tutti i
   rami hanno R/X < 0,3; confronto con pandapower.
 - Fattore n della corrente termica equivalente Ith in `iec60909`

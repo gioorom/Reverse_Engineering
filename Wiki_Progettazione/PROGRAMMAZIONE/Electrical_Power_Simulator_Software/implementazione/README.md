@@ -1,9 +1,14 @@
-# iec60909 — calcolo delle correnti di cortocircuito
+# iec60909 — cortocircuito e flusso di potenza
 
-Reimplementazione del calcolo di cortocircuito della **IEC 60909-0:2016**
-per Electrical Power Simulator Software, scritta dalle formule
-della norma e verificata contro [pandapower](https://www.pandapower.org/),
-un'implementazione open source indipendente della stessa norma.
+Pacchetto Python di Electrical Power Simulator Software con due calcoli sulla
+stessa descrizione della rete:
+
+- **cortocircuito** secondo la **IEC 60909-0:2016**, scritto dalle formule
+  della norma;
+- **flusso di potenza** (load flow) con il metodo di Newton-Raphson.
+
+Entrambi sono verificati contro [pandapower](https://www.pandapower.org/),
+implementazione open source indipendente, e con calcoli a mano.
 
 ## Installazione
 
@@ -35,7 +40,28 @@ risultato = calculate(load_network("rete.json"), case="max", kappa_method="C", t
 print(risultato.bus("QGBT").ikss3_ka)
 ```
 
-## Risultati per nodo
+### Flusso di potenza
+
+```bash
+python -m iec60909.flusso esempi/rete_flusso_potenza.json          # Markdown
+python -m iec60909.flusso rete.json --qlim --json                  # limiti di Q, JSON
+```
+
+```python
+from iec60909 import load_network, run_load_flow
+
+lf = run_load_flow(load_network("rete.json"), enforce_q_lims=False)
+print(lf.bus("QGBT").vm_pu, lf.branch("T1").loading_percent, lf.losses_mw)
+```
+
+Risultati: nodi (`vm_pu`, `u_kv`, `va_degree`, potenze immesse), rami
+(`p_from_mw`, `q_from_mvar`, `p_to_mw`, `q_to_mvar`, `i_from_ka`, `i_to_ka`,
+`pl_mw`, `loading_percent`; gli avvolgimenti dei trasformatori a tre
+avvolgimenti sono i rami `<id>:hv`, `<id>:mv`, `<id>:lv`), sorgenti (potenze
+di reti esterne e generatori). Modelli e limiti:
+[`../analisi/07_flusso_di_potenza.md`](../analisi/07_flusso_di_potenza.md).
+
+## Risultati per nodo (cortocircuito)
 
 | Grandezza | Significato |
 |---|---|
@@ -96,6 +122,21 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
   `pole_pairs` (obbligatorio per motori MT), `rx` (facoltativo), `count`,
   `x2_percent` e `rx2` (sequenza inversa da dati di targa, default Z2 = Z1)
 
+Campi usati solo dal flusso di potenza (tutti facoltativi, esempio in
+`esempi/rete_flusso_potenza.json`):
+
+- `external_grids`: `vm_pu` (default 1), `va_degree` (default 0)
+- `transformers`: `tap_pos`, `tap_step_percent`, `tap_side` (`hv`/`lv`),
+  `i0_percent`, `pfe_kw` (il cortocircuito usa sempre il rapporto nominale)
+- `lines`: `c_nf_per_km` (capacità di esercizio), `max_i_ka` (per il carico %)
+- `generators`: `p_mw`, `vm_pu` (nodo PV; `null` per un nodo PQ con
+  `q_mvar`), `q_min_mvar`, `q_max_mvar`
+- `motors`: `loading` (frazione della potenza nominale, default 1)
+- `static_generators`: `p_mw`, `q_mvar`
+- `loads`: `id`, `bus`, `p_mw`, `q_mvar`, `count`
+- `shunts`: `id`, `bus`, `q_mvar` (assorbita a tensione nominale: > 0
+  reattore, < 0 condensatori), `p_mw`
+
 ## Confronto con ETAP
 
 Gli studi di cortocircuito IEC di ETAP sono database SQLite (`.SI2S`) che
@@ -123,5 +164,7 @@ python -m pytest
   110/20/0,4 kV con trasformatori in parallelo a rapporto fuori nominale,
   anello MT, generatore, motore MT e cabina BT, e su una stazione con
   trasformatore a tre avvolgimenti in cinque gruppi vettoriali (tolleranza 1e-6).
+- `tests/test_loadflow.py`: flusso di potenza, soluzione in forma chiusa su due
+  nodi e confronto con pandapower `runpp` (tolleranza 1e-6).
 
 Dettagli delle formule, ipotesi e limiti: [`../analisi/01_iec60909_formule.md`](../analisi/01_iec60909_formule.md).

@@ -6,8 +6,8 @@ Software di simulazione delle reti elettriche ispirato alle funzioni di
 ETAP Power Simulator, sviluppato in proprio a partire dalle norme tecniche
 pubbliche (nessuna decompilazione di software commerciale).
 
-Primo modulo: calcolo delle correnti di cortocircuito secondo
-IEC 60909-0:2016.
+Moduli: calcolo delle correnti di cortocircuito secondo IEC 60909-0:2016 e
+flusso di potenza (Newton-Raphson).
 
 ## Riferimento di ispirazione
 
@@ -23,6 +23,7 @@ IEC 60909-0:2016.
 | Modulo | Norma | Stato |
 | ------ | ----- | ----- |
 | Cortocircuito ([`implementazione/`](implementazione/)) | IEC 60909-0:2016 | implementato e testato |
+| Flusso di potenza ([`analisi/07`](analisi/07_flusso_di_potenza.md)) | Newton-Raphson | implementato e testato (pandapower, forma chiusa) |
 
 ## Stato
 
@@ -30,7 +31,8 @@ IEC 60909-0:2016.
 - [x] Cortocircuito IEC 60909: formule documentate ([`analisi/01_iec60909_formule.md`](analisi/01_iec60909_formule.md))
 - [x] Cortocircuito IEC 60909: implementazione e test (calcoli a mano, confronto con pandapower)
 - [x] Cortocircuito: gruppi di generazione con servizi ausiliari, fattori μ/q/λ, componente continua, generatori statici, zig-zag
-- [ ] Altri moduli (es. load flow, arc flash IEEE 1584)
+- [x] Flusso di potenza (Newton-Raphson): implementazione e test
+- [ ] Altri moduli (es. arc flash IEEE 1584, coordinamento delle protezioni)
 
 ## Conclusioni
 

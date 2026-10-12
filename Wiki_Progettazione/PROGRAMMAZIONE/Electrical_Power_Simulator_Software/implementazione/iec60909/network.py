@@ -52,6 +52,9 @@ class ExternalGrid:
     # Sequenza zero: X0/X1 e R0/X0. Se assenti la rete non offre percorso verso terra.
     x0x1: Optional[float] = None
     r0x0: Optional[float] = None
+    # Flusso di potenza: nodo di saldo con tensione e angolo imposti
+    vm_pu: float = 1.0
+    va_degree: float = 0.0
 
 
 @dataclass
@@ -72,6 +75,14 @@ class Transformer:
     zn_hv_ohm: complex = 0.0
     zn_lv_ohm: complex = 0.0
     parallel: int = 1
+    # Flusso di potenza: variatore (posizione rispetto alla presa centrale,
+    # passo in % e lato) e magnetizzazione (corrente a vuoto e perdite nel ferro).
+    # Il calcolo di cortocircuito usa sempre il rapporto nominale.
+    tap_pos: int = 0
+    tap_step_percent: float = 0.0
+    tap_side: str = "hv"
+    i0_percent: float = 0.0
+    pfe_kw: float = 0.0
 
 
 @dataclass
@@ -131,6 +142,9 @@ class Line:
     x0_ohm_per_km: Optional[float] = None
     end_temperature_c: float = 20.0
     parallel: int = 1
+    # Flusso di potenza: capacità di esercizio e corrente ammissibile (per linea)
+    c_nf_per_km: float = 0.0
+    max_i_ka: Optional[float] = None
 
 
 @dataclass
@@ -167,6 +181,14 @@ class Generator:
     oltc: bool = True
     pg_percent: float = 0.0
     pt_percent: float = 0.0
+    # Flusso di potenza: potenza attiva erogata e tensione regolata (nodo PV);
+    # con vm_pu = None il generatore eroga la potenza reattiva q_mvar (nodo PQ).
+    # Limiti di potenza reattiva facoltativi (usati con enforce_q_lims).
+    p_mw: float = 0.0
+    vm_pu: Optional[float] = 1.0
+    q_mvar: float = 0.0
+    q_min_mvar: Optional[float] = None
+    q_max_mvar: Optional[float] = None
 
 
 @dataclass
@@ -187,6 +209,33 @@ class Motor:
     # (default: Z(2) = Z(1))
     x2_percent: Optional[float] = None
     rx2: Optional[float] = None
+    # Flusso di potenza: carico a potenza costante P = loading·Pr/η, Q = P·tanφ
+    loading: float = 1.0
+
+
+@dataclass
+class Load:
+    """Carico a potenza costante (solo flusso di potenza)."""
+
+    id: str
+    bus: str
+    p_mw: float
+    q_mvar: float = 0.0
+    count: int = 1
+
+
+@dataclass
+class Shunt:
+    """Derivazione a impedenza costante (reattori, condensatori di rifasamento).
+
+    p_mw e q_mvar sono le potenze assorbite alla tensione nominale del nodo:
+    q_mvar > 0 reattore (induttivo), q_mvar < 0 condensatori.
+    """
+
+    id: str
+    bus: str
+    q_mvar: float
+    p_mw: float = 0.0
 
 
 @dataclass
@@ -225,6 +274,9 @@ class StaticGenerator:
     ur_kv: Optional[float] = None
     rx: float = 0.1
     count: int = 1
+    # Flusso di potenza: potenza erogata (nodo PQ)
+    p_mw: float = 0.0
+    q_mvar: float = 0.0
 
 
 @dataclass
@@ -241,6 +293,8 @@ class Network:
     motors: list[Motor] = field(default_factory=list)
     static_generators: list[StaticGenerator] = field(default_factory=list)
     earthing_transformers: list[EarthingTransformer] = field(default_factory=list)
+    loads: list[Load] = field(default_factory=list)
+    shunts: list[Shunt] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}
@@ -337,6 +391,15 @@ class Network:
             units.add(t.id)
         for m in self.motors:
             check(m.bus, m.id)
+        for ld in self.loads:
+            check(ld.bus, ld.id)
+        for sh in self.shunts:
+            check(sh.bus, sh.id)
+        for t in self.transformers:
+            if t.tap_side not in ("hv", "lv"):
+                raise ValueError(f"{t.id}: tap_side deve essere 'hv' o 'lv'")
+            if t.pfe_kw / 1000.0 > t.i0_percent / 100.0 * t.sr_mva + 1e-12:
+                raise ValueError(f"{t.id}: pfe_kw non compatibile con i0_percent")
         for et in self.earthing_transformers:
             check(et.bus, et.id)
             if len(et.z0_ohm) != 2 or et.z0_ohm[0] < 0 or et.z0_ohm[1] <= 0:

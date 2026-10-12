@@ -20,6 +20,7 @@ def to_pandapower(data):
             rx_min=g.get("rx_min", g["rx_max"]),
             x0x_max=g.get("x0x1", math.nan), r0x0_max=g.get("r0x0", math.nan),
             x0x_min=g.get("x0x1", math.nan), r0x0_min=g.get("r0x0", math.nan),
+            vm_pu=g.get("vm_pu", 1.0), va_degree=g.get("va_degree", 0.0),
         )
     for t in data.get("transformers", []):
         trafo_ids[t["id"]] = pp.create_transformer_from_parameters(
@@ -31,7 +32,13 @@ def to_pandapower(data):
             vkr0_percent=t.get("ur0_percent", t["urr_percent"]),
             mag0_percent=100, mag0_rx=0, si0_hv_partial=0.9,
             parallel=t.get("parallel", 1),
+            **({"tap_side": t.get("tap_side", "hv"), "tap_neutral": 0, "tap_min": -20, "tap_max": 20,
+                "tap_pos": t.get("tap_pos", 0), "tap_step_percent": t["tap_step_percent"],
+                "tap_step_degree": 0.0, "tap_changer_type": "Ratio"}
+               if t.get("tap_step_percent") else {}),
         )
+        net.trafo.loc[trafo_ids[t["id"]], ["i0_percent", "pfe_kw"]] = [
+            t.get("i0_percent", 0.0), t.get("pfe_kw", 0.0)]
     for t in data.get("transformers3w", []):
         sn_hv = max(t["sr_hv_mv_mva"], t["sr_hv_lv_mva"])
         sn_mv = max(t["sr_hv_mv_mva"], t["sr_mv_lv_mva"])
@@ -55,7 +62,7 @@ def to_pandapower(data):
         pp.create_line_from_parameters(
             net, ids[ln["from_bus"]], ids[ln["to_bus"]], length_km=ln["length_km"],
             r_ohm_per_km=ln["r1_ohm_per_km"], x_ohm_per_km=ln["x1_ohm_per_km"],
-            c_nf_per_km=0, max_i_ka=1, r0_ohm_per_km=ln.get("r0_ohm_per_km", math.nan),
+            c_nf_per_km=ln.get("c_nf_per_km", 0.0), max_i_ka=ln.get("max_i_ka") or 1, r0_ohm_per_km=ln.get("r0_ohm_per_km", math.nan),
             x0_ohm_per_km=ln.get("x0_ohm_per_km", math.nan), c0_nf_per_km=0,
             endtemp_degree=ln.get("end_temperature_c", 20), parallel=ln.get("parallel", 1),
         )
@@ -73,9 +80,19 @@ def to_pandapower(data):
             net.trafo.loc[tid, "oltc"] = g.get("oltc", True)
             net.trafo.loc[tid, "pt_percent"] = g.get("pt_percent", 0.0)
             unit = dict(power_station_trafo=tid, pg_percent=g.get("pg_percent", 0.0))
+        if "vm_pu" in g and g["vm_pu"] is None:
+            # generatore PQ nel flusso di potenza
+            pp.create_sgen(net, ids[g["bus"]], p_mw=g.get("p_mw", 0.0), q_mvar=g.get("q_mvar", 0.0))
+            continue
+        lims = {}
+        if g.get("q_min_mvar") is not None:
+            lims["min_q_mvar"] = g["q_min_mvar"]
+        if g.get("q_max_mvar") is not None:
+            lims["max_q_mvar"] = g["q_max_mvar"]
         pp.create_gen(
-            net, ids[g["bus"]], p_mw=0, sn_mva=g["sr_mva"], vn_kv=g["ur_kv"],
-            xdss_pu=g["xd2_percent"] / 100, rdss_ohm=rg, cos_phi=g["cos_phi"], **unit,
+            net, ids[g["bus"]], p_mw=g.get("p_mw", 0.0), vm_pu=g.get("vm_pu", 1.0),
+            sn_mva=g["sr_mva"], vn_kv=g["ur_kv"],
+            xdss_pu=g["xd2_percent"] / 100, rdss_ohm=rg, cos_phi=g["cos_phi"], **unit, **lims,
         )
     for m in data.get("motors", []):
         rx = m.get("rx") or factors.motor_rx(m["ur_kv"], m["pr_mw"], m.get("pole_pairs"))
@@ -84,14 +101,21 @@ def to_pandapower(data):
             efficiency_percent=m["efficiency"] * 100, lrc_pu=m["ilr_ir"], rx=rx,
             cos_phi_n=m["cos_phi"], efficiency_n_percent=m["efficiency"] * 100,
             vn_kv=m["ur_kv"], scaling=m.get("count", 1),
+            loading_percent=100 * m.get("loading", 1.0),
         )
+    for ld in data.get("loads", []):
+        pp.create_load(net, ids[ld["bus"]], p_mw=ld["p_mw"], q_mvar=ld.get("q_mvar", 0.0),
+                       scaling=ld.get("count", 1))
+    for sh in data.get("shunts", []):
+        pp.create_shunt(net, ids[sh["bus"]], q_mvar=sh["q_mvar"], p_mw=sh.get("p_mw", 0.0))
     for sg in data.get("static_generators", []):
         if sg.get("kind", "PF") != "PF":
             raise ValueError("pp_ref: solo i convertitori pieni (PF) sono confrontabili")
         # sorgente di corrente: I"k = k·Sn/(√3·Un), con Sn = 1 MVA di riferimento
         un = next(b["un_kv"] for b in data["buses"] if b["id"] == sg["bus"])
         ik = sg["ikss_ka"] * sg.get("count", 1)
-        pp.create_sgen(net, ids[sg["bus"]], p_mw=0, sn_mva=1.0, k=ik * math.sqrt(3) * un,
+        pp.create_sgen(net, ids[sg["bus"]], p_mw=sg.get("p_mw", 0.0), q_mvar=sg.get("q_mvar", 0.0),
+                       sn_mva=1.0, k=ik * math.sqrt(3) * un,
                        generator_type="current_source", current_source=True)
     return net, ids
 
@@ -103,3 +127,13 @@ def run(data, fault, case, topology="meshed", **kwargs):
     calc_sc(net, fault=fault, case=case, lv_tol_percent=data.get("lv_tolerance_percent", 6),
             topology=topology, **kwargs)
     return {name: net.res_bus_sc.loc[idx] for name, idx in ids.items()}
+
+
+def run_pf(data, **kwargs):
+    """Flusso di potenza di riferimento con pandapower (modello a π dei trasformatori)."""
+    import pandapower as pp
+
+    net, ids = to_pandapower(data)
+    pp.runpp(net, trafo_model="pi", calculate_voltage_angles=False, tolerance_mva=1e-10,
+             init="flat", **kwargs)
+    return net, ids

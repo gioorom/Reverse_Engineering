@@ -1,0 +1,233 @@
+{
+  "name": "Rete 110/20/10/0,4 kV per il flusso di potenza",
+  "f_hz": 50,
+  "buses": [
+    {
+      "id": "AT",
+      "un_kv": 110.0
+    },
+    {
+      "id": "A",
+      "un_kv": 20.0
+    },
+    {
+      "id": "B",
+      "un_kv": 20.0
+    },
+    {
+      "id": "C",
+      "un_kv": 20.0
+    },
+    {
+      "id": "BT",
+      "un_kv": 0.4
+    },
+    {
+      "id": "MT2",
+      "un_kv": 20.0
+    },
+    {
+      "id": "MT3",
+      "un_kv": 10.0
+    }
+  ],
+  "external_grids": [
+    {
+      "id": "Q",
+      "bus": "AT",
+      "skq_max_mva": 3000,
+      "rx_max": 0.1,
+      "vm_pu": 1.02,
+      "va_degree": 0.0
+    }
+  ],
+  "transformers": [
+    {
+      "id": "T1",
+      "hv_bus": "AT",
+      "lv_bus": "A",
+      "sr_mva": 40,
+      "ur_hv_kv": 110,
+      "ur_lv_kv": 20,
+      "ukr_percent": 12,
+      "urr_percent": 0.4,
+      "vector_group": "Dyn5",
+      "tap_pos": -2,
+      "tap_step_percent": 1.25,
+      "tap_side": "hv",
+      "i0_percent": 0.05,
+      "pfe_kw": 14.0
+    },
+    {
+      "id": "T2",
+      "hv_bus": "AT",
+      "lv_bus": "A",
+      "sr_mva": 25,
+      "ur_hv_kv": 110,
+      "ur_lv_kv": 20,
+      "ukr_percent": 11,
+      "urr_percent": 0.5,
+      "vector_group": "Dyn5",
+      "tap_pos": -2,
+      "tap_step_percent": 1.25,
+      "tap_side": "hv"
+    },
+    {
+      "id": "T3",
+      "hv_bus": "C",
+      "lv_bus": "BT",
+      "sr_mva": 1.0,
+      "ur_hv_kv": 20,
+      "ur_lv_kv": 0.42,
+      "ukr_percent": 6,
+      "urr_percent": 1.0,
+      "vector_group": "Dyn11",
+      "tap_pos": 1,
+      "tap_step_percent": 2.5,
+      "tap_side": "lv",
+      "i0_percent": 0.8,
+      "pfe_kw": 1.5
+    }
+  ],
+  "transformers3w": [
+    {
+      "id": "T3W",
+      "hv_bus": "AT",
+      "mv_bus": "MT2",
+      "lv_bus": "MT3",
+      "ur_hv_kv": 110,
+      "ur_mv_kv": 20,
+      "ur_lv_kv": 10,
+      "sr_hv_mv_mva": 20,
+      "sr_hv_lv_mva": 10,
+      "sr_mv_lv_mva": 10,
+      "ukr_hv_mv_percent": 10,
+      "ukr_hv_lv_percent": 14,
+      "ukr_mv_lv_percent": 6,
+      "urr_hv_mv_percent": 0.4,
+      "urr_hv_lv_percent": 0.5,
+      "urr_mv_lv_percent": 0.45,
+      "vector_group": "YNynd5"
+    }
+  ],
+  "lines": [
+    {
+      "id": "L_AB",
+      "from_bus": "A",
+      "to_bus": "B",
+      "length_km": 5,
+      "r1_ohm_per_km": 0.125,
+      "x1_ohm_per_km": 0.112,
+      "c_nf_per_km": 300,
+      "max_i_ka": 0.4
+    },
+    {
+      "id": "L_BC",
+      "from_bus": "B",
+      "to_bus": "C",
+      "length_km": 3,
+      "r1_ohm_per_km": 0.206,
+      "x1_ohm_per_km": 0.118,
+      "c_nf_per_km": 250,
+      "max_i_ka": 0.3
+    },
+    {
+      "id": "L_AC",
+      "from_bus": "A",
+      "to_bus": "C",
+      "length_km": 8,
+      "r1_ohm_per_km": 0.125,
+      "x1_ohm_per_km": 0.112,
+      "c_nf_per_km": 300,
+      "max_i_ka": 0.4,
+      "parallel": 2
+    }
+  ],
+  "generators": [
+    {
+      "id": "G1",
+      "bus": "B",
+      "sr_mva": 10,
+      "ur_kv": 20,
+      "xd2_percent": 15,
+      "cos_phi": 0.8,
+      "p_mw": 6.0,
+      "vm_pu": 1.01
+    }
+  ],
+  "motors": [
+    {
+      "id": "M1",
+      "bus": "C",
+      "pr_mw": 2.0,
+      "ur_kv": 20,
+      "efficiency": 0.96,
+      "cos_phi": 0.88,
+      "ilr_ir": 5.5,
+      "pole_pairs": 2,
+      "loading": 0.8
+    }
+  ],
+  "static_generators": [
+    {
+      "id": "PV",
+      "bus": "C",
+      "kind": "PF",
+      "ikss_ka": 0.05,
+      "p_mw": 1.5,
+      "q_mvar": -0.2
+    }
+  ],
+  "loads": [
+    {
+      "id": "LA",
+      "bus": "A",
+      "p_mw": 12.0,
+      "q_mvar": 4.0
+    },
+    {
+      "id": "LB",
+      "bus": "B",
+      "p_mw": 5.0,
+      "q_mvar": 2.0
+    },
+    {
+      "id": "LC",
+      "bus": "C",
+      "p_mw": 3.0,
+      "q_mvar": 1.2,
+      "count": 2
+    },
+    {
+      "id": "LBT",
+      "bus": "BT",
+      "p_mw": 0.6,
+      "q_mvar": 0.25
+    },
+    {
+      "id": "L2",
+      "bus": "MT2",
+      "p_mw": 8.0,
+      "q_mvar": 3.0
+    },
+    {
+      "id": "L3",
+      "bus": "MT3",
+      "p_mw": 4.0,
+      "q_mvar": 1.5
+    }
+  ],
+  "shunts": [
+    {
+      "id": "RIF",
+      "bus": "BT",
+      "q_mvar": -0.15
+    },
+    {
+      "id": "RIF2",
+      "bus": "MT3",
+      "q_mvar": -1.0,
+      "p_mw": 0.002
+    }
+  ]
+}

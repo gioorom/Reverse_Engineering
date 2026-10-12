@@ -14,8 +14,10 @@ from .network import (
     ExternalGrid,
     Generator,
     Line,
+    Load,
     Motor,
     Network,
+    Shunt,
     StaticGenerator,
     Transformer,
     Transformer3W,
@@ -31,6 +33,8 @@ _SECTIONS = {
     "motors": Motor,
     "static_generators": StaticGenerator,
     "earthing_transformers": EarthingTransformer,
+    "loads": Load,
+    "shunts": Shunt,
 }
 
 
