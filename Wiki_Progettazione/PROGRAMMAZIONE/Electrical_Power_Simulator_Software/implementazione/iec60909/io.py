@@ -91,6 +91,24 @@ def network_from_dict(data: dict[str, Any]) -> Network:
     return net
 
 
+def network_to_dict(net: Network) -> dict[str, Any]:
+    """Inverso di network_from_dict: solo le sezioni non vuote, numeri complessi come [re, im]."""
+
+    def conv(value: Any) -> Any:
+        if isinstance(value, complex):
+            return [value.real, value.imag]
+        if isinstance(value, tuple):
+            return list(value)
+        return value
+
+    data: dict[str, Any] = {"name": net.name, "f_hz": net.f_hz, "lv_tolerance_percent": net.lv_tolerance_percent}
+    for key in _SECTIONS:
+        items = getattr(net, key)
+        if items:
+            data[key] = [{k: conv(v) for k, v in dataclasses.asdict(item).items()} for item in items]
+    return data
+
+
 def load_network(path: str | Path) -> Network:
     with open(path, encoding="utf-8") as fh:
         return network_from_dict(json.load(fh))

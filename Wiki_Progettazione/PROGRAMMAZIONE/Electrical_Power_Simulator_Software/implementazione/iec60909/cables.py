@@ -162,10 +162,7 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
         factors["altro"] = cs.k_extra
     k_total = math.prod(factors.values())
     ambient = cs.ambient_c if cs.ambient_c is not None else (20.0 if method in ("D1", "D2") else 30.0)
-    k_phase = tab.k_factor(cs.material, cs.insulation)
-
-    res = SizingResult(cs.id, line.id, un_kv, line.length_km, ib, cos_phi, in_a, i2_a, k_total, factors,
-                       k_phase=k_phase)
+    res = SizingResult(cs.id, line.id, un_kv, line.length_km, ib, cos_phi, in_a, i2_a, k_total, factors)
     if in_a is not None and in_a < ib - 1e-9:
         res.warnings.append(f"In = {in_a:.1f} A minore di Ib = {ib:.1f} A: protezione da aumentare")
 
@@ -210,7 +207,9 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
             if dv_pct > cs.vdrop_max_percent + 1e-9:
                 issues.append(f"ΔU {dv_pct:.2f} % > {cs.vdrop_max_percent:g} %")
             spe = pe_section(s, cs.pe_section_mm2)
-            data = {"theta": theta, "spe": spe}
+            k_phase = tab.k_factor(cs.material, cs.insulation, s)
+            k_pe = tab.k_factor(cs.material, cs.insulation, spe)
+            data = {"theta": theta, "spe": spe, "k": k_phase}
             if need_sc:
                 if res.t_max_s is None:
                     issues.append(f"il dispositivo non interviene con Ik max {res.ik_max_ka:.2f} kA")
@@ -233,8 +232,8 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
                         i2t = (ik1 * 1000.0 / n) ** 2 * t1
                         if i2t > (k_phase * s) ** 2:
                             issues.append(f"I²t {i2t:.3g} A²s > k²S² (Ik1 min)")
-                        if i2t > (k_phase * spe) ** 2:
-                            issues.append(f"I²t {i2t:.3g} A²s > k²S²PE {(k_phase * spe) ** 2:.3g} A²s")
+                        if i2t > (k_pe * spe) ** 2:
+                            issues.append(f"I²t {i2t:.3g} A²s > k²S²PE {(k_pe * spe) ** 2:.3g} A²s")
                         if cs.disconnection_time_s is not None and t1 > cs.disconnection_time_s + 1e-12:
                             issues.append(f"interruzione in {t1:.3g} s > {cs.disconnection_time_s:g} s")
             cand = Candidate(s, n, iz, dv_pct, issues)
@@ -250,6 +249,7 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
     res.pe_section_mm2 = best_data["spe"]
     res.ik1_min_end_ka = best_data.get("ik1")
     res.t_min_s = best_data.get("t1")
+    res.k_phase = best_data["k"]
     return res
 
 
