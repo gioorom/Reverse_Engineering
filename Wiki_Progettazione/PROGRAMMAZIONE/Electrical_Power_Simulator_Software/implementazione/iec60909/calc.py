@@ -522,9 +522,10 @@ def _steady_state(net: Network, b: _Builder, warnings: list[str]) -> list[Option
         if g.lambda_max is not None and g.lambda_min is not None:
             lam_max, lam_min = g.lambda_max, g.lambda_min
         elif g.xd_sat_percent is not None:
+            # reattanza subtransitoria corretta (K_G) in p.u. del generatore e stesso c
+            # usato per I"kG/IrG: con guasto ai morsetti la reattanza esterna è nulla
             lam_max, lam_min = factors.generator_lambda(
-                ratio, g.xd_sat_percent / 100.0, g.xd2_percent / 100.0, g.cos_phi, g.ufmax_ratio,
-                b.c_max(g.bus),
+                ratio, g.xd_sat_percent / 100.0, abs(zg) * ir, g.cos_phi, g.ufmax_ratio, c,
             )
         else:
             msg = f"{g.id}: per Ik servono xd_sat_percent oppure lambda_max e lambda_min"

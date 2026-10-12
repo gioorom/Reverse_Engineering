@@ -124,7 +124,8 @@ def generator_lambda(
 
     Modello analitico da cui derivano le curve della norma: corrente permanente
     E/(xd_sat + x_e), con x_e reattanza esterna (in p.u. del generatore)
-    ricavata dalla corrente iniziale, I"kG/IrG = c/(x"d + x_e).
+    ricavata dalla corrente iniziale, I"kG/IrG = c/(x"d + x_e), con x"d
+    l'impedenza subtransitoria corretta (K_G) in p.u. del generatore.
     λmax: eccitazione massima Ufmax/Ufr volte quella nominale a carico nominale
     (E = Ufmax/Ufr · |1 + j·xd_sat·(cosφ − j·sinφ)|); λmin: eccitazione
     costante a vuoto (E = 1).
