@@ -11,6 +11,13 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Armoniche in `iec60909.harmonics`, riga di comando
+  `python -m iec60909.armoniche`: sorgenti di corrente armonica con spettri
+  predefiniti o propri, reti di sequenza alla frequenza h·f con gli
+  sfasamenti dei trasformatori, tensioni e correnti armoniche, THD, fattore K,
+  filtri accordati (anche nel flusso di potenza), scansione in frequenza,
+  limiti EN 50160 e IEEE 519 (tensione e correnti al punto di consegna);
+  verifica con calcoli a mano e con OpenDSS.
 - Stabilità transitoria in `iec60909.stability`, riga di comando
   `python -m iec60909.stabilita`: generatori con modello classico o a un asse,
   regolatori di tensione e di velocità, rete esterna di potenza infinita,

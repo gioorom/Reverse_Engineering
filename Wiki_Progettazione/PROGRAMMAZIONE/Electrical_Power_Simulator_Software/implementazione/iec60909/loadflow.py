@@ -197,6 +197,11 @@ class _Model:
         for sh in net.shunts:
             # potenza assorbita a tensione nominale: S = V²·Y*  →  Y = (P − jQ)/S_base
             self.ysh[self.idx[sh.bus]] += complex(sh.p_mw, -sh.q_mvar) / S_BASE_MVA
+        for hf in net.harmonic_filters:
+            # filtri armonici: ammettenza alla frequenza fondamentale
+            from .harmonics import filter_impedance_pu
+
+            self.ysh[self.idx[hf.bus]] += 1.0 / filter_impedance_pu(hf, 1.0)
         self.ybus = np.zeros((self.n, self.n), dtype=complex)
         for br in self.branches:
             self.ybus[br.f, br.f] += br.yff

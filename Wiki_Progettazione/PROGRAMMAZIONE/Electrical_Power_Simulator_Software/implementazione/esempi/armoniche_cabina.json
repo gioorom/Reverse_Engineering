@@ -1,0 +1,103 @@
+{
+ "name": "Cabina 20/0,4 kV con convertitore e rifasamento",
+ "f_hz": 50,
+ "buses": [
+  {
+   "id": "MT",
+   "un_kv": 20.0
+  },
+  {
+   "id": "BT",
+   "un_kv": 0.4
+  },
+  {
+   "id": "BT2",
+   "un_kv": 0.4
+  }
+ ],
+ "external_grids": [
+  {
+   "id": "Q",
+   "bus": "MT",
+   "skq_max_mva": 500,
+   "rx_max": 0.1,
+   "x0x1": 1.0,
+   "r0x0": 0.1
+  }
+ ],
+ "transformers": [
+  {
+   "id": "TR",
+   "hv_bus": "MT",
+   "lv_bus": "BT",
+   "sr_mva": 1.0,
+   "ur_hv_kv": 20,
+   "ur_lv_kv": 0.4,
+   "ukr_percent": 6,
+   "urr_percent": 1,
+   "vector_group": "Dyn11"
+  }
+ ],
+ "lines": [
+  {
+   "id": "C",
+   "from_bus": "BT",
+   "to_bus": "BT2",
+   "length_km": 0.08,
+   "r1_ohm_per_km": 0.1,
+   "x1_ohm_per_km": 0.08,
+   "c_nf_per_km": 600,
+   "r0_ohm_per_km": 0.4,
+   "x0_ohm_per_km": 0.32
+  }
+ ],
+ "loads": [
+  {
+   "id": "CL",
+   "bus": "BT",
+   "p_mw": 0.4,
+   "q_mvar": 0.15
+  },
+  {
+   "id": "AZ",
+   "bus": "BT2",
+   "p_mw": 0.2,
+   "q_mvar": 0.05
+  }
+ ],
+ "shunts": [
+  {
+   "id": "RIF",
+   "bus": "BT",
+   "q_mvar": -0.25
+  }
+ ],
+ "harmonic_sources": [
+  {
+   "id": "VFD",
+   "bus": "BT2",
+   "element": "AZ",
+   "spectrum": "6_impulsi"
+  },
+  {
+   "id": "UPS",
+   "bus": "BT",
+   "element": "CL",
+   "spectrum": {
+    "5": [
+     12.0,
+     40.0
+    ],
+    "7": [
+     6.0,
+     -20.0
+    ],
+    "11": [
+     3.0,
+     10.0
+    ]
+   }
+  }
+ ],
+ "harmonic_filters": []
+}

@@ -8,7 +8,7 @@ pubbliche (nessuna decompilazione di software commerciale).
 
 Moduli: calcolo delle correnti di cortocircuito secondo IEC 60909-0:2016,
 flusso di potenza (Newton-Raphson), arc flash secondo IEEE 1584-2018 ,
-coordinamento delle protezioni e stabilità transitoria.
+coordinamento delle protezioni, stabilità transitoria e armoniche.
 
 ## Riferimento di ispirazione
 
@@ -28,6 +28,7 @@ coordinamento delle protezioni e stabilità transitoria.
 | Arc flash ([`analisi/08`](analisi/08_arc_flash_ieee1584.md)) | IEEE 1584-2018 | implementato e testato (allegato D della norma, arcflash-calc) |
 | Coordinamento delle protezioni ([`analisi/09`](analisi/09_coordinamento_protezioni.md)) | IEC 60255-151, IEEE C37.112 | implementato e testato (calcoli a mano) |
 | Stabilità transitoria ([`analisi/10`](analisi/10_stabilita_transitoria.md)) | equazione di oscillazione, modelli classico e a un asse | implementato e testato (aree uguali, scipy, ANDES) |
+| Armoniche ([`analisi/11`](analisi/11_armoniche.md)) | EN 50160, IEEE 519-2014 | implementato e testato (calcoli a mano, OpenDSS) |
 
 ## Stato
 
@@ -39,7 +40,8 @@ coordinamento delle protezioni e stabilità transitoria.
 - [x] Arc flash IEEE 1584-2018: implementazione e test
 - [x] Coordinamento delle protezioni: implementazione e test
 - [x] Stabilità transitoria: implementazione e test
-- [ ] Altri moduli (es. armoniche, avviamento dei motori)
+- [x] Armoniche: implementazione e test
+- [ ] Altri moduli (es. avviamento dei motori, affidabilità)
 
 ## Conclusioni
 

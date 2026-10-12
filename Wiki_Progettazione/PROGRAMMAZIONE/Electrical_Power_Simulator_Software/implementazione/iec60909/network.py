@@ -297,6 +297,42 @@ class Shunt:
 
 
 @dataclass
+class HarmonicSource:
+    """Sorgente di corrente armonica (carico non lineare trifase equilibrato).
+
+    La corrente fondamentale I1 è quella dell'elemento `element` (carico,
+    motore o generatore statico) nel flusso di potenza, oppure è indicata con
+    `i1_a` e `angle_deg` (angolo della corrente assorbita rispetto al
+    riferimento degli angoli). Corrente armonica assorbita:
+    I_h = I1·m_h/100 ∠ (h·θ1 + φ_h), con `spectrum` = nome di uno spettro
+    predefinito ("6_impulsi", "12_impulsi") oppure {"h": [m_h %, φ_h °], …}.
+    """
+
+    id: str
+    bus: str
+    spectrum: object = "6_impulsi"
+    element: Optional[str] = None
+    i1_a: Optional[float] = None
+    angle_deg: float = 0.0
+
+
+@dataclass
+class HarmonicFilter:
+    """Filtro passivo accordato (L-C serie con resistenza) collegato a stella a terra.
+
+    q_mvar: potenza reattiva capacitiva alla frequenza fondamentale e tensione
+    nominale; tuned_order: ordine di accordo (es. 4,7 per la 5ª); quality:
+    fattore di qualità X_L/R all'accordo.
+    """
+
+    id: str
+    bus: str
+    q_mvar: float
+    tuned_order: float
+    quality: float = 50.0
+
+
+@dataclass
 class StabilityEvent:
     """Evento della simulazione di stabilità transitoria.
 
@@ -466,6 +502,8 @@ class Network:
     arc_flash: list[ArcFlashPoint] = field(default_factory=list)
     protective_devices: list[ProtectiveDevice] = field(default_factory=list)
     stability_events: list[StabilityEvent] = field(default_factory=list)
+    harmonic_sources: list[HarmonicSource] = field(default_factory=list)
+    harmonic_filters: list[HarmonicFilter] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}
@@ -577,6 +615,12 @@ class Network:
                 check(af.bus, af.id)
         for pd in self.protective_devices:
             check(pd.bus, pd.id)
+        for hs in self.harmonic_sources:
+            check(hs.bus, hs.id)
+        for hf in self.harmonic_filters:
+            check(hf.bus, hf.id)
+            if hf.q_mvar <= 0 or hf.tuned_order <= 1 or hf.quality <= 0:
+                raise ValueError(f"{hf.id}: servono q_mvar > 0, tuned_order > 1 e quality > 0")
         for t in self.transformers:
             if t.tap_side not in ("hv", "lv"):
                 raise ValueError(f"{t.id}: tap_side deve essere 'hv' o 'lv'")

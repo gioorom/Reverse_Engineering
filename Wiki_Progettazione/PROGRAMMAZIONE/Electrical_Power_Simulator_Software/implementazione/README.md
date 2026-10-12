@@ -158,6 +158,21 @@ sezione `stability_events`: `t_s`, `kind` (`fault`, `clear_fault`,
 `scale`. Modelli, validazione e limiti:
 [`../analisi/10_stabilita_transitoria.md`](../analisi/10_stabilita_transitoria.md).
 
+### Armoniche
+
+```bash
+python -m iec60909.armoniche esempi/armoniche_cabina.json                  # tensioni, correnti, limiti EN 50160
+python -m iec60909.armoniche rete.json --limiti ieee519 --pcc MT --ramo-pcc TR --il 30
+python -m iec60909.armoniche rete.json --scansione BT --svg scansione.svg  # risonanze
+```
+
+Sezioni del file di rete: `harmonic_sources` (`id`, `bus`, `element` = carico,
+motore o generatore statico da cui prendere la corrente fondamentale, oppure
+`i1_a` e `angle_deg`; `spectrum` = `"6_impulsi"`, `"12_impulsi"` o
+`{"5": [m %, φ °], …}`) e `harmonic_filters` (`id`, `bus`, `q_mvar`,
+`tuned_order`, `quality`). Modelli, validazione e limiti:
+[`../analisi/11_armoniche.md`](../analisi/11_armoniche.md).
+
 ## Risultati per nodo (cortocircuito)
 
 | Grandezza | Significato |
@@ -327,6 +342,8 @@ python -m pytest
   `tests/test_arcflash_estensioni.py`: Lee, corrente continua (calcoli a
   mano), scelta di Ibf, calcolo a più intervalli (confronto con
   arcflash-calc `multistep_E_and_AFB`), fusibili e avvisi sotto 240 V.
+- `tests/test_armoniche.py`: armoniche, calcoli a mano, risonanza, filtri,
+  12 impulsi, armoniche omopolari, limiti, confronto con OpenDSS.
 - `tests/test_stabilita.py`: stabilità transitoria, criterio delle aree
   uguali, integrazione indipendente con scipy, confronto con ANDES (Kundur).
 - `tests/test_coordinamento.py`: coordinamento, curve dei dispositivi,

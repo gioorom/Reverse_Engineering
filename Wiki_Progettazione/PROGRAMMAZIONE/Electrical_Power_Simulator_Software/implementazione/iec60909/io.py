@@ -14,6 +14,8 @@ from .network import (
     EarthingTransformer,
     ExternalGrid,
     Generator,
+    HarmonicFilter,
+    HarmonicSource,
     Line,
     Load,
     Motor,
@@ -41,6 +43,8 @@ _SECTIONS = {
     "arc_flash": ArcFlashPoint,
     "protective_devices": ProtectiveDevice,
     "stability_events": StabilityEvent,
+    "harmonic_sources": HarmonicSource,
+    "harmonic_filters": HarmonicFilter,
 }
 
 
