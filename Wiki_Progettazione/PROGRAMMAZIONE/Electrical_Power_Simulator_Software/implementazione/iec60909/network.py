@@ -217,6 +217,27 @@ class Generator:
     # Saldo distribuito (distributed_slack): peso nella ripartizione dello
     # sbilancio di potenza attiva (0: potenza attiva fissa p_mw)
     slack_weight: float = 0.0
+    # Stabilità transitoria (dati sulla potenza nominale Sr): costante di
+    # inerzia H [s], smorzamento D [p.u. di potenza per p.u. di velocità],
+    # reattanze transitoria X'd, sincrona Xd e in quadratura Xq [%], costante
+    # di tempo transitoria a vuoto T'd0 [s]; modello "classical" (fem costante
+    # dietro X'd) o "one_axis" (decadimento del flusso, E'q dinamica).
+    # Regolatore di tensione del primo ordine (avr_ka, avr_ta_s, limiti di Efd)
+    # e regolatore di velocità con statismo (gov_droop_pu, gov_tg_s, gov_pmax_pu).
+    h_s: Optional[float] = None
+    d_pu: float = 0.0
+    xd1_percent: Optional[float] = None
+    xd_percent: Optional[float] = None
+    xq_percent: Optional[float] = None
+    td01_s: Optional[float] = None
+    dyn_model: str = "classical"
+    avr_ka: Optional[float] = None
+    avr_ta_s: float = 0.05
+    efd_min_pu: float = 0.0
+    efd_max_pu: float = 5.0
+    gov_droop_pu: Optional[float] = None
+    gov_tg_s: float = 0.5
+    gov_pmax_pu: float = 1.1
 
 
 @dataclass
@@ -273,6 +294,26 @@ class Shunt:
     bus: str
     q_mvar: float
     p_mw: float = 0.0
+
+
+@dataclass
+class StabilityEvent:
+    """Evento della simulazione di stabilità transitoria.
+
+    kind: "fault" (guasto trifase nel nodo `bus`, impedenza r_ohm + j·x_ohm),
+    "clear_fault" (elimina il guasto nel nodo `bus`), "trip_branch" (apre il
+    ramo `element`: linea, trasformatore o tre avvolgimenti), "trip_gen"
+    (distacca il generatore `element`), "load" (moltiplica per `scale` i
+    carichi a impedenza costante del nodo `bus`).
+    """
+
+    t_s: float
+    kind: str
+    bus: Optional[str] = None
+    element: Optional[str] = None
+    r_ohm: float = 0.0
+    x_ohm: float = 0.0
+    scale: float = 1.0
 
 
 @dataclass
@@ -424,6 +465,7 @@ class Network:
     shunts: list[Shunt] = field(default_factory=list)
     arc_flash: list[ArcFlashPoint] = field(default_factory=list)
     protective_devices: list[ProtectiveDevice] = field(default_factory=list)
+    stability_events: list[StabilityEvent] = field(default_factory=list)
 
     def bus_index(self) -> dict[str, int]:
         index = {b.id: i for i, b in enumerate(self.buses)}

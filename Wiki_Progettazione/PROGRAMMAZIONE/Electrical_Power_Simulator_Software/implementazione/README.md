@@ -133,6 +133,31 @@ generazione. Il codice di uscita della riga di comando è 1 se ci sono
 problemi. Dispositivi, verifiche e limiti:
 [`../analisi/09_coordinamento_protezioni.md`](../analisi/09_coordinamento_protezioni.md).
 
+### Stabilità transitoria
+
+```bash
+python -m iec60909.stabilita esempi/kundur_due_aree.json --tfine 5 --svg angoli.svg
+python -m iec60909.stabilita rete.json --tcc B --apri L2      # tempo critico di eliminazione
+```
+
+```python
+from iec60909 import StabilityEvent, critical_clearing_time, load_network, simulate
+
+rete = load_network("rete.json")
+res = simulate(rete, t_end_s=3.0, dt_s=0.002)            # eventi da stability_events
+print(res.stable, res.relative_angles_deg()["G1"].max())
+print(critical_clearing_time(rete, "B", [StabilityEvent(0, "trip_branch", element="L2")]))
+```
+
+Dati dinamici dei generatori: `h_s`, `d_pu`, `xd1_percent` (X'd), e per il
+modello `dyn_model: "one_axis"` anche `xd_percent`, `xq_percent`, `td01_s`;
+regolatore di tensione `avr_ka`, `avr_ta_s`, `efd_min_pu`, `efd_max_pu`;
+regolatore di velocità `gov_droop_pu`, `gov_tg_s`, `gov_pmax_pu`. Eventi nella
+sezione `stability_events`: `t_s`, `kind` (`fault`, `clear_fault`,
+`trip_branch`, `trip_gen`, `load`), `bus`, `element`, `r_ohm`, `x_ohm`,
+`scale`. Modelli, validazione e limiti:
+[`../analisi/10_stabilita_transitoria.md`](../analisi/10_stabilita_transitoria.md).
+
 ## Risultati per nodo (cortocircuito)
 
 | Grandezza | Significato |
@@ -302,6 +327,8 @@ python -m pytest
   `tests/test_arcflash_estensioni.py`: Lee, corrente continua (calcoli a
   mano), scelta di Ibf, calcolo a più intervalli (confronto con
   arcflash-calc `multistep_E_and_AFB`), fusibili e avvisi sotto 240 V.
+- `tests/test_stabilita.py`: stabilità transitoria, criterio delle aree
+  uguali, integrazione indipendente con scipy, confronto con ANDES (Kundur).
 - `tests/test_coordinamento.py`: coordinamento, curve dei dispositivi,
   correnti nei rami, verifiche di selettività, sensibilità e carico;
   `tests/test_coordinamento_estensioni.py`: correnti nei rami per i guasti

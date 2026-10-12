@@ -7,8 +7,8 @@ ETAP Power Simulator, sviluppato in proprio a partire dalle norme tecniche
 pubbliche (nessuna decompilazione di software commerciale).
 
 Moduli: calcolo delle correnti di cortocircuito secondo IEC 60909-0:2016,
-flusso di potenza (Newton-Raphson), arc flash secondo IEEE 1584-2018 e
-coordinamento delle protezioni.
+flusso di potenza (Newton-Raphson), arc flash secondo IEEE 1584-2018 ,
+coordinamento delle protezioni e stabilità transitoria.
 
 ## Riferimento di ispirazione
 
@@ -27,6 +27,7 @@ coordinamento delle protezioni.
 | Flusso di potenza ([`analisi/07`](analisi/07_flusso_di_potenza.md)) | Newton-Raphson | implementato e testato (pandapower, forma chiusa) |
 | Arc flash ([`analisi/08`](analisi/08_arc_flash_ieee1584.md)) | IEEE 1584-2018 | implementato e testato (allegato D della norma, arcflash-calc) |
 | Coordinamento delle protezioni ([`analisi/09`](analisi/09_coordinamento_protezioni.md)) | IEC 60255-151, IEEE C37.112 | implementato e testato (calcoli a mano) |
+| Stabilità transitoria ([`analisi/10`](analisi/10_stabilita_transitoria.md)) | equazione di oscillazione, modelli classico e a un asse | implementato e testato (aree uguali, scipy, ANDES) |
 
 ## Stato
 
@@ -37,7 +38,8 @@ coordinamento delle protezioni.
 - [x] Flusso di potenza (Newton-Raphson): implementazione e test
 - [x] Arc flash IEEE 1584-2018: implementazione e test
 - [x] Coordinamento delle protezioni: implementazione e test
-- [ ] Altri moduli (es. stabilità transitoria, armoniche)
+- [x] Stabilità transitoria: implementazione e test
+- [ ] Altri moduli (es. armoniche, avviamento dei motori)
 
 ## Conclusioni
 

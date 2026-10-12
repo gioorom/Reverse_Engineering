@@ -20,6 +20,7 @@ from .network import (
     Network,
     ProtectiveDevice,
     Shunt,
+    StabilityEvent,
     StaticGenerator,
     Transformer,
     Transformer3W,
@@ -39,6 +40,7 @@ _SECTIONS = {
     "shunts": Shunt,
     "arc_flash": ArcFlashPoint,
     "protective_devices": ProtectiveDevice,
+    "stability_events": StabilityEvent,
 }
 
 

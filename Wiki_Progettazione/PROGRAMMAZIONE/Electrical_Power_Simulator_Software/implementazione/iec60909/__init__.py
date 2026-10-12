@@ -1,4 +1,4 @@
-"""Cortocircuito (IEC 60909-0:2016), flusso di potenza, arc flash (IEEE 1584-2018) e coordinamento delle protezioni."""
+"""Cortocircuito (IEC 60909-0:2016), flusso di potenza, arc flash (IEEE 1584-2018) coordinamento delle protezioni e stabilità transitoria."""
 
 from .arcflash import ArcFlashResult, CurrentStep, Enclosure, Protection, arc_flash, arc_flash_study
 from .arcflash_dc import dc_arc_flash
@@ -6,6 +6,7 @@ from .calc import BusResult, FaultCurrents, StudyResult, calculate, fault_curren
 from .coordination import CoordinationResult, coordination_study, trip_time_s
 from .io import load_network, network_from_dict
 from .loadflow import LoadFlowResult, run_load_flow
+from .stability import StabilityResult, critical_clearing_time, simulate
 from .network import (
     ArcFlashPoint,
     Bus,
@@ -18,6 +19,7 @@ from .network import (
     Network,
     ProtectiveDevice,
     Shunt,
+    StabilityEvent,
     StaticGenerator,
     Transformer,
     Transformer3W,
@@ -43,6 +45,8 @@ __all__ = [
     "Protection",
     "ProtectiveDevice",
     "Shunt",
+    "StabilityEvent",
+    "StabilityResult",
     "StaticGenerator",
     "StudyResult",
     "Transformer",
@@ -51,10 +55,12 @@ __all__ = [
     "arc_flash_study",
     "calculate",
     "coordination_study",
+    "critical_clearing_time",
     "dc_arc_flash",
     "fault_currents",
     "load_network",
     "network_from_dict",
     "run_load_flow",
+    "simulate",
     "trip_time_s",
 ]

@@ -11,6 +11,13 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Stabilità transitoria in `iec60909.stability`, riga di comando
+  `python -m iec60909.stabilita`: generatori con modello classico o a un asse,
+  regolatori di tensione e di velocità, rete esterna di potenza infinita,
+  carichi ad ammettenza costante, eventi (guasto, eliminazione, apertura di
+  rami, distacco di generatori, variazioni di carico), tempo critico di
+  eliminazione, grafico degli angoli; verifica con il criterio delle aree
+  uguali, con un'integrazione indipendente e con ANDES sul sistema di Kundur.
 - Coordinamento delle protezioni, estensioni: correnti nei rami per guasti
   trifase, bifase, bifase a terra e monofase con gli sfasamenti dei gruppi
   vettoriali; protezioni di terra (corrente residua); relè direzionali;

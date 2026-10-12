@@ -1,7 +1,7 @@
 [project]
 name = "iec60909"
 version = "0.1.0"
-description = "Cortocircuito IEC 60909-0:2016, flusso di potenza, arc flash IEEE 1584-2018 e coordinamento delle protezioni"
+description = "Cortocircuito IEC 60909-0:2016, flusso di potenza, arc flash IEEE 1584-2018, coordinamento delle protezioni e stabilità transitoria"
 requires-python = ">=3.10"
 license = "MIT"
 dependencies = ["numpy>=1.24"]
@@ -14,6 +14,7 @@ iec60909 = "iec60909.__main__:main"
 iec60909-flusso = "iec60909.flusso:main"
 iec60909-arco = "iec60909.arco:main"
 iec60909-coordinamento = "iec60909.coordinamento:main"
+iec60909-stabilita = "iec60909.stabilita:main"
 
 [build-system]
 requires = ["setuptools>=77"]
