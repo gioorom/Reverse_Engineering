@@ -130,19 +130,40 @@ pp_ref = pytest.importorskip("tests.pp_ref", reason="pandapower non installato")
 pytest.importorskip("pandapower")
 
 
+def _dang(a, b):
+    """Differenza di due angoli in gradi, ridotta a (−180°, 180°]."""
+    return (a - b + 180.0) % 360.0 - 180.0
+
+
 def _confronta(data, **kw):
     res = run_load_flow(network_from_dict(data), **kw)
-    net, ids = pp_ref.run_pf(data, enforce_q_lims=kw.get("enforce_q_lims", False))
+    net, ids = pp_ref.run_pf(data, enforce_q_lims=kw.get("enforce_q_lims", False),
+                             calculate_voltage_angles=kw.get("phase_shift", True))
     assert res.converged
     for b in res.buses:
         ref = net.res_bus.loc[ids[b.bus]]
         assert b.vm_pu == pytest.approx(ref.vm_pu, rel=REL), b.bus
-        assert b.va_degree == pytest.approx(ref.va_degree, abs=1e-6), b.bus
+        assert _dang(b.va_degree, ref.va_degree) == pytest.approx(0.0, abs=1e-6), b.bus
     return res, net, ids
 
 
 def test_pandapower_tensioni_e_angoli():
-    _confronta(RETE_LF)
+    """Angoli assoluti con gli sfasamenti dei gruppi vettoriali (Dyn5, Dyn11, YNynd5)."""
+    res, _, _ = _confronta(RETE_LF)
+    # nodo BT: Dyn5 (−150°) seguito da Dyn11 (−330°): circa −480° = −120°
+    assert _dang(res.bus("BT").va_degree, -120.0) == pytest.approx(0.0, abs=5.0)
+    assert _dang(res.bus("MT3").va_degree, -150.0) == pytest.approx(0.0, abs=10.0)
+
+
+def test_pandapower_angoli_relativi():
+    """phase_shift=False: angoli relativi, come calculate_voltage_angles=False."""
+    res, _, _ = _confronta(RETE_LF, phase_shift=False)
+    assert abs(res.bus("BT").va_degree) < 10.0
+    # moduli, flussi e perdite non dipendono dagli sfasamenti (rete senza maglie sfasate)
+    ass = run_load_flow(network_from_dict(RETE_LF))
+    assert ass.losses_mw == pytest.approx(res.losses_mw, rel=1e-9)
+    for b in res.buses:
+        assert ass.bus(b.bus).vm_pu == pytest.approx(b.vm_pu, rel=1e-9)
 
 
 def test_pandapower_flussi_e_sorgenti():

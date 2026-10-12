@@ -59,8 +59,7 @@ def case14_to_dict(net) -> dict:
       neutra), quindi i dati si trasferiscono senza modifiche. Per i
       trasformatori senza variatore (tap_pos NaN) si pone tap_pos = 0. La presa
       neutra deve essere 0 (altrimenti si userebbe tap_pos − tap_neutral). Gli
-      sfasamenti sono nulli in case14 (shift_degree = 0), quindi l'assenza
-      degli sfasamenti nel modello iec60909 non introduce approssimazioni.
+      sfasamenti sono nulli in case14 (shift_degree = 0): gruppo YNyn0.
       ``vkr_percent`` = 0 (trasformatori ideali senza perdite), ``i0`` e
       ``pfe`` nulli: modello a π e a T coincidono;
     - generatori: nodi PV con ``p_mw``, ``vm_pu`` e limiti ``min/max_q_mvar``;

@@ -169,17 +169,35 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
 Campi usati solo dal flusso di potenza (tutti facoltativi, esempio in
 `esempi/rete_flusso_potenza.json`):
 
-- `external_grids`: `vm_pu` (default 1), `va_degree` (default 0)
+- `external_grids`: `vm_pu` (default 1), `va_degree` (default 0),
+  `slack_weight` (peso nel saldo distribuito, default 1)
 - `transformers`: `tap_pos`, `tap_step_percent`, `tap_side` (`hv`/`lv`),
-  `i0_percent`, `pfe_kw` (il cortocircuito usa sempre il rapporto nominale)
+  `i0_percent`, `pfe_kw` (il cortocircuito usa sempre il rapporto nominale);
+  variatore sotto carico: `tap_min`, `tap_max`, `control_bus` (nodo regolato),
+  `control_vm_pu` (tensione di riferimento, default 1), `control_band_pu`
+  (semiampiezza della banda, default 0,75 passi). Lo sfasamento (k·30°, tensione
+  BT in ritardo) è ricavato dal numero orario di `vector_group`
+- `transformers3w`: `tap_pos`, `tap_step_percent`, `tap_side` (`hv`/`mv`/`lv`),
+  `i0_percent` (riferita alla potenza dell'avvolgimento AT), `pfe_kw`;
+  sfasamenti di MT e BT dai numeri orari di `vector_group` (es. `YNyn0d5`)
 - `lines`: `c_nf_per_km` (capacità di esercizio), `max_i_ka` (per il carico %)
 - `generators`: `p_mw`, `vm_pu` (nodo PV; `null` per un nodo PQ con
-  `q_mvar`), `q_min_mvar`, `q_max_mvar`
+  `q_mvar`), `q_min_mvar`, `q_max_mvar`, `regulated_bus` (nodo di cui il
+  generatore regola la tensione a `vm_pu`, regolazione remota), `slack_weight`
+  (peso nel saldo distribuito, default 0)
 - `motors`: `loading` (frazione della potenza nominale, default 1)
 - `static_generators`: `p_mw`, `q_mvar`
-- `loads`: `id`, `bus`, `p_mw`, `q_mvar`, `count`
+- `loads`: `id`, `bus`, `p_mw`, `q_mvar`, `count`, quote ZIP in %
+  `const_z_p_percent`, `const_i_p_percent`, `const_z_q_percent`,
+  `const_i_q_percent` (impedenza e corrente costante; il resto a potenza
+  costante, default 0)
 - `shunts`: `id`, `bus`, `q_mvar` (assorbita a tensione nominale: > 0
   reattore, < 0 condensatori), `p_mw`
+
+Opzioni di `run_load_flow` (e della riga di comando): `enforce_q_lims`
+(`--qlim`), `phase_shift=True` (`--angoli-relativi` per angoli relativi senza
+sfasamenti), `distributed_slack=False` (`--saldo-distribuito`),
+`tap_control=True` (`--prese-fisse` per non regolare le prese).
 
 Sezione dell'arc flash (esempio in `esempi/arc_flash_cabina.json`):
 

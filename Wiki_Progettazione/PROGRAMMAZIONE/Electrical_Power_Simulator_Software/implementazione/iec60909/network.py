@@ -55,6 +55,9 @@ class ExternalGrid:
     # Flusso di potenza: nodo di saldo con tensione e angolo imposti
     vm_pu: float = 1.0
     va_degree: float = 0.0
+    # Saldo distribuito (distributed_slack): peso nella ripartizione dello
+    # sbilancio di potenza attiva
+    slack_weight: float = 1.0
 
 
 @dataclass
@@ -83,6 +86,15 @@ class Transformer:
     tap_side: str = "hv"
     i0_percent: float = 0.0
     pfe_kw: float = 0.0
+    # Flusso di potenza: variatore sotto carico. Prese ammesse tap_min…tap_max
+    # (None: nessun limite); con control_bus il variatore regola la tensione di
+    # quel nodo a control_vm_pu ± control_band_pu (semiampiezza della banda in
+    # p.u.; None: 0,75 passi) muovendo la presa di un passo alla volta.
+    tap_min: Optional[int] = None
+    tap_max: Optional[int] = None
+    control_bus: Optional[str] = None
+    control_vm_pu: float = 1.0
+    control_band_pu: Optional[float] = None
 
 
 @dataclass
@@ -126,6 +138,16 @@ class Transformer3W:
     z0_zigzag_hv_ohm: Optional[tuple[float, float]] = None
     z0_zigzag_mv_ohm: Optional[tuple[float, float]] = None
     z0_zigzag_lv_ohm: Optional[tuple[float, float]] = None
+    # Flusso di potenza: variatore su un avvolgimento (tap_side "hv", "mv" o
+    # "lv", ai morsetti dell'avvolgimento) e magnetizzazione (corrente a vuoto
+    # riferita alla potenza dell'avvolgimento AT, cioè la maggiore delle potenze
+    # di coppia che lo comprendono, e perdite nel ferro), posta sul ramo AT
+    # della stella equivalente. Il cortocircuito usa sempre il rapporto nominale.
+    tap_pos: int = 0
+    tap_step_percent: float = 0.0
+    tap_side: str = "hv"
+    i0_percent: float = 0.0
+    pfe_kw: float = 0.0
 
 
 @dataclass
@@ -189,6 +211,12 @@ class Generator:
     q_mvar: float = 0.0
     q_min_mvar: Optional[float] = None
     q_max_mvar: Optional[float] = None
+    # Regolazione remota: il generatore regola a vm_pu la tensione di questo
+    # nodo invece della propria (None: regolazione locale).
+    regulated_bus: Optional[str] = None
+    # Saldo distribuito (distributed_slack): peso nella ripartizione dello
+    # sbilancio di potenza attiva (0: potenza attiva fissa p_mw)
+    slack_weight: float = 0.0
 
 
 @dataclass
@@ -215,13 +243,22 @@ class Motor:
 
 @dataclass
 class Load:
-    """Carico a potenza costante (solo flusso di potenza)."""
+    """Carico (solo flusso di potenza), a potenza costante o dipendente dalla tensione.
+
+    Modello ZIP separato per P e Q: P(V) = P·(z·V² + i·V + (1 − z − i)) con
+    z = const_z_p_percent/100 e i = const_i_p_percent/100 (V in p.u. della
+    tensione nominale del nodo); analogo per Q. Default: potenza costante.
+    """
 
     id: str
     bus: str
     p_mw: float
     q_mvar: float = 0.0
     count: int = 1
+    const_z_p_percent: float = 0.0
+    const_i_p_percent: float = 0.0
+    const_z_q_percent: float = 0.0
+    const_i_q_percent: float = 0.0
 
 
 @dataclass
@@ -437,6 +474,8 @@ class Network:
         units: set[str] = set()
         for g in self.generators:
             check(g.bus, g.id)
+            if g.regulated_bus is not None:
+                check(g.regulated_bus, g.id)
             if g.unit_transformer is None:
                 continue
             t = transformers.get(g.unit_transformer)
@@ -453,6 +492,10 @@ class Network:
             check(m.bus, m.id)
         for ld in self.loads:
             check(ld.bus, ld.id)
+            for q in ("p", "q"):
+                z, i = getattr(ld, f"const_z_{q}_percent"), getattr(ld, f"const_i_{q}_percent")
+                if z < 0 or i < 0 or z + i > 100.0 + 1e-9:
+                    raise ValueError(f"{ld.id}: quote const_z_{q} e const_i_{q} non valide (somma <= 100)")
         for sh in self.shunts:
             check(sh.bus, sh.id)
         for af in self.arc_flash:
@@ -463,6 +506,20 @@ class Network:
             if t.tap_side not in ("hv", "lv"):
                 raise ValueError(f"{t.id}: tap_side deve essere 'hv' o 'lv'")
             if t.pfe_kw / 1000.0 > t.i0_percent / 100.0 * t.sr_mva + 1e-12:
+                raise ValueError(f"{t.id}: pfe_kw non compatibile con i0_percent")
+            if t.tap_min is not None and t.tap_max is not None and t.tap_min > t.tap_max:
+                raise ValueError(f"{t.id}: tap_min maggiore di tap_max")
+            if t.control_bus is not None:
+                check(t.control_bus, t.id)
+                if t.tap_step_percent == 0:
+                    raise ValueError(f"{t.id}: la regolazione della tensione richiede tap_step_percent")
+                if t.control_band_pu is not None and t.control_band_pu <= 0:
+                    raise ValueError(f"{t.id}: control_band_pu deve essere positiva")
+        for t in self.transformers3w:
+            if t.tap_side not in ("hv", "mv", "lv"):
+                raise ValueError(f"{t.id}: tap_side deve essere 'hv', 'mv' o 'lv'")
+            sr_hv = max(t.sr_hv_mv_mva, t.sr_hv_lv_mva)
+            if t.pfe_kw / 1000.0 > t.i0_percent / 100.0 * sr_hv + 1e-12:
                 raise ValueError(f"{t.id}: pfe_kw non compatibile con i0_percent")
         for et in self.earthing_transformers:
             check(et.bus, et.id)
