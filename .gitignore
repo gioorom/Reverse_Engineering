@@ -25,3 +25,9 @@ __pycache__/
 *.pyc
 .pytest_cache/
 *.egg-info/
+
+# Archivi e installer da analizzare
+*.zip
+*.7z
+*.rar
+*.msi
