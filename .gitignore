@@ -41,3 +41,6 @@ __pycache__/
 *.ldf
 *.PSO
 *.dmp
+
+# copie di lavoro temporanee dei subagenti di Claude Code
+.claude/worktrees/
