@@ -42,7 +42,7 @@ def _build(cls: type, data: dict[str, Any]) -> Any:
     if unknown:
         raise ValueError(f"{cls.__name__}: campi sconosciuti {sorted(unknown)}")
     kwargs = dict(data)
-    for key in ("zn_hv_ohm", "zn_mv_ohm", "zn_lv_ohm"):
+    for key in ("zn_hv_ohm", "zn_mv_ohm", "zn_lv_ohm", "zn_ohm"):
         if key in kwargs:
             kwargs[key] = _complex(kwargs[key])
     return cls(**kwargs)

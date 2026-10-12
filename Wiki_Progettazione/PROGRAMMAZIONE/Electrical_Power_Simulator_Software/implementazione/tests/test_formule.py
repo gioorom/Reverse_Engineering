@@ -74,6 +74,9 @@ def test_guasto_bifase_a_terra_correnti_di_fase():
     r_iso = calculate(_cabina(vector_group="Dy5")).bus("BT")
     assert r_iso.ikss1_ka == 0.0
     assert r_iso.z0_ohm is None
+    assert r_iso.ikss2e_earth_ka == 0.0
+    assert r_iso.ikss2e_l2_ka == pytest.approx(r_iso.ikss2_ka, rel=1e-12)
+    assert r_iso.ikss2e_l3_ka == pytest.approx(r_iso.ikss2_ka, rel=1e-12)
 
 
 def test_gruppi_vettoriali_sequenza_zero():
@@ -153,3 +156,25 @@ def test_dati_omopolari_e_zigzag_non_validi():
         calculate(_cabina(uk0_percent=1.0, ur0_percent=2.0))
     with pytest.raises(ValueError, match="zig-zag"):
         calculate(_cabina(vector_group="Dzn0"))
+
+
+def test_generatore_con_neutro_a_terra():
+    """Generatore 11 kV con neutro a terra tramite resistenza: sequenza zero K_G·(R + jX0) + 3·Rn."""
+    from iec60909.network import Generator
+
+    def rete(**gen):
+        return Network(
+            buses=[Bus("G", 11.0)],
+            generators=[Generator("G1", "G", sr_mva=10.0, ur_kv=11.0, xd2_percent=15.0,
+                                  cos_phi=0.8, rg_ohm=0.1, **gen)],
+        )
+
+    assert calculate(rete()).bus("G").ikss1_ka == 0.0
+    r = calculate(rete(x0_percent=8.0, zn_ohm=60.0)).bus("G")
+    kg = 1.1 / (1 + 0.15 * 0.6)
+    xd = 0.15 * 11.0**2 / 10.0
+    x0 = 0.08 * 11.0**2 / 10.0
+    z1 = kg * complex(0.1, xd)
+    z0 = kg * complex(0.1, x0) + 180.0
+    assert r.z0_ohm == pytest.approx(z0, rel=1e-12)
+    assert r.ikss1_ka == pytest.approx(math.sqrt(3) * 1.1 * 11.0 / abs(2 * z1 + z0), rel=1e-12)

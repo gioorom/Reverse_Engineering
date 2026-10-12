@@ -258,6 +258,18 @@ class _Builder:
             z = complex(r * k_theta, x) * ln.length_km / ln.parallel
             branch(ln.from_bus, ln.to_bus, z / self.zbase(ln.from_bus))
 
+        if seq == 0:
+            for g in self.net.generators:
+                if g.x0_percent is None:
+                    continue  # neutro isolato
+                x0 = g.x0_percent / 100.0 * g.ur_kv**2 / g.sr_mva
+                xd = g.xd2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
+                rg = g.rg_ohm if g.rg_ohm is not None else factors.generator_rx(g.ur_kv, g.sr_mva) * xd
+                kg = factors.generator_kg(
+                    self.un[g.bus], g.ur_kv, self.c_max(g.bus), g.xd2_percent / 100.0, g.cos_phi
+                )
+                # K_G si applica all'impedenza omopolare della macchina, non a quella di neutro
+                shunt(g.bus, (kg * complex(rg, x0) + 3.0 * complex(g.zn_ohm)) / self.zbase(g.bus))
         if seq in (1, 2):
             for g in self.net.generators:
                 xd = g.xd2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
@@ -265,6 +277,9 @@ class _Builder:
                 kg = factors.generator_kg(
                     self.un[g.bus], g.ur_kv, self.c_max(g.bus), g.xd2_percent / 100.0, g.cos_phi
                 )
+                if seq == 2 and g.x2_percent is not None:
+                    # reattanza di sequenza inversa di targa, es. X(2) = (X"d + X"q)/2
+                    xd = g.x2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
                 shunt(g.bus, kg * complex(rg, xd) / self.zbase(g.bus))
             if motors and self.case == "max":
                 for m in self.net.motors:
@@ -272,6 +287,10 @@ class _Builder:
                     zm = m.ur_kv**2 / (m.ilr_ir * srm) / m.count
                     rx = m.rx if m.rx is not None else factors.motor_rx(m.ur_kv, m.pr_mw, m.pole_pairs)
                     xm = zm / math.sqrt(1.0 + rx**2)
+                    if seq == 2 and m.x2_percent is not None:
+                        # sequenza inversa da dati di targa (default: Z(2) = Z(1))
+                        xm = m.x2_percent / 100.0 * m.ur_kv**2 / srm / m.count
+                        rx = m.rx2 if m.rx2 is not None else rx
                     shunt(m.bus, complex(rx * xm, xm) / self.zbase(m.bus))
         return y, grounded
 
@@ -350,7 +369,9 @@ def calculate(
         ik3 = c / abs(z1i) * ibase
         ik2 = math.sqrt(3.0) * c / abs(z1i + z2i) * ibase
         if zero_open:
-            ik1 = ike = ikl2 = ikl3 = 0.0
+            # senza percorso verso terra il guasto bifase a terra equivale al bifase isolato
+            ik1 = ike = 0.0
+            ikl2 = ikl3 = ik2
         else:
             ik1 = 3.0 * c / abs(z1i + z2i + z0i) * ibase
             den = z1i * z2i + z1i * z0i + z2i * z0i

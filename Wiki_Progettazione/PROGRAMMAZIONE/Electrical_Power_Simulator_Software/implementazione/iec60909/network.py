@@ -125,6 +125,12 @@ class Generator:
     xd2_percent: float
     cos_phi: float = 0.8
     rg_ohm: Optional[float] = None
+    # reattanza di sequenza inversa in % (default: X"d)
+    x2_percent: Optional[float] = None
+    # Centro stella a terra: reattanza omopolare in % e impedenza di neutro.
+    # Se x0_percent è assente il generatore non conduce corrente omopolare.
+    x0_percent: Optional[float] = None
+    zn_ohm: complex = 0.0
 
 
 @dataclass
@@ -141,6 +147,10 @@ class Motor:
     pole_pairs: Optional[int] = None
     rx: Optional[float] = None
     count: int = 1
+    # sequenza inversa da dati di targa: X2 in % su Sr = Pr/(η·cosφ) e R2/X2
+    # (default: Z(2) = Z(1))
+    x2_percent: Optional[float] = None
+    rx2: Optional[float] = None
 
 
 @dataclass
