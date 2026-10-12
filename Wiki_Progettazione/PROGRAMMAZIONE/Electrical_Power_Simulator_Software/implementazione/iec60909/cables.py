@@ -1,7 +1,7 @@
 """Dimensionamento dei cavi (IEC 60364-5-52, IEC 60364-4-43, IEC 60364-4-41).
 
-Per ogni linea con una voce in `cable_sizing` si cerca la sezione (e il numero
-di conduttori in parallelo) più piccola che soddisfa:
+Per ogni linea con una voce in `cable_sizing` si cerca il minor numero di
+conduttori in parallelo e, a parità, la sezione più piccola che soddisfa:
 
 1. **portata:** Ib ≤ In ≤ Iz e I2 ≤ 1,45·Iz, con Iz = n·I0·k (I0 dalle
    tabelle dell'allegato B della IEC 60364-5-52, k prodotto dei fattori di
@@ -238,8 +238,10 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
                             issues.append(f"interruzione in {t1:.3g} s > {cs.disconnection_time_s:g} s")
             cand = Candidate(s, n, iz, dv_pct, issues)
             res.candidates.append(cand)
-            if cand.ok and (best is None or (n * s, n) < (best.parallel * best.section_mm2, best.parallel)):
+            if cand.ok and best is None:  # il minor numero di conduttori in parallelo, poi la sezione minore
                 best, best_data = cand, data
+        if best is not None:
+            break
     if best is None:
         res.warnings.append("nessuna sezione soddisfa tutte le verifiche")
         return res
@@ -311,7 +313,7 @@ def results_to_markdown(results: list[SizingResult], title: str = "") -> str:
         if r.warnings:
             out += [""] + [f"- {w}" for w in r.warnings]
         scartati = [c for c in r.candidates if c.issues
-                    and (not r.ok or c.parallel * c.section_mm2 < r.parallel * r.section_mm2)]
+                    and (not r.ok or (c.parallel, c.section_mm2) < (r.parallel, r.section_mm2))]
         if scartati:
             out += ["", "| Sezione scartata | Iz [A] | ΔU [%] | Motivi |", "|---|---|---|---|"]
             for c in scartati:

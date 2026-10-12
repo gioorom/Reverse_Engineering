@@ -45,3 +45,57 @@ def k_factor(material: str, insulation: str, section_mm2: Optional[float] = None
     if insulation == "xlpe":
         return {"cu": 143.0, "al": 94.0}[material]
     raise ValueError(f"isolante non valido {insulation!r} (pvc, xlpe)")
+
+
+# --- portate e fattori di correzione (IEC 60364-5-52, allegato B) -------------------------
+# AMPACITY[(materiale, isolante, conduttori caricati, metodo)] = {sezione: A}
+AMPACITY: dict[tuple, dict[float, float]] = {}
+# fattori per temperatura dell'aria (B.52.14) e del terreno (B.52.15): {isolante: {°C: k}}
+K_AIR: dict[str, dict[float, float]] = {}
+K_GROUND: dict[str, dict[float, float]] = {}
+# resistività termica del terreno (B.52.16): {K·m/W: k}
+K_SOIL: dict[float, float] = {}
+# raggruppamento (B.52.17): {disposizione: {numero di circuiti: k}}
+K_GROUPING: dict[str, dict[int, float]] = {}
+
+
+def _lookup(table: dict, x: float, what: str) -> float:
+    if x in table:
+        return table[x]
+    keys = sorted(table)
+    if not keys or x < keys[0] or x > keys[-1]:
+        raise ValueError(f"{what}: valore {x:g} fuori tabella")
+    hi = next(k for k in keys if k > x)
+    lo = max(k for k in keys if k < x)
+    return table[lo] + (table[hi] - table[lo]) * (x - lo) / (hi - lo)  # interpolazione lineare
+
+
+def ampacity_table(material: str, insulation: str, loaded: int, method: str, cores: str = "multi",
+                   arrangement: Optional[str] = None) -> dict[float, float]:
+    key = (material, insulation, loaded, method if arrangement is None else f"{method}:{arrangement}")
+    if key not in AMPACITY:
+        raise ValueError(f"portata non tabellata per {key}")
+    return AMPACITY[key]
+
+
+def correction_factors(insulation: str, method: str, ambient_c: Optional[float], soil: Optional[float],
+                       grouping: Optional[str], circuits: int, cores: str = "multi") -> dict[str, float]:
+    """Fattori di correzione diversi da 1, per nome."""
+    out: dict[str, float] = {}
+    buried = method in ("D1", "D2")
+    if ambient_c is not None and ambient_c != (20.0 if buried else 30.0):
+        tbl = (K_GROUND if buried else K_AIR).get(insulation, {})
+        out["temperatura"] = _lookup(tbl, ambient_c, "temperatura ambiente")
+    if soil is not None and soil != 2.5:
+        if not buried:
+            raise ValueError("la resistività del terreno vale solo per i metodi D1 e D2")
+        out["terreno"] = _lookup(K_SOIL, soil, "resistività termica del terreno")
+    if circuits > 1:
+        if grouping is None:
+            raise ValueError("con più circuiti serve la disposizione (grouping)")
+        if grouping not in K_GROUPING:
+            raise ValueError(f"disposizione di raggruppamento non valida {grouping!r}")
+        tbl = K_GROUPING[grouping]
+        n = max(k for k in tbl if k <= circuits)
+        out["raggruppamento"] = tbl[n]
+    return out
