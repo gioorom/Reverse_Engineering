@@ -40,6 +40,36 @@ def thermal_m(kappa_value: float, f_hz: float, tk_s: float) -> float:
     return (math.exp(4.0 * f_hz * tk_s * ln) - 1.0) / (2.0 * f_hz * tk_s * ln)
 
 
+def thermal_n(ikss_over_ik: float, tk_s: float) -> float:
+    """Fattore n dell'effetto termico della componente alternata (IEC 60909-0, all. A).
+
+    Media nel tempo Tk del quadrato della componente alternata, riferita a I"k²,
+    con decadimento subtransitorio e transitorio secondo le ipotesi delle curve
+    della norma: I"k/I'k = 1,12, T'd = 3,1 s·Ik/I'k, T"d = T'd/10. Per
+    I"k/Ik ≤ 1 (guasti lontani dai generatori) n = 1.
+    """
+    if ikss_over_ik <= 1.0 or tk_s <= 0.0:
+        return 1.0
+    x = ikss_over_ik
+    xp = x / 1.12  # I'k/Ik
+    td = 3.1 / xp  # T'd [s]
+    a, b = x - xp, xp - 1.0  # ampiezze dei termini subtransitorio e transitorio (in Ik)
+
+    def term(rate: float) -> float:
+        # (1/Tk)·∫0^Tk e^(−rate·t/T'd) dt
+        return td / (rate * tk_s) * (1.0 - math.exp(-rate * tk_s / td))
+
+    integral = (
+        1.0
+        + a * a * term(20.0)
+        + b * b * term(2.0)
+        + 2.0 * a * term(10.0)
+        + 2.0 * b * term(1.0)
+        + 2.0 * a * b * term(11.0)
+    )
+    return min(1.0, integral / x**2)
+
+
 def transformer_kt(c_max: float, x_t_pu: float) -> float:
     """Fattore di correzione K_T dei trasformatori a due avvolgimenti.
 

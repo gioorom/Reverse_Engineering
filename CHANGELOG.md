@@ -11,6 +11,9 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Aggiunto
 
+- Fattore n della corrente termica equivalente Ith in `iec60909`
+  (decadimento della componente alternata per i guasti alimentati da un solo
+  generatore).
 - Trasformatori dei servizi ausiliari dei gruppi di generazione in
   `iec60909`: guasti sul lato ausiliario e nelle reti a valle calcolati con
   K_G,S/K_T,S (trasformatori ausiliari con il loro K_T).

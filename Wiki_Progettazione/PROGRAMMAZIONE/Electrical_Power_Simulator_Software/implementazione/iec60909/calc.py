@@ -503,6 +503,7 @@ def _calculate(
     machines = _machines(b, warnings)
     zf_pu = [zf_ohm / b.zbase(bus.id) for bus in net.buses]
     steady = _steady_state(net, b, warnings, zf_pu)
+    single_fed = not net.external_grids and len(net.generators) == 1
     pf = b.pf_sources()
     zs_full = _full_z(b.build(1, motors=False)) if pf else None
 
@@ -552,7 +553,6 @@ def _calculate(
         peak = math.sqrt(2.0) * (k * share + (1.0 - share))
         ip3 = peak * ik3
         m = factors.thermal_m(k, net.f_hz, tk_s)
-        ith = ik3 * math.sqrt(m + 1.0)
         i_pf3 = e_pf / abs(z1i) * ibase  # quota dei convertitori, senza decadimento
         ib = _breaking_current(i, c, z1_full, machines, tmin_s, zf) * ibase + i_pf3
         zdci = zdc[i] + scaled(zf, fc_dc)
@@ -563,6 +563,12 @@ def _calculate(
             ik += sum(
                 abs(zs_full[kk, i]) * i_pf for kk, i_pf in pf if cmath.isfinite(zs_full[kk, i])
             ) / abs(zss) * ibase
+        # Fattore n: decadimento della componente alternata (guasti vicini ai
+        # generatori) solo quando Ik deriva da λ (guasto alimentato da un solo
+        # generatore); nelle reti magliate Ik è la stima cautelativa della norma
+        # e si usa n = 1.
+        n = factors.thermal_n(ik3 / ik, tk_s) if single_fed and ik else 1.0
+        ith = ik3 * math.sqrt(m + n)
 
         results.append(
             BusResult(

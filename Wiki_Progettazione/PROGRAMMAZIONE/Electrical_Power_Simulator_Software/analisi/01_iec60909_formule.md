@@ -181,8 +181,21 @@ per bifase e monofase.
   0,092 (< 5), 0,055 (altrimenti); R/X = (Rc/Xc)·(fc/f). In una rete solo
   radiale coincide con l'R/X di Z1. Corrente di interruzione asimmetrica:
   Ib,asym = √(Ib² + i_DC²).
-- **Ith** = I"k·√(m + n), con n = 1 e
+- **Ith** = I"k·√(m + n), con
   m = [e^(4·f·Tk·ln(κ−1)) − 1] / [2·f·Tk·ln(κ−1)]; per κ → 2 il limite è m = 2.
+  Il fattore n (componente alternata, all. A della norma) è la media su Tk del
+  quadrato della corrente simmetrica riferita a I"k², con decadimento
+  subtransitorio e transitorio e le ipotesi delle curve della norma
+  (I"k/I'k = 1,12, T'd = 3,1 s·Ik/I'k, T"d = T'd/10). Con x = I"k/Ik,
+  x' = I'k/Ik, a = x − x', b = x' − 1 e
+  E(r) = T'd/(r·Tk)·(1 − e^(−r·Tk/T'd)):
+  n = [1 + a²·E(20) + b²·E(2) + 2a·E(10) + 2b·E(1) + 2ab·E(11)] / x².
+  n = 1 per I"k/Ik ≤ 1. `iec60909` usa n < 1 solo per i guasti alimentati da
+  un solo generatore, dove Ik deriva da λ; nelle reti magliate Ik è la stima
+  cautelativa della norma (I"k senza motori asincroni) e si usa n = 1. La
+  formula è ricostruita dalla definizione (testo della norma non disponibile
+  in rete) e verificata con integrazione numerica e con i limiti n → 1 per
+  Tk → 0 e n → (Ik/I"k)² per Tk → ∞.
 
 ## Validazione
 
@@ -199,5 +212,4 @@ per bifase e monofase.
 
 ## Limiti (non ancora implementati)
 
-- Fattore n della corrente termica per guasti vicini ai generatori (n = 1).
 - Metodo B senza la deroga per R/X < 0,3 in tutti i rami.

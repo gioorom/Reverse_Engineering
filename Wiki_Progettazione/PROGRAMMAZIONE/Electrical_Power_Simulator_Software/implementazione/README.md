@@ -48,7 +48,7 @@ print(risultato.bus("QGBT").ikss3_ka)
 | `ib_ka` | corrente di interruzione simmetrica Ib con i fattori μ e q (tmin da `--tmin`) |
 | `idc_ka`, `ib_asym_ka` | componente continua all'istante tmin e corrente di interruzione asimmetrica |
 | `ik_ka` | corrente permanente Ik (reti magliate: senza motori asincroni; un solo generatore: λ·IrG) |
-| `ith_ka` | corrente termica equivalente per la durata Tk |
+| `ith_ka` | corrente termica equivalente per la durata Tk, I"k·√(m + n) (n < 1 solo per guasti alimentati da un solo generatore) |
 | `z1_ohm`, `z2_ohm`, `z0_ohm` | impedenze di cortocircuito di sequenza nel nodo |
 
 ## Formato del file di rete (JSON)
