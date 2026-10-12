@@ -308,6 +308,20 @@ class ProtectiveDevice:
     ti_s: float = 0.02
     # fusibile o curva per punti: [[I_A, t_s], …]
     points: list = field(default_factory=list)
+    # grandezza misurata: "phase" (corrente di fase maggiore) o "residual"
+    # (corrente residua 3·I0, protezione di terra)
+    measure: str = "phase"
+    # direzionale: interviene solo con corrente nel verso protetto; angolo
+    # caratteristico dell'impedenza vista dietro il dispositivo (−ΔV/I)
+    directional: bool = False
+    characteristic_angle_deg: float = 45.0
+    # bande di tolleranza: soglie di corrente ±%, tempi ±% (almeno ±time_tolerance_s)
+    current_tolerance_percent: float = 0.0
+    time_tolerance_percent: float = 0.0
+    time_tolerance_s: float = 0.0
+    # selettività energetica dichiarata dal costruttore con i dispositivi a
+    # valle: {id del dispositivo a valle: Is [kA]}
+    selectivity_limits: dict = field(default_factory=dict)
 
 
 @dataclass

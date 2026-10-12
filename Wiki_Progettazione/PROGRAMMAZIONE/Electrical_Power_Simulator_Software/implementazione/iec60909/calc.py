@@ -280,8 +280,18 @@ class _Builder:
                 self.max_rx = max(self.max_rx, rx)
             return complex(z.real, z.imag * x_scale)
 
-        def shunt(bus: str, z: complex) -> None:
-            y[self.idx[bus], self.idx[bus]] += 1.0 / scale(z)
+        # rami della sequenza (correnti nei rami): (nome, nodo i, nodo j, ammettenza,
+        # rapporto); le derivazioni con nome (es. trasformatore YNd in sequenza
+        # zero) hanno nodo j None e corrente dal nodo i verso l'elemento
+        if not hasattr(self, "seq_branches"):
+            self.seq_branches: dict[int, list[tuple[str, str, Optional[str], complex, float]]] = {}
+        self.seq_branches[seq] = []
+
+        def shunt(bus: str, z: complex, name: str = "") -> None:
+            yy = 1.0 / scale(z)
+            if name:
+                self.seq_branches[seq].append((name, bus, None, yy, 1.0))
+            y[self.idx[bus], self.idx[bus]] += yy
             grounded[self.idx[bus]] = True
 
         if seq == 1:
@@ -291,6 +301,8 @@ class _Builder:
             yy = 1.0 / scale(z)
             if seq == 1:
                 self.branches.append((name, i_bus, j_bus, yy, ratio))
+            if name:
+                self.seq_branches[seq].append((name, i_bus, j_bus, yy, ratio))
             i, j = self.idx[i_bus], self.idx[j_bus]
             y[i, i] += yy / ratio**2
             y[j, j] += yy
@@ -327,22 +339,22 @@ class _Builder:
                 # verso terra sul suo nodo (Z0 del trasformatore + 3·Zn) e i due lati
                 # sono disaccoppiati in sequenza zero.
                 if hv == "ZN":
-                    shunt(t.hv_bus, (z0 * ratio**2 + zn_hv) / t.parallel)
+                    shunt(t.hv_bus, (z0 * ratio**2 + zn_hv) / t.parallel, t.id)
                 if lv == "ZN":
-                    shunt(t.lv_bus, (z0 + zn_lv) / t.parallel)
+                    shunt(t.lv_bus, (z0 + zn_lv) / t.parallel, t.id)
             elif hv == "YN" and lv == "YN":
-                branch(t.hv_bus, t.lv_bus, (z0 + zn_lv + zn_hv / ratio**2) / t.parallel, ratio)
+                branch(t.hv_bus, t.lv_bus, (z0 + zn_lv + zn_hv / ratio**2) / t.parallel, ratio, t.id)
             elif hv == "YN" and lv == "D":
-                shunt(t.hv_bus, (z0 * ratio**2 + zn_hv) / t.parallel)
+                shunt(t.hv_bus, (z0 * ratio**2 + zn_hv) / t.parallel, t.id)
             elif hv == "D" and lv == "YN":
-                shunt(t.lv_bus, (z0 + zn_lv) / t.parallel)
+                shunt(t.lv_bus, (z0 + zn_lv) / t.parallel, t.id)
             # Altri gruppi (Yy, Yyn, YNy, Dd, Dy, Yd, Z senza neutro, ...): sequenza
             # zero interrotta.
 
         if seq == 0:
             # trasformatori di messa a terra (zig-zag o YNd dedicati)
             for et in self.net.earthing_transformers:
-                shunt(et.bus, (complex(*et.z0_ohm) + 3.0 * complex(et.zn_ohm)) / self.zbase(et.bus))
+                shunt(et.bus, (complex(*et.z0_ohm) + 3.0 * complex(et.zn_ohm)) / self.zbase(et.bus), et.id)
 
         for t in self.net.transformers3w:
             star = _star_node(t)
@@ -358,7 +370,7 @@ class _Builder:
                     branch(star, bus, z_w, ratio, f"{t.id}:{w}")
                 elif connections[w] == "YN":
                     zn = 3.0 * complex(getattr(t, f"zn_{w}_ohm")) / self.zbase(bus)
-                    branch(star, bus, z_w + zn, ratio)
+                    branch(star, bus, z_w + zn, ratio, f"{t.id}:{w}")
                 elif connections[w] == "D":
                     # il triangolo chiude la corrente omopolare: derivazione dal centro stella
                     shunt(star, z_star[w] / self.zbase(star))
@@ -367,7 +379,7 @@ class _Builder:
                     # stesso, staccato dal centro stella (lati disaccoppiati)
                     z0_zz = complex(*getattr(t, f"z0_zigzag_{w}_ohm"))
                     zn = 3.0 * complex(getattr(t, f"zn_{w}_ohm"))
-                    shunt(bus, (z0_zz + zn) / self.zbase(bus))
+                    shunt(bus, (z0_zz + zn) / self.zbase(bus), f"{t.id}:{w}")
                 # Y o Z senza neutro: avvolgimento aperto in sequenza zero
 
         for ln in self.net.lines:
@@ -716,43 +728,323 @@ def _steady_state(
     return out
 
 
+FAULT_TYPES = ("3ph", "2ph", "2ph_e", "1ph")
+
+
 @dataclass
 class FaultCurrents:
-    """Correnti iniziali per un guasto trifase in un nodo (metodo della IEC 60909).
+    """Correnti iniziali (o di interruzione) per un guasto in un nodo (metodo della IEC 60909).
 
-    `branch_ka[(ramo, nodo)]`: corrente complessa (kA, alla tensione del nodo)
-    che dal nodo entra nel ramo; per i trasformatori a tre avvolgimenti i rami
-    sono `<id>:hv`, `<id>:mv`, `<id>:lv` (dal centro stella al nodo).
+    Tipi di guasto (`fault_type`): "3ph" trifase, "2ph" bifase isolato tra le
+    fasi b e c, "2ph_e" bifase a terra (b, c e terra), "1ph" monofase a terra
+    della fase a. La fase a del nodo guasto è il riferimento delle fasi.
+
+    - `ikss_ka`: corrente complessa nel punto di guasto (kA): per il trifase la
+      corrente della fase a, per gli altri guasti la corrente della fase guasta
+      di modulo massimo (monofase: I"k1; bifase: I"k2).
+    - `branch_ka[(ramo, nodo)]`: corrente complessa (kA, alla tensione del nodo)
+      di sequenza diretta che dal nodo entra nel ramo, senza gli sfasamenti dei
+      gruppi vettoriali; per il guasto trifase è la corrente di fase. Per i
+      trasformatori a tre avvolgimenti i rami sono `<id>:hv`, `<id>:mv`,
+      `<id>:lv` (dal centro stella al nodo).
+    - `branch_seq_ka[(ramo, nodo)]`: componenti (I0, I1, I2) nel riferimento
+      delle reti di sequenza (senza sfasamenti); comprende le derivazioni
+      verso terra della sequenza zero (trasformatori YNd, zig-zag e di messa a
+      terra: corrente omopolare che l'elemento assorbe dal nodo).
+    - `branch_phase_ka[(ramo, nodo)]`: correnti di fase (Ia, Ib, Ic) nel
+      riferimento del nodo, con gli sfasamenti dei gruppi vettoriali.
+    - `bus_dv_seq_kv[nodo]`: variazioni delle tensioni stellate di sequenza
+      (ΔV0, ΔV1, ΔV2) in kV, nel riferimento delle reti di sequenza (servono
+      ai relè direzionali).
+    - `bus_shift_deg[nodo]`: sfasamento della sequenza diretta del nodo
+      rispetto al nodo guasto (gradi).
     """
 
     bus: str
     ikss_ka: complex
     branch_ka: dict[tuple[str, str], complex]
+    fault_type: str = "3ph"
+    fault_seq_ka: tuple[complex, complex, complex] = (0j, 0j, 0j)
+    fault_phase_ka: tuple[complex, complex, complex] = (0j, 0j, 0j)
+    branch_seq_ka: dict[tuple[str, str], tuple[complex, complex, complex]] = field(default_factory=dict)
+    branch_phase_ka: dict[tuple[str, str], tuple[complex, complex, complex]] = field(default_factory=dict)
+    bus_dv_seq_kv: dict[str, tuple[complex, complex, complex]] = field(default_factory=dict)
+    bus_shift_deg: dict[str, float] = field(default_factory=dict)
+    inside_unit: Optional[str] = None
+    breaking: bool = False
+    warnings: list[str] = field(default_factory=list)
+
+    def phase_ka(self, branch: str, bus: str) -> float:
+        """Modulo della corrente di fase maggiore nel ramo (kA)."""
+        return max(abs(i) for i in self.branch_phase_ka.get((branch, bus), (0j, 0j, 0j)))
+
+    def residual_ka(self, branch: str, bus: str) -> float:
+        """Modulo della corrente residua 3·I0 nel ramo (kA)."""
+        return 3.0 * abs(self.branch_seq_ka.get((branch, bus), (0j, 0j, 0j))[0])
 
 
-def fault_currents(net: Network, fault_bus: str, case: str = "max", zf_ohm: complex = 0j) -> FaultCurrents:
-    """Correnti nei rami per un guasto trifase nel nodo `fault_bus`.
+def unit_of_bus(net: Network, bus: str) -> Optional[str]:
+    """Generatore del gruppo di generazione al cui interno si trova il nodo (come `calculate`)."""
+    found = None
+    for g in net.generators:
+        if g.unit_transformer is None:
+            continue
+        region, other_sources = net.unit_region(g)
+        if other_sources:
+            region = [g.bus]
+        if bus in region:
+            found = g.id
+    return found
 
-    Sovrapposizione della sola sorgente equivalente c·Un/√3 nel punto di
-    guasto (variazioni di tensione ΔV = −Z_kf·I"k); stesse impedenze e fattori
-    di correzione del calcolo di I"k. I contributi dei convertitori pieni (PF)
-    e il calcolo dedicato dei guasti interni ai gruppi di generazione non sono
-    considerati.
+
+def _clock(group: str, kinds: tuple[str, str]) -> int:
+    """Numero orario finale del gruppo; se manca: 11 per Dy, Yd, Yz, Zy, 0 altrimenti."""
+    m = re.search(r"(\d+)\s*$", group.strip())
+    if m:
+        return int(m.group(1)) % 12
+    letters = {k[0].upper() for k in kinds}  # Y, D o Z
+    return 11 if letters in ({"D", "Y"}, {"Y", "Z"}) else 0
+
+
+def _zero_shift(k: int) -> float:
+    """Sfasamento della sequenza zero tra avvolgimenti a stella: 180° se k/2 è dispari."""
+    return 180.0 if k % 2 == 0 and (k // 2) % 2 == 1 else 0.0
+
+
+def _vector_shifts(net: Network) -> dict[str, tuple[float, float]]:
+    """Sfasamento (gradi) introdotto da ogni ramo dal primo al secondo nodo.
+
+    Per ramo: (sequenza diretta, sequenza zero). Convenzione IEC: il lato BT
+    è in ritardo di k·30° sull'AT (k numero orario), quindi la sequenza diretta
+    ruota di −k·30° e l'inversa di +k·30° passando dall'AT al BT. In sequenza
+    zero (solo avvolgimenti YN-YN) lo sfasamento è 0° o 180° (k/2 dispari:
+    polarità invertita).
     """
+    out: dict[str, tuple[float, float]] = {}
+    for t in net.transformers:
+        k = _clock(t.vector_group, _parse_vector_group(t.vector_group))
+        out[t.id] = (-30.0 * k, _zero_shift(k))
+    for t3 in net.transformers3w:
+        tokens = re.findall(r"(YN|ZN|Y|D|Z)(\d*)", t3.vector_group.strip(), flags=re.IGNORECASE)
+        hv_kind = tokens[0][0].upper()
+        k_hv = int(tokens[0][1]) % 12 if tokens[0][1] else 0
+        out[f"{t3.id}:hv"] = (0.0, 0.0)  # il centro stella ha il riferimento dell'AT
+        for w, (kind, num) in zip(("mv", "lv"), tokens[1:]):
+            k = int(num) % 12 if num else _clock("", (hv_kind, kind.upper()))
+            k = (k - k_hv) % 12
+            out[f"{t3.id}:{w}"] = (-30.0 * k, _zero_shift(k))
+    return out
+
+
+def _node_shifts(
+    start: str,
+    branches: list[tuple[str, str, Optional[str], complex, float]],
+    shifts: dict[str, float],
+    warnings: list[str],
+) -> dict[str, float]:
+    """Sfasamento di ogni nodo rispetto a `start` (visita dei rami a due estremi)."""
+    adj: dict[str, list[tuple[str, float, str]]] = {}
+    for name, i, j, _, _ in branches:
+        if j is None:
+            continue
+        d = shifts.get(name, 0.0)
+        adj.setdefault(i, []).append((j, d, name))
+        adj.setdefault(j, []).append((i, -d, name))
+    out = {start: 0.0}
+    stack = [start]
+    while stack:
+        a = stack.pop()
+        for nb, d, name in adj.get(a, []):
+            s = (out[a] + d) % 360.0
+            if nb not in out:
+                out[nb] = s
+                stack.append(nb)
+            elif abs((out[nb] - s + 180.0) % 360.0 - 180.0) > 1e-6:
+                msg = f"{name}: sfasamenti dei gruppi vettoriali non congruenti nella maglia"
+                if msg not in warnings:
+                    warnings.append(msg)
+    return out
+
+
+def _decay_injections(
+    b: _Builder, f: int, c: float, z: np.ndarray, zf: complex, tmin_s: float, warnings: list[str]
+) -> np.ndarray:
+    """Iniezioni di corrente che riducono le f.e.m. delle macchine che decadono (calcolo di Ib).
+
+    Per ogni macchina con I"k_i > 2·Ir la f.e.m. si riduce di c·w_i, con
+    w_i = (ΔU"_i/c)·(1 − μ_i·q_i) come nella formula di Ib della IEC 60909:
+    la corrente nel punto di guasto diminuisce di w_i·I"k_i.
+    """
+    inj = np.zeros(z.shape[0], dtype=complex)
+    if tmin_s < factors.T_MIN_IB:
+        return inj
+    zff = z[f, f] + zf
+    for mach in _machines(b, warnings):
+        zkf = z[mach.bus, f]
+        if not cmath.isfinite(zkf):
+            continue
+        i_m = c * abs(zkf / zff) / abs(mach.z)
+        ratio = i_m / mach.ir
+        if ratio <= 2.0:
+            continue
+        mu = factors.decay_mu(ratio, tmin_s)
+        q = 1.0 if mach.mw_per_pole_pair is None else factors.decay_q(mach.mw_per_pole_pair, tmin_s)
+        w = (mach.z.imag * i_m / c) * (1.0 - mu * q)
+        inj[mach.bus] -= w * c / mach.z
+    return inj
+
+
+def fault_currents(
+    net: Network,
+    fault_bus: str,
+    case: str = "max",
+    zf_ohm: complex = 0j,
+    fault_type: str = "3ph",
+    breaking: bool = False,
+    tmin_s: float = 0.1,
+) -> FaultCurrents:
+    """Correnti nei rami per un guasto nel nodo `fault_bus`.
+
+    Sovrapposizione, in ciascuna rete di sequenza, della sola sorgente
+    equivalente c·Un/√3 nel punto di guasto (variazioni di tensione
+    ΔV = −Z_kf·I_f); stesse impedenze e fattori di correzione del calcolo di
+    I"k, compreso il guasto interno a un gruppo di generazione (`_Builder` con
+    `inside_unit`, come in `calculate`). Le correnti di sequenza nel punto di
+    guasto sono quelle di `calculate` per il tipo di guasto `fault_type`.
+
+    Convertitori pieni (PF, solo caso massimo): iniettano nel loro nodo la
+    corrente I"k_PF, con la fase per cui Z_fk·I_PF è in fase con c; la
+    tensione nel punto di guasto prima del guasto vale così
+    E = c + Σ |Z_fk|·I_PF, come in `calculate`.
+
+    `breaking=True` (solo guasto trifase): corrente di interruzione Ib al
+    tempo `tmin_s`. Ogni macchina che decade (I"k_i > 2·Ir) riduce la sua
+    f.e.m. della quota w_i = (ΔU"_i/c)·(1 − μ_i·q_i) della IEC 60909 (Ib =
+    I"k − Σ w_i·I"k_i); la rete lineare ridistribuisce le correnti nei rami,
+    quindi decadono solo i contributi che passano dalle macchine. Le riduzioni
+    sono moltiplicate per un fattore α (1 se i contributi sono in fase) tale
+    che la corrente nel nodo guasto sia la Ib di `calculate`, che somma i
+    contributi in modulo. Per i guasti dissimmetrici la norma assume Ib = I"k.
+    """
+    if fault_type not in FAULT_TYPES:
+        raise ValueError(f"tipo di guasto non valido {fault_type!r} {FAULT_TYPES}")
     net.validate()
-    b = _Builder(net, case, [])
-    z = _full_z(b.build(1))
+    warnings: list[str] = []
+    inside = unit_of_bus(net, fault_bus)
+    b = _Builder(net, case, warnings, inside)
+    z1 = _full_z(b.build(1))
+    z2 = _full_z(b.build(2))
+    z0 = _full_z(b.build(0))
     f = b.idx[fault_bus]
     zf = complex(zf_ohm) / b.zbase(fault_bus)
-    i_f = b.c_case(fault_bus) / (z[f, f] + zf)
-    dv = np.where(np.isfinite(z[:, f]), -z[:, f] * i_f, 0.0)
+    c = b.c_case(fault_bus)
+    z1_fin = np.where(np.isfinite(z1), z1, 0.0)
+
+    # iniezioni di sequenza diretta dei convertitori pieni, in fase con c nel nodo guasto
+    inj = np.zeros(z1.shape[0], dtype=complex)
+    e = c
+    for k, i_pf in b.pf_sources():
+        if cmath.isfinite(z1[k, f]) and abs(z1[k, f]) > 0.0:
+            inj[k] += i_pf * cmath.exp(-1j * cmath.phase(z1[f, k]))
+            e += abs(z1[k, f]) * i_pf
+
+    z1i, z2i, z0i = z1[f, f] + zf, z2[f, f] + zf, z0[f, f] + zf
+    zero_open = not cmath.isfinite(z0i)
+    i0 = i2 = 0j
+    if fault_type == "3ph":
+        i1 = e / z1i
+        if breaking:
+            ib = _breaking_current(f, c, z1, _machines(b, warnings), tmin_s, zf) + (e - c) / abs(z1i)
+            decay = _decay_injections(b, f, c, z1, zf, tmin_s, warnings)
+            # I_f(α) = A − α·B: α scala le riduzioni delle f.e.m. in modo che |I_f| = Ib
+            # (α = 1 se i contributi delle macchine sono in fase, come assume la norma)
+            big_b = -(z1_fin[f] @ decay) / z1i
+            alpha = 1.0
+            if abs(big_b) > 0.0:
+                p = (i1 * big_b.conjugate()).real
+                disc = p**2 - abs(big_b) ** 2 * (abs(i1) ** 2 - ib**2)
+                if disc >= 0.0:
+                    roots = [(p - math.sqrt(disc)) / abs(big_b) ** 2, (p + math.sqrt(disc)) / abs(big_b) ** 2]
+                    alpha = min(roots, key=lambda r: abs(r - 1.0))
+                else:
+                    alpha = p / abs(big_b) ** 2
+            inj += alpha * decay
+            i1 = i1 - alpha * big_b
+    elif fault_type == "2ph" or (fault_type == "2ph_e" and zero_open):
+        i1 = e / (z1i + z2i)
+        i2 = -i1
+    elif fault_type == "1ph":
+        if zero_open:
+            i1 = 0j  # nessun percorso verso terra: nessuna corrente di guasto
+            inj[:] = 0.0
+        else:
+            i1 = e / (z1i + z2i + z0i)
+        i2 = i0 = i1
+    else:  # bifase a terra
+        i1 = e / (z1i + z2i * z0i / (z2i + z0i))
+        i2 = -i1 * z0i / (z2i + z0i)
+        i0 = -i1 * z2i / (z2i + z0i)
+
+    def col(z: np.ndarray) -> np.ndarray:
+        return np.where(np.isfinite(z[:, f]), z[:, f], 0.0)
+
+    dv = {1: z1_fin @ inj - col(z1) * i1, 2: -col(z2) * i2, 0: -col(z0) * i0}
 
     def ibase(bus: str) -> float:
         return S_BASE_MVA / (math.sqrt(3.0) * b.un[bus])
 
-    out: dict[tuple[str, str], complex] = {}
-    for name, i_bus, j_bus, yy, ratio in b.branches:
-        vi, vj = dv[b.idx[i_bus]], dv[b.idx[j_bus]]
-        out[(name, i_bus)] = (yy / ratio**2 * vi - yy / ratio * vj) * ibase(i_bus)
-        out[(name, j_bus)] = (yy * vj - yy / ratio * vi) * ibase(j_bus)
-    return FaultCurrents(fault_bus, i_f * ibase(fault_bus), out)
+    seq: dict[tuple[str, str], list[complex]] = {}
+    for s in (1, 2, 0):
+        v = dv[s]
+        for name, i_bus, j_bus, yy, ratio in b.seq_branches[s]:
+            vi = v[b.idx[i_bus]]
+            if j_bus is None:  # derivazione verso terra
+                seq.setdefault((name, i_bus), [0j, 0j, 0j])[s] += yy * vi * ibase(i_bus)
+                continue
+            vj = v[b.idx[j_bus]]
+            seq.setdefault((name, i_bus), [0j, 0j, 0j])[s] += (yy / ratio**2 * vi - yy / ratio * vj) * ibase(i_bus)
+            seq.setdefault((name, j_bus), [0j, 0j, 0j])[s] += (yy * vj - yy / ratio * vi) * ibase(j_bus)
+
+    # sfasamenti dei gruppi vettoriali rispetto al nodo guasto
+    shifts = _vector_shifts(net)
+    sh1 = _node_shifts(fault_bus, b.seq_branches[1], {k: v[0] for k, v in shifts.items()}, warnings)
+    sh0 = _node_shifts(fault_bus, b.seq_branches[0], {k: v[1] for k, v in shifts.items()}, warnings)
+
+    def phases(bus: str, c0: complex, c1: complex, c2: complex) -> tuple[complex, complex, complex]:
+        r1 = cmath.exp(1j * math.radians(sh1.get(bus, 0.0)))
+        r0 = cmath.exp(1j * math.radians(sh0.get(bus, 0.0)))
+        a0, a1, a2 = c0 * r0, c1 * r1, c2 * r1.conjugate()
+        return (a0 + a1 + a2, a0 + _A**2 * a1 + _A * a2, a0 + _A * a1 + _A**2 * a2)
+
+    ib_f = ibase(fault_bus)
+    f_seq = (i0 * ib_f, i1 * ib_f, i2 * ib_f)
+    f_ph = phases(fault_bus, *f_seq)
+    if fault_type == "3ph":
+        ikss = f_seq[1]
+    elif fault_type == "1ph":
+        ikss = f_ph[0]
+    else:
+        ikss = max(f_ph[1:], key=abs)
+    branch_seq = {k: (v[0], v[1], v[2]) for k, v in seq.items()}
+    keys1 = {(nm, x) for nm, i, j, _, _ in b.seq_branches[1] for x in (i, j)}
+    buses = [bus.id for bus in net.buses]
+    return FaultCurrents(
+        bus=fault_bus,
+        ikss_ka=ikss,
+        branch_ka={k: v[1] for k, v in branch_seq.items() if k in keys1},
+        fault_type=fault_type,
+        fault_seq_ka=f_seq,
+        fault_phase_ka=f_ph,
+        branch_seq_ka=branch_seq,
+        branch_phase_ka={k: phases(k[1], *v) for k, v in branch_seq.items()},
+        bus_dv_seq_kv={
+            bus: (dv[0][b.idx[bus]] * b.un[bus] / math.sqrt(3.0),
+                  dv[1][b.idx[bus]] * b.un[bus] / math.sqrt(3.0),
+                  dv[2][b.idx[bus]] * b.un[bus] / math.sqrt(3.0))
+            for bus in buses
+        },
+        bus_shift_deg={bus: sh1.get(bus, 0.0) for bus in buses},
+        inside_unit=inside,
+        breaking=breaking and fault_type == "3ph",
+        warnings=warnings,
+    )

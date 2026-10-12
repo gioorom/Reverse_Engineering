@@ -10,7 +10,9 @@ sulla stessa descrizione della rete:
   **IEEE 1584-2018**, con il metodo di Lee oltre 15 kV e i metodi
   dell'allegato D.5 di NFPA 70E in corrente continua;
 - **coordinamento delle protezioni**: sequenza di intervento, selettività,
-  sensibilità e curve tempo-corrente di relè, interruttori BT e fusibili.
+  sensibilità e curve tempo-corrente di relè, interruttori BT e fusibili,
+  per guasti trifase, bifase e monofase a terra (protezioni di fase e di
+  terra, anche direzionali).
 
 Cortocircuito e flusso di potenza sono verificati contro
 [pandapower](https://www.pandapower.org/), implementazione open source
@@ -106,19 +108,30 @@ protezione Σ Δt_k/t(I_k) = 1. Procedura, campo di validità e limiti sono in [
 ```bash
 python -m iec60909.coordinamento esempi/coordinamento_cabina.json            # Markdown
 python -m iec60909.coordinamento rete.json --svg tcc --nodi QD1 --json      # curve SVG, JSON
+python -m iec60909.coordinamento rete.json --ib --tmin 0.05 --no-terra      # Ib, senza guasti a terra
 ```
 
 ```python
 from iec60909 import coordination_study, fault_currents, load_network
 
 rete = load_network("rete.json")
-studio = coordination_study(rete, max_time_s=5.0)
+studio = coordination_study(rete, max_time_s=5.0)          # anche current_basis="ib", earth_faults=False
 print(studio.issues)                                      # problemi trovati
-print(fault_currents(rete, "QD1").branch_ka)               # correnti nei rami (kA)
+print(fault_currents(rete, "QD1").branch_ka)               # correnti nei rami (kA), guasto trifase
+fc = fault_currents(rete, "QD1", fault_type="1ph")         # "3ph", "2ph", "2ph_e", "1ph"
+print(fc.branch_phase_ka, fc.branch_seq_ka)                # correnti di fase e di sequenza nei rami
 ```
 
-Il codice di uscita della riga di comando è 1 se ci sono problemi. Dispositivi,
-verifiche e limiti: [`../analisi/09_coordinamento_protezioni.md`](../analisi/09_coordinamento_protezioni.md).
+Livelli di guasto dello studio:
+- trifase massimo, oppure con la corrente di interruzione Ib (`--ib`);
+- bifase minimo;
+- monofase massimo e minimo, nei nodi con percorso verso terra.
+
+Le correnti nei rami vengono dalle tre reti di sequenza, con gli sfasamenti
+dei gruppi vettoriali, i convertitori pieni e i guasti interni ai gruppi di
+generazione. Il codice di uscita della riga di comando è 1 se ci sono
+problemi. Dispositivi, verifiche e limiti:
+[`../analisi/09_coordinamento_protezioni.md`](../analisi/09_coordinamento_protezioni.md).
 
 ## Risultati per nodo (cortocircuito)
 
@@ -239,13 +252,20 @@ Sezione dell'arc flash (esempio in `esempi/arc_flash_cabina.json`):
 
 Sezione del coordinamento (esempio in `esempi/coordinamento_cabina.json`):
 
-- `protective_devices`: `id`, `branch` (linea, trasformatore o `<id>:hv|mv|lv`),
-  `bus` (estremo di installazione), `kind` (`relay`, `breaker`, `fuse`),
-  `protects` (`branch` o `bus`), `cti_s`; relè: `curve` (`IEC_SI`, `IEC_VI`,
-  `IEC_EI`, `IEC_LTI`, `IEEE_MI`, `IEEE_VI`, `IEEE_EI`), `pickup_a`, `tms`,
-  `stages` (`[{"pickup_a", "time_s"}]`), `breaker_time_s`; interruttore BT:
-  `in_a`, `ir`, `tr_s`, `isd`, `tsd_s`, `i2t_sd`, `ii`, `ti_s`; fusibile:
-  `points` (`[[I_A, t_s], …]`)
+- `protective_devices`: `id`, `branch` (linea, trasformatore, `<id>:hv|mv|lv`
+  o trasformatore di messa a terra), `bus` (estremo di installazione), `kind`
+  (`relay`, `breaker`, `fuse`), `protects` (`branch` o `bus`), `cti_s`;
+  relè: `curve` (`IEC_SI`, `IEC_VI`, `IEC_EI`, `IEC_LTI`, `IEEE_MI`,
+  `IEEE_VI`, `IEEE_EI`), `pickup_a`, `tms`, `stages`
+  (`[{"pickup_a", "time_s"}]`), `breaker_time_s`; interruttore BT: `in_a`,
+  `ir`, `tr_s`, `isd`, `tsd_s`, `i2t_sd`, `ii`, `ti_s`; fusibile: `points`
+  (`[[I_A, t_s], …]`). Campi comuni:
+  - `measure`: `phase` (default) o `residual` (3·I0, protezione di terra);
+  - `directional`, `characteristic_angle_deg` (default 45°);
+  - bande di tolleranza: `current_tolerance_percent`,
+    `time_tolerance_percent`, `time_tolerance_s`;
+  - `selectivity_limits`: `{"<id a valle>": Is_kA}`, limite di selettività
+    energetica dalle tabelle del costruttore
 
 ## Confronto con ETAP
 
@@ -283,6 +303,11 @@ python -m pytest
   mano), scelta di Ibf, calcolo a più intervalli (confronto con
   arcflash-calc `multistep_E_and_AFB`), fusibili e avvisi sotto 240 V.
 - `tests/test_coordinamento.py`: coordinamento, curve dei dispositivi,
-  correnti nei rami, verifiche di selettività, sensibilità e carico.
+  correnti nei rami, verifiche di selettività, sensibilità e carico;
+  `tests/test_coordinamento_estensioni.py`: correnti nei rami per i guasti
+  dissimmetrici, con la somma nel nodo guasto confrontata con `calculate`
+  (tolleranza 1e-9) e i gruppi vettoriali; protezioni di terra, relè
+  direzionali, corrente di interruzione, bande di tolleranza, selettività
+  energetica, convertitori pieni e guasti interni ai gruppi.
 
 Dettagli delle formule, ipotesi e limiti: [`../analisi/01_iec60909_formule.md`](../analisi/01_iec60909_formule.md).
