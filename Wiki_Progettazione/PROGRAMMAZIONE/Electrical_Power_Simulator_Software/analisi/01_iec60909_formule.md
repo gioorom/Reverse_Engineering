@@ -85,9 +85,34 @@ per bifase e monofase.
 
 ## Ib, Ik, Ith
 
-- **Ib** = I"k: stima cautelativa ammessa per le reti magliate (μ = q = 1).
-- **Ik**: calcolata come I"k senza motori, solo se non ci sono generatori
-  sincroni (reti lontane dai generatori).
+- **Ib** (corrente di interruzione simmetrica, guasto trifase), formula per reti
+  magliate:
+  Ib = I"k − Σ (ΔU"_i/(c·Un/√3))·(1 − μ_i·q_i)·I"k_i, con I"k_i corrente
+  parziale della macchina i ai suoi morsetti e ΔU"_i = X"_i·I"k_i (X" con K_G
+  per i generatori). Le reti esterne non decadono; per una sola macchina la
+  formula si riduce a Ib = μ·q·I"k.
+  - μ = 0,84 + 0,26·e^(−0,26·r) (tmin 0,02 s); 0,71 + 0,51·e^(−0,30·r)
+    (0,05 s); 0,62 + 0,72·e^(−0,32·r) (0,10 s); 0,56 + 0,94·e^(−0,38·r)
+    (≥ 0,25 s), r = I"k_i/Ir_i; interpolazione lineare per tmin intermedi.
+  - q (motori asincroni) = 1,03 + 0,12·ln m; 0,79 + 0,12·ln m; 0,57 + 0,12·ln m;
+    0,26 + 0,10·ln m, con m = PrM/p in MW per coppia polare (0,05 MW per i
+    gruppi BT senza dati); q = 1 per le macchine sincrone.
+  - Macchine con r ≤ 2 non decadono (μ = q = 1), come per il criterio di
+    guasto lontano dai generatori; con questa regola Ib coincide con ETAP.
+  - tmin < 0,02 s (fuori dalle tabelle della norma): Ib = I"k, scelta
+    cautelativa.
+  - Guasti dissimmetrici: Ib2 = I"k2, Ib2E = I"k2E, Ib1 = I"k1.
+- **Ik** (corrente permanente, guasto trifase):
+  - reti con rete esterna o più generatori (magliate): Ik = I"k calcolata
+    senza i motori asincroni;
+  - guasto alimentato da un solo generatore: Ik = λ·IrG, λmax nel caso
+    massimo e λmin nel caso minimo. λ può essere imposto (`lambda_max`,
+    `lambda_min`, letti dalle curve della norma) oppure calcolato con il modello
+    analitico da cui derivano le curve: corrente permanente E/(xd_sat + x_e),
+    con x_e = c/r − x"d reattanza esterna, E = Ufmax/Ufr·|1 + j·xd_sat·(cosφ −
+    j·sinφ)| per λmax (Ufmax/Ufr = 1,3 serie 1, 1,6 serie 2) ed E = 1 per λmin.
+    Il modello approssima le curve grafiche della norma: per verifiche
+    formali usare i valori letti dalle curve.
 - **Ith** = I"k·√(m + n), con n = 1 e
   m = [e^(4·f·Tk·ln(κ−1)) − 1] / [2·f·Tk·ln(κ−1)]; per κ → 2 il limite è m = 2.
 
@@ -108,7 +133,7 @@ per bifase e monofase.
 
 - Avvolgimenti a zig-zag (rifiutati con un errore esplicito).
 - Gruppi di generazione con trasformatore (power station unit, K_S/K_SO),
-  generatori con neutro a terra.
-- Ib con i fattori μ e q, Ik con il metodo λ per reti vicine ai generatori.
+  inclusi λ e μ del gruppo.
+- Fattore n della corrente termica per guasti vicini ai generatori (n = 1).
 - Componente continua i_DC, impedenza di guasto, contributo di inverter/eolico.
 - Metodo B senza la deroga per R/X < 0,3 in tutti i rami.

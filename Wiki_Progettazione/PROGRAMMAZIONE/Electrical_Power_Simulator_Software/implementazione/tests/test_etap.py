@@ -276,7 +276,28 @@ def test_motore_asincrono(tmp_path):
         "id": "MA1", "bus": "BT1Q", "pr_mw": pytest.approx(0.18), "ur_kv": 0.4,
         "efficiency": 1.0, "cos_phi": 1.0, "ilr_ir": pytest.approx(6.5),
         "rx": pytest.approx(0.25), "x2_percent": 16.0, "rx2": pytest.approx(2.4 / 16.0),
+        "count": 1,
     }
+
+
+def test_motore_asincrono_potenza_attiva_poli_e_quantita(tmp_path):
+    """Con HP/kW, poli e quantità: Pr per motore, coppie polari, Sr totale = kVA."""
+    motore = {
+        "ID": "MA1", "ConnectedBus": "BT1Q", "kVA": 180.0, "KV": 0.4, "LRC": 650.0,
+        "Xpp/R": 4.0, "X2": 16.0, "R": 2.4, "HP/kW": 200.0, "FlagHP/kW": 1,
+        "Poles": 4, "Quantity": 2,
+    }
+    rete, _ = etap.network_from_etap(_studio(tmp_path, IIndMachine=[motore]))
+    m = _per_id(rete["motors"])["MA1"]
+    p_kw = 200.0 * 0.7457  # FlagHP/kW = 1: potenza in HP
+    assert m["count"] == 2 and m["pole_pairs"] == 2
+    assert m["pr_mw"] == pytest.approx(p_kw / 1000 / 2)
+    assert m["efficiency"] == pytest.approx(p_kw / 180.0) and m["cos_phi"] == 1.0
+    sr_totale = m["pr_mw"] / (m["efficiency"] * m["cos_phi"]) * m["count"]
+    assert sr_totale == pytest.approx(0.18)
+    motore.update({"HP/kW": 150.0, "FlagHP/kW": 2})  # kW
+    rete, _ = etap.network_from_etap(_studio(tmp_path, nome="kw.SI2S", IIndMachine=[motore]))
+    assert _per_id(rete["motors"])["MA1"]["pr_mw"] == pytest.approx(0.075)
 
 
 def test_rete_esterna(tmp_path):

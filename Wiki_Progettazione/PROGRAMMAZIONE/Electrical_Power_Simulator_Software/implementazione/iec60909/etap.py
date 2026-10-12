@@ -197,6 +197,7 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
             "cos_phi": _num(g["PF"]) / 100.0,
             "rg_ohm": xd / _num(g["Xpp/R"]),
             "x2_percent": _num(g["X2"]) or None,
+            "xd_sat_percent": _num(g.get("Xdsat")) or None,
             **_earthing(g, _num(g["KV"]), g.get("Xzero")),
         })
     # IEC 60909: i motori sincroni si trattano come generatori sincroni
@@ -215,17 +216,26 @@ def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], 
             **_earthing(m, _num(m["kV"]), m.get("X0")),
         })
     for m in _rows(db, "IIndMachine"):
+        kva = _num(m["kVA"])  # potenza apparente nominale, già comprensiva della quantità
+        qty = max(1, int(_num(m.get("Quantity")) or 1))
+        # potenza attiva di targa: FlagHP/kW = 1 → HP, 2 → kW
+        p_kw = _num(m.get("HP/kW")) * (0.7457 if m.get("FlagHP/kW") == 1 else 1.0)
+        if not 0.0 < p_kw <= kva:
+            p_kw = kva
         motor: dict[str, Any] = {
             "id": m["ID"],
             "bus": node(m["ConnectedBus"]),
-            # potenza apparente nominale di ETAP (kVA, già comprensiva della quantità)
-            "pr_mw": _num(m["kVA"]) / 1000.0,
+            # Sr = Pr/(η·cosφ) = kVA: η·cosφ = Pr/kVA, con cosφ = 1
+            "pr_mw": p_kw / 1000.0 / qty,
             "ur_kv": _num(m["KV"]),
-            "efficiency": 1.0,
+            "efficiency": p_kw / kva,
             "cos_phi": 1.0,
             "ilr_ir": _num(m["LRC"]) / 100.0,
             "rx": 1.0 / _num(m["Xpp/R"]),
+            "count": qty,
         }
+        if _num(m.get("Poles")) >= 2:
+            motor["pole_pairs"] = int(_num(m["Poles"]) // 2)
         if _num(m.get("X2")) > 0:
             motor["x2_percent"] = _num(m["X2"])
             motor["rx2"] = _num(m["R"]) / _num(m["X2"])
@@ -255,6 +265,7 @@ def compare(path: str | Path, kappa_method: str = "C") -> tuple[StudyResult, lis
         sum2 = {r["FaultedBus"]: r for r in _rows(db, "SCIECLGSum2")}
         clip = {r["FaultedBus"]: r for r in _rows(db, "ClippingCurrent")}
         sum1 = _rows(db, "SCIECLGSum1")
+        duty = _rows(db, "SCIEC3phSum")
     out: list[Comparison] = []
     for e in sum1:
         bus = e["FaultedBus"]
@@ -271,14 +282,47 @@ def compare(path: str | Path, kappa_method: str = "C") -> tuple[StudyResult, lis
             ("|Z0|", z.get("ZZeroOhm"), abs(r.z0_ohm) if r.z0_ohm is not None else 0.0),
         ]
         out += [Comparison(bus, q, _num(a), float(b)) for q, a, b in pairs]
+    out += _compare_duty(duty, alias, data, result, kappa_method)
     return result, out
+
+
+def _compare_duty(
+    duty: list[dict[str, Any]],
+    alias: dict[str, str],
+    data: dict[str, Any],
+    result: StudyResult,
+    kappa_method: str,
+) -> list[Comparison]:
+    """Studi di "duty" (.SI1S): Ik per nodo e Ib dei dispositivi che vedono l'intera corrente.
+
+    Ib è confrontata solo per i dispositivi la cui corrente iniziale coincide con
+    I"k del nodo; per gli altri ETAP sottrae il contributo del ramo protetto.
+    """
+    out: list[Comparison] = []
+    by_tmin: dict[float, StudyResult] = {}
+    for e in duty:
+        bus = e["FaultedBus"]
+        r = result.bus(alias.get(bus, bus))
+        tmin = _num(e.get("DeviceTD"))
+        if tmin <= 0.0:
+            if _num(e.get("Ik")) > 0:
+                out.append(Comparison(bus, 'I"k3 (duty)', _num(e["IPPk"]), r.ikss3_ka))
+                out.append(Comparison(bus, "Ik", _num(e["Ik"]), r.ik_ka or 0.0))
+            continue
+        if abs(_num(e["IPPk"]) - r.ikss3_ka) > 1e-3 * max(r.ikss3_ka, 1e-9):
+            continue
+        if tmin not in by_tmin:
+            by_tmin[tmin] = calculate(network_from_dict(data), "max", kappa_method, tmin_s=tmin)
+        rb = by_tmin[tmin].bus(alias.get(bus, bus))
+        out.append(Comparison(bus, f"Ib {e['DeviceID'].strip()} (tmin {tmin:g} s)", _num(e["Ibsymm"]), rb.ib_ka))
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="iec60909.etap", description="Confronto con uno studio di cortocircuito IEC di ETAP"
     )
-    parser.add_argument("studio", help="file di uscita ETAP (SQLite: .SI2S)")
+    parser.add_argument("studio", help="file di uscita ETAP (SQLite: .SI2S, .SI1S)")
     parser.add_argument("--kappa", choices=("B", "C"), default="C")
     parser.add_argument("--json", metavar="FILE", help="salva la rete convertita in JSON")
     args = parser.parse_args(argv)

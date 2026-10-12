@@ -21,6 +21,7 @@ pip install -e ".[test]"    # anche pytest e pandapower per i test
 python -m iec60909 esempi/cabina_mt_bt.json              # correnti massime, Markdown
 python -m iec60909 esempi/cabina_mt_bt.json --caso min   # correnti minime
 python -m iec60909 rete.json --kappa B --tk 0.5 --json   # metodo B, Tk = 0,5 s, JSON
+python -m iec60909 rete.json --tmin 0.05                  # Ib con tempo minimo di interruzione 50 ms
 ```
 
 Da Python:
@@ -28,7 +29,7 @@ Da Python:
 ```python
 from iec60909 import load_network, calculate
 
-risultato = calculate(load_network("rete.json"), case="max", kappa_method="C", tk_s=1.0)
+risultato = calculate(load_network("rete.json"), case="max", kappa_method="C", tk_s=1.0, tmin_s=0.1)
 print(risultato.bus("QGBT").ikss3_ka)
 ```
 
@@ -42,8 +43,8 @@ print(risultato.bus("QGBT").ikss3_ka)
 | `ikss2e_earth_ka` | I"kE2E, corrente verso terra nel guasto bifase a terra |
 | `ikss2e_l2_ka`, `ikss2e_l3_ka` | correnti nelle fasi guaste del guasto bifase a terra |
 | `kappa`, `ip3_ka`, `ip2_ka`, `ip1_ka` | fattore κ e correnti di picco |
-| `ib_ka` | corrente di interruzione simmetrica (Ib = I"k, cautelativa) |
-| `ik_ka` | corrente permanente (solo reti senza generatori sincroni) |
+| `ib_ka` | corrente di interruzione simmetrica Ib con i fattori μ e q (tmin da `--tmin`) |
+| `ik_ka` | corrente permanente Ik (reti magliate: senza motori asincroni; un solo generatore: λ·IrG) |
 | `ith_ka` | corrente termica equivalente per la durata Tk |
 | `z1_ohm`, `z2_ohm`, `z0_ohm` | impedenze di cortocircuito di sequenza nel nodo |
 
@@ -72,7 +73,9 @@ Vedi `esempi/cabina_mt_bt.json`. Sezioni e campi:
 - `generators` (anche motori sincroni): `id`, `bus`, `sr_mva`, `ur_kv`,
   `xd2_percent`, `cos_phi`, `rg_ohm` (se assente: R_Gf = 0,05/0,07/0,15 · X"d),
   `x2_percent` (sequenza inversa, default X"d), `x0_percent` e `zn_ohm`
-  (centro stella a terra; senza `x0_percent` il neutro è isolato)
+  (centro stella a terra; senza `x0_percent` il neutro è isolato); per Ik con
+  un solo generatore: `xd_sat_percent` e `ufmax_ratio` (1,3 o 1,6) oppure
+  `lambda_max` e `lambda_min` letti dalle curve della norma
 - `motors`: `id`, `bus`, `pr_mw`, `ur_kv`, `efficiency`, `cos_phi`, `ilr_ir`,
   `pole_pairs` (obbligatorio per motori MT), `rx` (facoltativo), `count`,
   `x2_percent` e `rx2` (sequenza inversa da dati di targa, default Z2 = Z1)

@@ -18,7 +18,7 @@ from typing import Optional
 import numpy as np
 
 from . import factors
-from .network import Network, Transformer, Transformer3W
+from .network import Generator, Motor, Network, Transformer, Transformer3W
 
 S_BASE_MVA = 100.0
 _A = cmath.exp(2j * math.pi / 3)
@@ -60,6 +60,7 @@ class StudyResult:
     tk_s: float
     buses: list[BusResult]
     warnings: list[str] = field(default_factory=list)
+    tmin_s: float = 0.1
 
     def bus(self, bus_id: str) -> BusResult:
         for b in self.buses:
@@ -134,6 +135,41 @@ class _Builder:
         z0 = kt * complex(r0k, math.sqrt(z0k**2 - r0k**2)) / self.zbase(t.lv_bus)
         ratio = (t.ur_hv_kv / t.ur_lv_kv) / (self.un[t.hv_bus] / self.un[t.lv_bus])
         return z1, z0, ratio
+
+    def generator_z(self, g: Generator, seq: int) -> complex:
+        """Impedenza del generatore in p.u. (sequenza 1, 2 o 0 senza neutro)."""
+        xd = g.xd2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
+        rg = g.rg_ohm if g.rg_ohm is not None else factors.generator_rx(g.ur_kv, g.sr_mva) * xd
+        kg = factors.generator_kg(
+            self.un[g.bus], g.ur_kv, self.c_max(g.bus), g.xd2_percent / 100.0, g.cos_phi
+        )
+        x = xd
+        if seq == 2 and g.x2_percent is not None:
+            # reattanza di sequenza inversa di targa, es. X(2) = (X"d + X"q)/2
+            x = g.x2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
+        elif seq == 0:
+            x = (g.x0_percent or 0.0) / 100.0 * g.ur_kv**2 / g.sr_mva
+        return kg * complex(rg, x) / self.zbase(g.bus)
+
+    @staticmethod
+    def motor_sr_mva(m: Motor) -> float:
+        return m.pr_mw / (m.efficiency * m.cos_phi)
+
+    def motor_z(self, m: Motor, seq: int) -> complex:
+        """Impedenza del motore asincrono (o del gruppo) in p.u., sequenza 1 o 2."""
+        srm = self.motor_sr_mva(m)
+        zm = m.ur_kv**2 / (m.ilr_ir * srm) / m.count
+        rx = m.rx if m.rx is not None else factors.motor_rx(m.ur_kv, m.pr_mw, m.pole_pairs)
+        xm = zm / math.sqrt(1.0 + rx**2)
+        if seq == 2 and m.x2_percent is not None:
+            # sequenza inversa da dati di targa (default: Z(2) = Z(1))
+            xm = m.x2_percent / 100.0 * m.ur_kv**2 / srm / m.count
+            rx = m.rx2 if m.rx2 is not None else rx
+        return complex(rx * xm, xm) / self.zbase(m.bus)
+
+    def rated_current_pu(self, bus: str, sr_mva: float, ur_kv: float) -> float:
+        """Corrente nominale di una macchina in p.u. della base del nodo."""
+        return sr_mva * self.un[bus] / (S_BASE_MVA * ur_kv)
 
     def _transformer3w_star(self, t: Transformer3W, zero: bool) -> dict[str, complex]:
         """Impedenze degli avvolgimenti dello schema a stella, in Ω riferiti al lato AT.
@@ -262,44 +298,27 @@ class _Builder:
             for g in self.net.generators:
                 if g.x0_percent is None:
                     continue  # neutro isolato
-                x0 = g.x0_percent / 100.0 * g.ur_kv**2 / g.sr_mva
-                xd = g.xd2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
-                rg = g.rg_ohm if g.rg_ohm is not None else factors.generator_rx(g.ur_kv, g.sr_mva) * xd
-                kg = factors.generator_kg(
-                    self.un[g.bus], g.ur_kv, self.c_max(g.bus), g.xd2_percent / 100.0, g.cos_phi
-                )
                 # K_G si applica all'impedenza omopolare della macchina, non a quella di neutro
-                shunt(g.bus, (kg * complex(rg, x0) + 3.0 * complex(g.zn_ohm)) / self.zbase(g.bus))
+                shunt(g.bus, self.generator_z(g, 0) + 3.0 * complex(g.zn_ohm) / self.zbase(g.bus))
         if seq in (1, 2):
             for g in self.net.generators:
-                xd = g.xd2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
-                rg = g.rg_ohm if g.rg_ohm is not None else factors.generator_rx(g.ur_kv, g.sr_mva) * xd
-                kg = factors.generator_kg(
-                    self.un[g.bus], g.ur_kv, self.c_max(g.bus), g.xd2_percent / 100.0, g.cos_phi
-                )
-                if seq == 2 and g.x2_percent is not None:
-                    # reattanza di sequenza inversa di targa, es. X(2) = (X"d + X"q)/2
-                    xd = g.x2_percent / 100.0 * g.ur_kv**2 / g.sr_mva
-                shunt(g.bus, kg * complex(rg, xd) / self.zbase(g.bus))
+                shunt(g.bus, self.generator_z(g, seq))
             if motors and self.case == "max":
                 for m in self.net.motors:
-                    srm = m.pr_mw / (m.efficiency * m.cos_phi)
-                    zm = m.ur_kv**2 / (m.ilr_ir * srm) / m.count
-                    rx = m.rx if m.rx is not None else factors.motor_rx(m.ur_kv, m.pr_mw, m.pole_pairs)
-                    xm = zm / math.sqrt(1.0 + rx**2)
-                    if seq == 2 and m.x2_percent is not None:
-                        # sequenza inversa da dati di targa (default: Z(2) = Z(1))
-                        xm = m.x2_percent / 100.0 * m.ur_kv**2 / srm / m.count
-                        rx = m.rx2 if m.rx2 is not None else rx
-                    shunt(m.bus, complex(rx * xm, xm) / self.zbase(m.bus))
+                    shunt(m.bus, self.motor_z(m, seq))
         return y, grounded
 
 
 def _diag_z(system: tuple[np.ndarray, np.ndarray]) -> np.ndarray:
     """Impedenze nodali Z_ii; infinite per le parti di rete senza collegamento verso terra."""
+    return np.diag(_full_z(system)).copy()
+
+
+def _full_z(system: tuple[np.ndarray, np.ndarray]) -> np.ndarray:
+    """Matrice delle impedenze nodali; infinita tra parti di rete non collegate."""
     y, grounded = system
     n = y.shape[0]
-    z = np.full(n, complex(math.inf, math.inf))
+    z = np.full((n, n), complex(math.inf, math.inf))
     seen = np.zeros(n, dtype=bool)
     for start in range(n):
         if seen[start]:
@@ -315,7 +334,7 @@ def _diag_z(system: tuple[np.ndarray, np.ndarray]) -> np.ndarray:
                     stack.append(j)
         if grounded[component].any():
             sub = np.ix_(component, component)
-            z[component] = np.diag(np.linalg.inv(y[sub]))
+            z[sub] = np.linalg.inv(y[sub])
     return z
 
 
@@ -324,6 +343,7 @@ def calculate(
     case: str = "max",
     kappa_method: str = "C",
     tk_s: float = 1.0,
+    tmin_s: float = 0.1,
 ) -> StudyResult:
     """Calcola le correnti di cortocircuito in tutti i nodi della rete.
 
@@ -332,6 +352,8 @@ def calculate(
     kappa_method: "B" (impedenza nel punto di guasto, fattore 1,15) o "C"
     (frequenza equivalente fc = 20 Hz a 50 Hz, 24 Hz a 60 Hz).
     tk_s: durata del cortocircuito per la corrente termica equivalente Ith.
+    tmin_s: tempo minimo di interruzione per Ib (fattori μ e q; valori
+    tabellati 0,02 / 0,05 / 0,10 / ≥ 0,25 s, interpolazione lineare).
     """
     net.validate()
     kappa_method = kappa_method.upper()
@@ -340,7 +362,8 @@ def calculate(
     warnings: list[str] = []
     b = _Builder(net, case, warnings)
 
-    z1 = _diag_z(b.build(1))
+    z1_full = _full_z(b.build(1))
+    z1 = np.diag(z1_full).copy()
     isolated = [net.buses[i].id for i in np.nonzero(~np.isfinite(z1[: len(net.buses)]))[0]]
     if isolated:
         raise ValueError(f"nodi non collegati ad alcuna sorgente: {isolated}")
@@ -350,13 +373,8 @@ def calculate(
         fc = 20.0 if net.f_hz == 50.0 else 24.0
         zc = _diag_z(b.build(1, x_scale=fc / net.f_hz))
         rx_c = zc.real / zc.imag * fc / net.f_hz
-    # Corrente permanente Ik: senza contributo dei motori; calcolata solo per reti
-    # "lontane dai generatori" (nessun generatore sincrono).
-    z1_steady = _diag_z(b.build(1, motors=False)) if not net.generators else None
-    if net.generators:
-        warnings.append("rete con generatori: Ik permanente non calcolata (serve il metodo λ)")
-    if net.motors or net.generators:
-        warnings.append("Ib calcolata come Ib = I\"k (stima cautelativa, μ = q = 1)")
+    machines = _machines(b, warnings)
+    steady = _steady_state(net, b, warnings)
 
     results = []
     for i, bus in enumerate(net.buses):
@@ -390,9 +408,8 @@ def calculate(
         ip3 = k * math.sqrt(2.0) * ik3
         m = factors.thermal_m(k, net.f_hz, tk_s)
         ith = ik3 * math.sqrt(m + 1.0)
-        ik = None
-        if z1_steady is not None:
-            ik = c / abs(z1_steady[i]) * ibase
+        ib = _breaking_current(i, c, z1_full, machines, tmin_s) * ibase
+        ik = None if steady[i] is None else steady[i] * ibase
 
         results.append(
             BusResult(
@@ -413,9 +430,107 @@ def calculate(
                 ip3_ka=ip3,
                 ip2_ka=k * math.sqrt(2.0) * ik2,
                 ip1_ka=k * math.sqrt(2.0) * ik1,
-                ib_ka=ik3,
+                ib_ka=ib,
                 ik_ka=ik,
                 ith_ka=ith,
             )
         )
-    return StudyResult(net.name, case, kappa_method, tk_s, results, warnings)
+    return StudyResult(net.name, case, kappa_method, tk_s, results, warnings, tmin_s)
+
+
+@dataclass
+class _Machine:
+    """Macchina rotante vista dal calcolo di Ib."""
+
+    bus: int
+    z: complex  # impedenza subtransitoria in p.u. (con K_G per i generatori)
+    ir: float  # corrente nominale in p.u.
+    mw_per_pole_pair: Optional[float]  # solo motori asincroni (fattore q)
+
+
+def _machines(b: _Builder, warnings: list[str]) -> list[_Machine]:
+    out = []
+    for g in b.net.generators:
+        out.append(_Machine(b.idx[g.bus], b.generator_z(g, 1), b.rated_current_pu(g.bus, g.sr_mva, g.ur_kv), None))
+    if b.case == "max":
+        for m in b.net.motors:
+            if m.pole_pairs is not None:
+                mpp = m.pr_mw / m.pole_pairs
+            else:
+                # gruppi di motori BT senza dati: PrM/p = 0,05 MW
+                mpp = 0.05
+                msg = f"{m.id}: coppie polari non indicate, per q si usa PrM/p = 0,05 MW"
+                if msg not in warnings:
+                    warnings.append(msg)
+            sr = b.motor_sr_mva(m) * m.count
+            out.append(_Machine(b.idx[m.bus], b.motor_z(m, 1), b.rated_current_pu(m.bus, sr, m.ur_kv), mpp))
+    return out
+
+
+def _breaking_current(
+    f: int, c: float, z_full: np.ndarray, machines: list[_Machine], tmin_s: float
+) -> float:
+    """Corrente di interruzione simmetrica Ib (p.u.) per guasto trifase nel nodo f.
+
+    Ib = I"k − Σ (ΔU"_i/(c·Un/√3))·(1 − μ_i·q_i)·I"k_i, con I"k_i corrente
+    parziale della macchina i e ΔU"_i = X"_i·I"k_i la caduta ai suoi
+    morsetti (q = 1 per le macchine sincrone). Per un guasto alimentato da una
+    sola macchina si riduce a Ib = μ·q·I"k. Le macchine con I"k_i ≤ 2·Ir non
+    decadono (μ = q = 1); per tmin < 0,02 s Ib = I"k.
+    """
+    zff = z_full[f, f]
+    ib = c / abs(zff)
+    if tmin_s < factors.T_MIN_IB:
+        # sotto 0,02 s la norma non dà μ e q: nessun decadimento (cautelativo)
+        return ib
+    for mach in machines:
+        zkf = z_full[mach.bus, f]
+        if not cmath.isfinite(zkf):
+            continue
+        i_m = c * abs(zkf / zff) / abs(mach.z)
+        ratio = i_m / mach.ir
+        if ratio <= 2.0:
+            continue  # macchina lontana dal guasto: nessun decadimento (μ = q = 1)
+        mu = factors.decay_mu(ratio, tmin_s)
+        q = 1.0 if mach.mw_per_pole_pair is None else factors.decay_q(mach.mw_per_pole_pair, tmin_s)
+        ib -= (mach.z.imag * i_m / c) * (1.0 - mu * q) * i_m
+    return ib
+
+
+def _steady_state(net: Network, b: _Builder, warnings: list[str]) -> list[Optional[float]]:
+    """Corrente permanente Ik (p.u.) per guasto trifase in ogni nodo.
+
+    Guasto alimentato da un solo generatore (nessuna rete esterna, un solo
+    generatore): Ik = λ·IrG, con λmax (caso max) o λmin (caso min).
+    Negli altri casi (reti magliate o con più sorgenti): Ik = I"k calcolata
+    senza i motori asincroni.
+    """
+    n = len(net.buses)
+    system = b.build(1, motors=False)
+    if net.external_grids or len(net.generators) != 1:
+        z = _diag_z(system)
+        return [b.c_case(bus.id) / abs(z[i]) for i, bus in enumerate(net.buses)]
+    g = net.generators[0]
+    z_full = _full_z(system)
+    gi = b.idx[g.bus]
+    zg = b.generator_z(g, 1)
+    ir = b.rated_current_pu(g.bus, g.sr_mva, g.ur_kv)
+    out: list[Optional[float]] = []
+    for i, bus in enumerate(net.buses):
+        c = b.c_case(bus.id)
+        ratio = c * abs(z_full[gi, i] / z_full[i, i]) / abs(zg) / ir
+        if g.lambda_max is not None and g.lambda_min is not None:
+            lam_max, lam_min = g.lambda_max, g.lambda_min
+        elif g.xd_sat_percent is not None:
+            lam_max, lam_min = factors.generator_lambda(
+                ratio, g.xd_sat_percent / 100.0, g.xd2_percent / 100.0, g.cos_phi, g.ufmax_ratio,
+                b.c_max(g.bus),
+            )
+        else:
+            msg = f"{g.id}: per Ik servono xd_sat_percent oppure lambda_max e lambda_min"
+            if msg not in warnings:
+                warnings.append(msg)
+            out.append(None)
+            continue
+        out.append((lam_max if b.case == "max" else lam_min) * ir)
+    return out

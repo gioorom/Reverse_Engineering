@@ -131,6 +131,13 @@ class Generator:
     # Se x0_percent è assente il generatore non conduce corrente omopolare.
     x0_percent: Optional[float] = None
     zn_ohm: complex = 0.0
+    # Corrente permanente (λ): reattanza sincrona satura in %, rapporto
+    # Ufmax/Ufr dell'eccitazione (1,3 serie 1; 1,6 serie 2) oppure λ imposti
+    # (es. letti dalle curve della norma).
+    xd_sat_percent: Optional[float] = None
+    ufmax_ratio: float = 1.3
+    lambda_max: Optional[float] = None
+    lambda_min: Optional[float] = None
 
 
 @dataclass

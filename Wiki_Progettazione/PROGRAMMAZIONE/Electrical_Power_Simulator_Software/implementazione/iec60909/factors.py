@@ -69,3 +69,70 @@ def motor_rx(ur_kv: float, pr_mw: float, pole_pairs: int | None) -> float:
     if pole_pairs is None:
         raise ValueError("per i motori MT serve il numero di coppie polari")
     return 0.10 if pr_mw / pole_pairs >= 1.0 else 0.15
+
+
+# Tempi minimi di interruzione tabellati per μ e q; per valori intermedi si
+# interpola linearmente, fuori dall'intervallo si usa il valore estremo.
+_T_MIN = (0.02, 0.05, 0.10, 0.25)
+T_MIN_IB = _T_MIN[0]
+_MU = ((0.84, 0.26, 0.26), (0.71, 0.51, 0.30), (0.62, 0.72, 0.32), (0.56, 0.94, 0.38))
+_Q = ((1.03, 0.12), (0.79, 0.12), (0.57, 0.12), (0.26, 0.10))
+
+
+def _interpolate(values: list[float], tmin_s: float) -> float:
+    if tmin_s <= _T_MIN[0]:
+        return values[0]
+    if tmin_s >= _T_MIN[-1]:
+        return values[-1]
+    for k in range(len(_T_MIN) - 1):
+        t0, t1 = _T_MIN[k], _T_MIN[k + 1]
+        if t0 <= tmin_s <= t1:
+            return values[k] + (values[k + 1] - values[k]) * (tmin_s - t0) / (t1 - t0)
+    raise AssertionError("intervallo non trovato")
+
+
+def decay_mu(ikg_over_irg: float, tmin_s: float) -> float:
+    """Fattore μ di decadimento della corrente simmetrica di generatori e motori.
+
+    μ = a + b·e^(−c·I"kG/IrG) per tmin = 0,02 / 0,05 / 0,10 / ≥ 0,25 s;
+    μ = 1 se I"kG/IrG ≤ 2; μ ≤ 1.
+    """
+    if ikg_over_irg <= 2.0:
+        return 1.0
+    values = [min(1.0, a + b * math.exp(-c * ikg_over_irg)) for a, b, c in _MU]
+    return min(1.0, _interpolate(values, tmin_s))
+
+
+def decay_q(mw_per_pole_pair: float, tmin_s: float) -> float:
+    """Fattore q dei motori asincroni, m = PrM/p in MW per coppia polare; q ≤ 1."""
+    if mw_per_pole_pair <= 0.0:
+        raise ValueError("PrM/p deve essere positivo")
+    # ogni curva tabellata è limitata a 0 ≤ q ≤ 1 prima dell'interpolazione
+    values = [max(0.0, min(1.0, a + b * math.log(mw_per_pole_pair))) for a, b in _Q]
+    return _interpolate(values, tmin_s)
+
+
+def generator_lambda(
+    ikg_over_irg: float,
+    xd_sat_pu: float,
+    xd2_pu: float,
+    cos_phi: float,
+    ufmax_ratio: float,
+    c: float,
+) -> tuple[float, float]:
+    """Fattori λmax e λmin per la corrente permanente di un generatore.
+
+    Modello analitico da cui derivano le curve della norma: corrente permanente
+    E/(xd_sat + x_e), con x_e reattanza esterna (in p.u. del generatore)
+    ricavata dalla corrente iniziale, I"kG/IrG = c/(x"d + x_e).
+    λmax: eccitazione massima Ufmax/Ufr volte quella nominale a carico nominale
+    (E = Ufmax/Ufr · |1 + j·xd_sat·(cosφ − j·sinφ)|); λmin: eccitazione
+    costante a vuoto (E = 1).
+    """
+    sin_phi = math.sqrt(max(0.0, 1.0 - cos_phi**2))
+    x_ext = max(0.0, c / ikg_over_irg - xd2_pu)
+    e_rated = math.hypot(1.0 + xd_sat_pu * sin_phi, xd_sat_pu * cos_phi)
+    lam_max = ufmax_ratio * e_rated / (xd_sat_pu + x_ext)
+    lam_min = 1.0 / (xd_sat_pu + x_ext)
+    # la corrente permanente non supera quella iniziale
+    return min(lam_max, ikg_over_irg), min(lam_min, ikg_over_irg)
