@@ -27,6 +27,7 @@ import json
 import math
 import sqlite3
 import sys
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional
@@ -74,11 +75,26 @@ def network_from_etap(path: str | Path) -> tuple[dict[str, Any], dict[str, str]]
     Restituisce il dizionario della rete e la mappa dei nodi uniti dagli
     interruttori di congiuntore (nodo ETAP -> nodo del modello).
     """
-    db = _open(path)
-    alias: dict[str, str] = {}
+    with closing(_open(path)) as db:
+        return _convert(db, path)
+
+
+def _convert(db: sqlite3.Connection, path: str | Path) -> tuple[dict[str, Any], dict[str, str]]:
+    # congiuntori: ogni nodo unito punta al nodo radice del suo gruppo,
+    # qualunque sia l'ordine delle righe (anche per congiuntori in serie)
+    parent: dict[str, str] = {}
+
+    def root(bus: str) -> str:
+        while parent.get(bus, bus) != bus:
+            bus = parent[bus]
+        return bus
+
     for c in _rows(db, "IConnect"):
         if str(c["Type"]).strip().lower().startswith("tie"):
-            alias[c["ToSec"]] = alias.get(c["From"], c["From"])
+            a, b = root(c["From"]), root(c["ToSec"])
+            if a != b:
+                parent[b] = a
+    alias = {bus: root(bus) for bus in parent}
 
     def node(bus: str) -> str:
         return alias.get(bus, bus)
@@ -235,11 +251,12 @@ def compare(path: str | Path, kappa_method: str = "C") -> tuple[StudyResult, lis
     """Calcola la rete dello studio ETAP e confronta i risultati nodo per nodo."""
     data, alias = network_from_etap(path)
     result = calculate(network_from_dict(data), "max", kappa_method)
-    db = _open(path)
-    sum2 = {r["FaultedBus"]: r for r in _rows(db, "SCIECLGSum2")}
-    clip = {r["FaultedBus"]: r for r in _rows(db, "ClippingCurrent")}
+    with closing(_open(path)) as db:
+        sum2 = {r["FaultedBus"]: r for r in _rows(db, "SCIECLGSum2")}
+        clip = {r["FaultedBus"]: r for r in _rows(db, "ClippingCurrent")}
+        sum1 = _rows(db, "SCIECLGSum1")
     out: list[Comparison] = []
-    for e in _rows(db, "SCIECLGSum1"):
+    for e in sum1:
         bus = e["FaultedBus"]
         r = result.bus(alias.get(bus, bus))
         z = sum2.get(bus, {})
