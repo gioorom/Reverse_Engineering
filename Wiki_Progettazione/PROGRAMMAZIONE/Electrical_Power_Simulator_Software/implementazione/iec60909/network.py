@@ -362,7 +362,8 @@ class CableSizing:
     method: str = "C"
     cores: str = "multi"
     arrangement: Optional[str] = None
-    loaded_conductors: int = 3
+    phases: int = 3  # 3 (trifase) o 1 (fase-neutro, a U0 = Un/√3)
+    loaded_conductors: Optional[int] = None  # default: 3 in trifase, 2 in monofase
     ambient_c: Optional[float] = None
     soil_resistivity_km_w: Optional[float] = None
     grouping: Optional[str] = None

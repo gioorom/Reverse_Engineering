@@ -215,7 +215,7 @@ python -m iec60909.cavi rete.json --applica rete_dimensionata.json   # salva le 
 
 Sezione `cable_sizing`: `id`, `line`, `ib_a` e `cos_phi` (default dal flusso di
 potenza), `material` (`cu`, `al`), `insulation` (`pvc`, `xlpe`, `epr`),
-`method` (A1, A2, B1, B2, C, D1, D2, E, F, G), `loaded_conductors`,
+`phases` (3 o 1), `method` (A1, A2, B1, B2, C, D1, D2, E, F, G), `loaded_conductors`,
 `arrangement`, `ambient_c`, `soil_resistivity_km_w`, `grouping`, `circuits`,
 `cores`, `k_extra`, `ampacity_a` (tabella propria), `sections`,
 `max_parallel`, `device` o `in_a` con `i2_ratio`, `vdrop_max_percent`,

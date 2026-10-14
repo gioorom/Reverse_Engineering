@@ -246,3 +246,24 @@ def test_esempio_cabina(tmp_path, capsys):
     net = load_network(tmp_path / "rete.json")
     assert next(ln for ln in net.lines if ln.id == "L_M1").r1_ohm_per_km == 0.153
     assert run_load_flow(net).converged
+
+
+def test_circuito_monofase():
+    """Circuito fase-neutro a 230 V: portata con 2 conduttori caricati (B.52.2) e caduta di
+    tensione 2·Ib·L·(R·cosφ + X·sinφ)/U0, doppia di quella trifase a parità di corrente."""
+    from iec60909 import cable_tables as tab
+    from iec60909.cables import voltage_drop_percent
+
+    mono = voltage_drop_percent(16, 0.03, 7.41, 0.08, 0.95, 0.4, phases=1)
+    tri = voltage_drop_percent(16, 0.03, 7.41, 0.08, 0.95, 0.4)
+    assert mono == pytest.approx(2 * tri, rel=1e-12)
+    assert mono == pytest.approx(2 * 16 * 0.03 * (7.41 * 0.95 + 0.08 * math.sqrt(1 - 0.95**2)) / 230.94 * 100,
+                                 rel=1e-4)
+    net = _rete(km=0.03, ib_a=20.0, ampacity_a={}, method="C", phases=1, in_a=20.0, i2_ratio=1.45,
+                vdrop_max_percent=10)
+    r = size_cable(net, net.cable_sizing[0])
+    due = tab.ampacity_table("cu", "pvc", 2, "C")
+    assert r.iz_a == due[r.section_mm2] and due[r.section_mm2] >= 20 > due[{2.5: 1.5, 4: 2.5}[r.section_mm2]]
+    net.cable_sizing[0].ib_a = None
+    with pytest.raises(ValueError, match="monofase"):
+        size_cable(net, net.cable_sizing[0])

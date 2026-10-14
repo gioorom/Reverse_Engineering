@@ -96,11 +96,16 @@ def pe_section(s: float, given: Optional[float] = None) -> float:
 
 
 def voltage_drop_percent(ib_a: float, length_km: float, r_ohm_per_km: float, x_ohm_per_km: float,
-                         cos_phi: float, un_kv: float, parallel: int = 1) -> float:
-    """Caduta di tensione trifase ΔU% = √3·Ib·L·(R·cosφ + X·sinφ)/(n·Un)·100."""
+                         cos_phi: float, un_kv: float, parallel: int = 1, phases: int = 3) -> float:
+    """Caduta di tensione: trifase ΔU% = √3·Ib·L·(R·cosφ + X·sinφ)/(n·Un)·100; monofase
+    (fase-neutro, andata e ritorno) ΔU% = 2·Ib·L·(R·cosφ + X·sinφ)/(n·U0)·100 con U0 = Un/√3."""
     sin_phi = math.sqrt(max(0.0, 1.0 - cos_phi**2))
-    dv = math.sqrt(3) * ib_a * length_km * (r_ohm_per_km * cos_phi + x_ohm_per_km * sin_phi) / parallel
-    return dv / (un_kv * 1000.0) * 100.0
+    z = length_km * (r_ohm_per_km * cos_phi + x_ohm_per_km * sin_phi) / parallel
+    if phases == 1:
+        return 2.0 * ib_a * z / (un_kv * 1000.0 / math.sqrt(3)) * 100.0
+    if phases != 3:
+        raise ValueError("phases vale 1 o 3")
+    return math.sqrt(3) * ib_a * z / (un_kv * 1000.0) * 100.0
 
 
 def min_section_short_circuit(i_a: float, t_s: float, k: float) -> float:
@@ -186,6 +191,8 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
         raise ValueError(f"{cs.id}: linea inesistente {cs.line!r}")
     un_kv = next(b.un_kv for b in net.buses if b.id == line.from_bus)
     ib, cos_phi = cs.ib_a, cs.cos_phi
+    if cs.phases == 1 and ib is None:
+        raise ValueError(f"{cs.id}: per un circuito monofase indicare ib_a (il flusso di potenza è trifase)")
     if ib is None or cos_phi is None:
         if lf is None:
             from .loadflow import run_load_flow
@@ -202,6 +209,9 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
     dev, in_a, i2_a = _device_rating(net, cs)
 
     method = cs.method.upper()
+    if cs.phases not in (1, 3):
+        raise ValueError(f"{cs.id}: phases vale 1 o 3")
+    loaded = cs.loaded_conductors if cs.loaded_conductors is not None else (2 if cs.phases == 1 else 3)
     theta_z = cs.max_temperature_c if cs.max_temperature_c is not None else tab.MAX_TEMPERATURE[tab._insulation(cs.insulation)]
     key = None
     if cs.ratings:
@@ -211,8 +221,8 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
     elif cs.ampacity_a:
         table = {float(k): float(v) for k, v in cs.ampacity_a.items()}
     else:
-        key = tab.ampacity_key(cs.material, cs.insulation, cs.loaded_conductors, method, cs.arrangement)
-        table = tab.ampacity_table(cs.material, cs.insulation, cs.loaded_conductors, method, cs.cores,
+        key = tab.ampacity_key(cs.material, cs.insulation, loaded, method, cs.arrangement)
+        table = tab.ampacity_table(cs.material, cs.insulation, loaded, method, cs.cores,
                                    cs.arrangement)
     factors = tab.correction_factors(cs.insulation, method, cs.ambient_c, cs.soil_resistivity_km_w,
                                      cs.grouping, cs.circuits, cs.cores)
@@ -260,7 +270,7 @@ def size_cable(net: Network, cs: CableSizing, lf=None, sc_max=None, sc_min=None)
                     issues.append(f"I2 {i2_a:.1f} A > 1,45·Iz {1.45 * iz:.1f} A")
             theta = ambient + (theta_z - ambient) * min(ib / iz, 1.0) ** 2 if iz > 0 else theta_z
             r = _r_ohm_per_km(cs, s, theta)
-            dv_pct = voltage_drop_percent(ib, line.length_km, r, cs.x_ohm_per_km, cos_phi, un_kv, n) \
+            dv_pct = voltage_drop_percent(ib, line.length_km, r, cs.x_ohm_per_km, cos_phi, un_kv, n, cs.phases) \
                 + cs.upstream_drop_percent
             if dv_pct > cs.vdrop_max_percent + 1e-9:
                 issues.append(f"ΔU {dv_pct:.2f} % > {cs.vdrop_max_percent:g} %")

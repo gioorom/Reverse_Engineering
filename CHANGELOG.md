@@ -17,6 +17,9 @@ Il repository non ha ancora versioni rilasciate.
   indicazioni della CIGRE TB 880; verifica sui casi sottomarini a 30 kV e
   220 kV (opzione `layup_on_conductor` per la cordatura sul conduttore).
 
+- Dimensionamento dei cavi: circuiti monofase (campo `phases`), con portata a
+  2 conduttori caricati e caduta di tensione fase-neutro.
+
 #### Corretto
 
 - Portate MT: interasse dell'effetto di prossimità per la formazione in

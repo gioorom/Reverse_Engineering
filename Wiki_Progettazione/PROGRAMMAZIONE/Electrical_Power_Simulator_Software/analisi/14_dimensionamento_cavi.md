@@ -27,7 +27,8 @@ Sezione `cable_sizing`, una voce per linea; la linea è alimentata dal suo nodo 
 | `line` | linea da dimensionare |
 | `ib_a`, `cos_phi` | corrente di impiego e fattore di potenza (default: dal flusso di potenza, [`07`](07_flusso_di_potenza.md)) |
 | `material`, `insulation` | `cu`/`al`; `pvc` (70 °C) o `xlpe`/`epr` (90 °C) |
-| `method`, `loaded_conductors`, `arrangement` | metodo di installazione di riferimento (A1, A2, B1, B2, C, D1, D2, E, F, G); 2 o 3 conduttori caricati; per F e G con 3 conduttori: `trefoil`/`flat`, `horizontal`/`vertical` |
+| `phases` | 3 (trifase, default) o 1 (fase-neutro a U0 = Un/√3; richiede `ib_a`) |
+| `method`, `loaded_conductors`, `arrangement` | metodo di installazione di riferimento (A1, A2, B1, B2, C, D1, D2, E, F, G); conduttori caricati (default 3 in trifase, 2 in monofase); per F e G con 3 conduttori: `trefoil`/`flat`, `horizontal`/`vertical` |
 | `ambient_c`, `soil_resistivity_km_w` | temperatura dell'aria (o del terreno per D1/D2) e resistività termica del terreno |
 | `grouping`, `circuits`, `cores` | raggruppamento: disposizione B.52.17 in aria (`bunched`, `single_layer_wall_floor`, `single_layer_under_ceiling`, `single_layer_perforated_tray`, `single_layer_ladder_cleats`), distanza B.52.18 per D2 (`touching`, `one_cable_diameter`, `0.125_m`, `0.25_m`, `0.5_m`) o B.52.19 per D1 (`touching`, `0.25_m`, `0.5_m`, `1.0_m`, con `cores` `multi`/`single`) |
 | `k_extra` | ulteriore fattore (es. passerelle B.52.20/21, non tabellate) |
@@ -57,7 +58,9 @@ più piccola che supera tutte le verifiche.
      ulteriore riduzione.
 2. **Coordinamento con la protezione (IEC 60364-4-43, 433.1):** Ib ≤ In ≤ Iz e I2 ≤ 1,45·Iz.
 3. **Caduta di tensione:**
-   - ΔU% = √3·Ib·L·(R·cosφ + X·sinφ)/(n·Un)·100, più la caduta a monte.
+   - ΔU% = √3·Ib·L·(R·cosφ + X·sinφ)/(n·Un)·100 in trifase e
+     2·Ib·L·(R·cosφ + X·sinφ)/(n·U0)·100 in monofase (andata e ritorno), più
+     la caduta a monte.
    - R è il valore IEC 60228 a 20 °C portato alla temperatura di esercizio
      θ = θa + (θz − θa)·(Ib/Iz)².
 4. **Cortocircuito (IEC 60364-4-43, 434.5.2).** Deve valere I²t ≤ k²·S².
@@ -163,8 +166,9 @@ unica, 2 conflitti. Le lacune sono:
   IEC 60502-2 e il metodo IEC 60287 non sono implementati.
 - **Passerelle:** i fattori B.52.20/B.52.21 non sono inclusi (fonti parziali)
   e vanno dati con `k_extra`.
-- **Circuiti trifase:** quelli monofase non sono distinti; la caduta di
-  tensione si calcola sulla tensione concatenata.
+- **Circuiti monofase:** la corrente di impiego va indicata (il flusso di
+  potenza è trifase equilibrato); il neutro è considerato caricato come la
+  fase, senza le armoniche.
 - **Effetto pelle:** la resistenza è in corrente continua, senza l'effetto
   pelle e di prossimità, trascurabile fino a circa 240 mm².
 - **Guasto a terra:** si suppone la linea radiale, alimentata dal suo nodo di
