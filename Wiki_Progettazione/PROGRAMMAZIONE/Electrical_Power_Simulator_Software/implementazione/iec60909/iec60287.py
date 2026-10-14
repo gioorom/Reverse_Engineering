@@ -1,14 +1,17 @@
-"""Portata dei cavi unipolari MT/AT in regime permanente (IEC 60287-1-1, IEC 60287-2-1).
+"""Portata dei cavi MT/AT in regime permanente (IEC 60287-1-1, IEC 60287-2-1): tre cavi
+unipolari oppure un cavo tripolare con schermi separati sulle anime (tipo SL), con o senza
+armatura a fili.
 
 Equazione della portata con fattore di carico 100 % (IEC 60287-1-1, 1.4.1.1):
 
     I = √{ [Δθ − Wd·(0,5·T1 + n·(T2 + T3 + T4))] /
            [R·T1 + n·R·(1 + λ1)·T2 + n·R·(1 + λ1 + λ2)·(T3 + T4)] }
 
-con n = 1 (cavi unipolari), R resistenza in c.a. alla temperatura massima del
+con n = 1 (cavi unipolari) o 3 (tripolari), R resistenza in c.a. alla temperatura massima del
 conduttore, Wd perdite dielettriche, λ1 = λ1' + λ1'' perdite nello schermo
 (correnti di circolazione e parassite) riferite a quelle nel conduttore,
-T1…T4 resistenze termiche (isolante, letto, guaina esterna, ambiente).
+λ2 perdite nell'armatura, T1…T4 resistenze termiche (isolante, letto o riempitivi,
+guaina esterna, ambiente).
 Le perdite nello schermo dipendono dalla sua temperatura e, nei tubi, T4'
 dalla temperatura media dell'aria nel tubo: si itera fino a convergenza.
 
@@ -25,18 +28,27 @@ from typing import Optional
 # dei materiali degli schermi (alluminio: valore per guaine e armature)
 RHO_20 = {"cu": 1.7241e-8, "al": 2.84e-8, "lead": 21.4e-8, "steel": 13.8e-8, "bronze": 3.5e-8}
 ALPHA_20 = {"cu": 3.93e-3, "al": 4.03e-3, "lead": 4.0e-3, "steel": 4.5e-3, "bronze": 3.0e-3}
+# armature: "steel" acciaio zincato (magnetico), "stainless" acciaio inossidabile (non magnetico)
+MAGNETIC_ARMOUR = {"steel"}
+NON_MAGNETIC_ARMOUR = {"stainless"}
+LAYUP_COEFF_3_CORES = 1.29  # fattore di cordatura delle anime, IEC 60287 tabella A.1 (3 anime)
 # IEC 60287-2-1 tabella 4: costanti U, V, Y per T4' (aria tra cavo e tubo)
 DUCT_CONSTANTS = {"plastic": (1.87, 0.312, 0.0037)}
 # IEC 60287-2-1 tabella 2 (tabella 3 nell'edizione 2023): Z, E, g per la posa in aria
 AIR_ARRANGEMENTS = {
     "trefoil": (0.96, 1.25, 0.20),  # tre cavi a trifoglio
     "flat_touching": (0.62, 1.95, 0.25),  # tre cavi orizzontali a contatto
+    "single": (0.21, 3.94, 0.60),  # cavo singolo, non a parete (una sola fonte)
 }
 
 
 @dataclass
 class CableConstruction:
-    """Cavo unipolare con isolante estruso, descritto per strati (spessori in mm)."""
+    """Cavo con isolante estruso, descritto per strati (spessori in mm).
+
+    Unipolare (`cores` = 1) oppure tripolare (`cores` = 3) con schermo su ogni anima, guaina
+    eventuale sull'anima (`core_sheath_mm`), riempitivi fino a `filler_diameter_mm`, letto
+    (`bedding_mm`), armatura a fili e guaina esterna (`oversheath_mm`)."""
 
     conductor_material: str = "cu"
     area_mm2: float = 240.0
@@ -44,6 +56,8 @@ class CableConstruction:
     r20_ohm_per_km: Optional[float] = None  # default: IEC 60228 classe 2
     ks: float = 1.0  # IEC 60287-1-1 tabella 2 (corda rotonda, isolante estruso: 1 e 1)
     kp: float = 1.0
+    conductor_tape_mm: float = 0.0  # nastro sul conduttore (sotto il semiconduttore)
+    conductor_tape_rho_t: float = 6.0
     conductor_screen_mm: float = 0.0
     insulation_mm: float = 5.5
     insulation_screen_mm: float = 0.0
@@ -60,6 +74,17 @@ class CableConstruction:
     screen_lay_factor: float = 1.0  # lunghezza effettiva dei fili per metro di cavo (cordatura)
     bedding_mm: float = 0.0
     bedding_rho_t: float = 6.0
+    cores: int = 1
+    core_sheath_mm: float = 0.0  # tripolari: guaina sull'anima, sopra lo schermo
+    core_sheath_rho_t: float = 3.5
+    filler_diameter_mm: Optional[float] = None  # tripolari: diametro sulle anime riunite
+    filler_rho_t: float = 6.0
+    core_lay_length_mm: Optional[float] = None  # tripolari: passo di cordatura delle anime
+    armour_material: Optional[str] = None  # "steel" (magnetico) | "stainless" (non magnetico)
+    armour_wires: int = 0
+    armour_wire_diameter_mm: float = 0.0
+    armour_lay_length_mm: Optional[float] = None
+    armour_ac_factor: Optional[float] = None  # RA in c.a./RA in c.c. (default: CIGRE TB 880 GP34)
     oversheath_mm: float = 3.0
     oversheath_rho_t: float = 3.5
     max_temperature_c: float = 90.0
@@ -69,15 +94,39 @@ class CableConstruction:
     t3_factor: Optional[float] = None
 
     def diameters_mm(self) -> dict[str, float]:
+        """Diametri sugli strati; per i tripolari quelli dell'anima e poi del cavo."""
         dc = self.conductor_diameter_mm
-        d1 = dc + 2 * self.conductor_screen_mm
+        dt = dc + 2 * self.conductor_tape_mm
+        d1 = dt + 2 * self.conductor_screen_mm
         di = d1 + 2 * self.insulation_mm
         d3 = di + 2 * self.insulation_screen_mm + 2 * self.under_screen_mm
         ds = d3 + 2 * self.screen_thickness_mm
-        da = ds + 2 * self.bedding_mm
-        de = da + 2 * self.oversheath_mm
-        return {"conductor": dc, "conductor_screen": d1, "insulation": di, "insulation_screen": d3,
-                "screen_mean": d3 + self.screen_thickness_mm, "screen": ds, "under_oversheath": da, "outer": de}
+        out = {"conductor": dc, "conductor_tape": dt, "conductor_screen": d1, "insulation": di,
+               "insulation_screen": d3, "screen_mean": d3 + self.screen_thickness_mm, "screen": ds}
+        if self.cores == 3:
+            core = ds + 2 * self.core_sheath_mm
+            fill = self.filler_diameter_mm if self.filler_diameter_mm is not None else core * (1 + 2 / math.sqrt(3))
+            out.update(core=core, fillers=fill)
+            under = fill + 2 * self.bedding_mm
+        else:
+            under = ds + 2 * self.bedding_mm
+        out["under_armour"] = under
+        da = under + 2 * self.armour_wire_diameter_mm if self.armour_material else under
+        out["armour_mean"] = under + self.armour_wire_diameter_mm
+        out["under_oversheath"] = da
+        out["outer"] = da + 2 * self.oversheath_mm
+        return out
+
+    @property
+    def layup_factor(self) -> float:
+        """Lunghezza dell'anima per metro di cavo tripolare (CIGRE TB 880, GP23)."""
+        if self.cores != 3 or not self.core_lay_length_mm:
+            return 1.0
+        return math.sqrt(1 + (math.pi * LAYUP_COEFF_3_CORES * self.diameters_mm()["core"] / self.core_lay_length_mm) ** 2)
+
+    @property
+    def magnetic_armour(self) -> bool:
+        return self.armour_material in MAGNETIC_ARMOUR
 
 
 @dataclass
@@ -130,6 +179,9 @@ class RatingResult:
     notes: list[str] = field(default_factory=list)
     cable: int = 0  # cavo che limita la portata (in piano: 0 esterno in ritardo, 1 centrale, 2 esterno in anticipo)
     currents_a: list = field(default_factory=list)  # portata di ciascun cavo
+    lambda2: float = 0.0  # perdite nell'armatura (tripolari)
+    armour_temperature_c: Optional[float] = None
+    layup_factor: float = 1.0
 
 
 def _y(x2: float) -> float:
@@ -250,10 +302,9 @@ def screen_loss_factors(c: CableConstruction, inst: Installation, r_ac: float,
             beta1 = math.sqrt(4.0 * math.pi * omega / (1e7 * rho_s))  # [1/m]
             m = omega / r * 1e-7
             gs = 1.0 + (ts / ds) ** 1.74 * (beta1 * ds * 1e-3 - 1.6)
-            if m <= 0.1:  # Δ1 = Δ2 = 0 (2.3.6.1)
-                lam0 = (3.0 if inst.formation == "trefoil" else 6.0 if k == 1 else 1.5) * (m * m / (1.0 + m * m)) * r_**2
-                d1 = d2 = 0.0
-            elif inst.formation == "trefoil":
+            # Δ1 e Δ2 calcolati anche per m ≤ 0,1, dove la norma permette di trascurarli
+            # (come nei casi della CIGRE TB 880)
+            if inst.formation == "trefoil":
                 lam0 = 3.0 * (m * m / (1.0 + m * m)) * r_**2
                 d1, d2 = (1.14 * m**2.45 + 0.33) * r_ ** (0.92 * m + 1.66), 0.0
             elif k == 1:  # centrale
@@ -288,7 +339,8 @@ def t1_insulation(c: CableConstruction, inst: Optional[Installation] = None) -> 
     d = c.diameters_mm()
     d_is = d["insulation"] + 2 * c.insulation_screen_mm
     t = 0.0
-    for rho, thick, under in ((rho_sc, c.conductor_screen_mm, d["conductor"]),
+    for rho, thick, under in ((c.conductor_tape_rho_t, c.conductor_tape_mm, d["conductor"]),
+                              (rho_sc, c.conductor_screen_mm, d["conductor_tape"]),
                               (c.insulation_rho_t, c.insulation_mm, d["conductor_screen"]),
                               (rho_sc, c.insulation_screen_mm, d["insulation"]),
                               (c.under_screen_rho_t, c.under_screen_mm, d_is)):
@@ -359,12 +411,13 @@ def t4_external(c: CableConstruction, inst: Installation) -> list[float]:
 
 
 def _t4_air(c: CableConstruction, inst: Installation, lam1: float, t1: float, t2: float, t3: float,
-            wd: float, dtheta: float) -> float:
+            wd: float, dtheta: float, n: int = 1, lam2: float = 0.0) -> float:
     """T4 in aria, all'ombra (IEC 60287-2-1, 4.2.1): h = Z/De^g + E, iterazione su (Δθs)^(1/4)."""
     de = c.diameters_mm()["outer"] / 1000.0
     h = inst.air_z / de**inst.air_g + inst.air_e
-    ka = math.pi * de * h / (1.0 + lam1) * (t1 + t2 * (1.0 + lam1) + t3 * (1.0 + lam1))
-    dtheta_d = wd * (1.0 / (1.0 + lam1) - 0.5) * t1
+    lt = 1.0 + lam1 + lam2
+    ka = math.pi * de * h / lt * (t1 / n + t2 * (1.0 + lam1) + t3 * lt)
+    dtheta_d = wd * ((1.0 / lt - 0.5) * t1 - n * lam2 * t2 / lt)
     x = 2.0
     for _ in range(100):
         new = ((dtheta + dtheta_d) / (1.0 + ka * x)) ** 0.25
@@ -376,7 +429,16 @@ def _t4_air(c: CableConstruction, inst: Installation, lam1: float, t1: float, t2
 
 
 def rating(c: CableConstruction, inst: Installation, max_iter: int = 500, tol: float = 1e-11) -> RatingResult:
-    """Portata [A] di un circuito di tre cavi unipolari: la minore tra quelle dei tre cavi."""
+    """Portata [A] di un circuito di tre cavi unipolari (la minore tra quelle dei tre cavi) o
+    di un cavo tripolare."""
+    if c.cores == 3:
+        from .iec60287_tripolari import rating_three_core
+
+        return rating_three_core(c, inst, max_iter, tol)
+    if c.cores != 1:
+        raise ValueError("cores vale 1 (unipolari) o 3 (tripolari)")
+    if c.armour_material:
+        raise ValueError("armatura sui cavi unipolari non supportata")
     if inst.kind not in ("buried", "ducts", "air"):
         raise ValueError(f"posa non supportata {inst.kind!r} (buried, ducts, air)")
     if inst.kind == "ducts" and (inst.duct_inner_mm is None or inst.duct_outer_mm is None):

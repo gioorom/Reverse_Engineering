@@ -168,3 +168,90 @@ def test_effetto_pelle_nei_tre_campi_e_aria():
     assert rating(c, Installation(kind="air", air_temperature_c=25, u0_kv=U0)).current_a > 0
     with pytest.raises(ValueError, match="air_arrangement"):
         rating(c, Installation(kind="air", formation="flat", spacing_mm=300, u0_kv=U0))
+
+
+# --- cavi tripolari ---------------------------------------------------------------------
+
+def _caso2(armour="steel", **kw):
+    """CIGRE TB 880 caso 2: cavo sottomarino tripolare 30 kV, 3 × 630 mm² Cu, XLPE 8 mm, guaine di
+    piombo 2,3 mm e guaina semiconduttiva in PE sulle anime, riempitivi fino a 134,9 mm, 71 fili
+    d'armatura da 6 mm (passo 1785 mm), cordatura delle anime con passo 2152 mm, interrato a 1 m
+    nel fondale a 15 °C e 0,7 K·m/W."""
+    dati = dict(
+        cores=3, area_mm2=630, conductor_diameter_mm=30.0, r20_ohm_per_km=0.0283, conductor_tape_mm=0.25,
+        conductor_tape_rho_t=6.0, conductor_screen_mm=1.0, insulation_mm=8.0, insulation_screen_mm=0.9,
+        under_screen_mm=1.1, under_screen_rho_t=12.0, semicon_rho_t=2.5, insulation_tan_delta=0.004,
+        screen_kind="sheath", screen_material="lead", screen_thickness_mm=2.3, core_sheath_mm=2.5,
+        core_sheath_rho_t=2.5, filler_diameter_mm=134.9, filler_rho_t=6.0, bedding_mm=1.2, core_lay_length_mm=2152,
+        armour_material=armour, armour_wires=71, armour_wire_diameter_mm=6.0, armour_lay_length_mm=1785,
+        oversheath_mm=3.0, oversheath_rho_t=6.0)
+    return CableConstruction(**{**dati, **kw})
+
+
+POSA_CASO2 = dict(depth_m=1.0, soil_temperature_c=15, soil_rho_t=0.7, u0_kv=30 / math.sqrt(3), eddy_both_ends=True)
+
+
+def test_tripolare_armato_cigre_tb880_caso_2():
+    """Valori di riferimento del caso 2 (RA, λ2, temperatura dell'armatura e portata) come
+    riportati nell'implementazione CableDesign (fcamaraneto/CableDesign)."""
+    c = _caso2()
+    d = c.diameters_mm()
+    assert (d["core"], d["under_armour"], d["armour_mean"], d["outer"]) == pytest.approx((62.1, 137.3, 143.3, 155.3))
+    r = rating(c, Installation(**POSA_CASO2))
+    assert r.current_a == pytest.approx(838.339973933, abs=1e-6)
+    assert r.lambda2 == pytest.approx(0.4206526837, abs=1e-9)
+    assert r.armour_temperature_c == pytest.approx(71.308546665890, abs=1e-8)
+    assert r.lambda1_eddy / _f(r) == pytest.approx(0.02208098453, abs=1e-9)
+    from iec60909.iec60287_tripolari import armour_ac_resistance
+
+    assert armour_ac_resistance(c, 71.308546665890) == pytest.approx(1.2798804135e-4, rel=1e-9)
+
+
+def _f(r):
+    """Fattore F di riduzione delle perdite parassite usato nel risultato (per confrontare λ1'')."""
+    from iec60909.iec60287 import _f_reduction
+
+    c = _caso2()
+    d = c.diameters_mm()
+    f = c.layup_factor
+    omega = 2 * math.pi * 50
+    rs = 21.4e-8 / (math.pi * d["screen_mean"] * 2.3e-6) * f * (1 + 4.0e-3 * (r.screen_temperature_c - 20))
+    x = 2 * omega * 1e-7 * math.log(2 * d["core"] / d["screen_mean"]) * f
+    return _f_reduction(rs / x, rs / x)
+
+
+def test_tripolare_armatura_non_magnetica_e_senza_armatura():
+    """Armatura in acciaio inossidabile: niente perdite nell'armatura e niente fattore 1,5;
+    senza armatura la guaina esterna sta direttamente sul letto dei riempitivi."""
+    acciaio = rating(_caso2(), Installation(**POSA_CASO2))
+    inox = rating(_caso2("stainless"), Installation(**POSA_CASO2))
+    assert inox.lambda2 == 0 and inox.current_a > acciaio.current_a
+    assert inox.r_ac_ohm_per_m < acciaio.r_ac_ohm_per_m  # niente 1,5·(ys + yp)
+    # λ1'·R = 1,5·Rs/(1 + (Rs/X)²) con l'armatura magnetica (GP38), senza il fattore con quella inox
+    assert inox.lambda1_circ * inox.r_ac_ohm_per_m == pytest.approx(
+        acciaio.lambda1_circ * acciaio.r_ac_ohm_per_m / 1.5, rel=0.01)
+    nudo = _caso2(None)
+    assert nudo.diameters_mm()["outer"] == pytest.approx(137.3 + 6.0)
+    r = rating(nudo, Installation(**POSA_CASO2))
+    assert r.lambda2 == 0 and r.armour_temperature_c is None
+
+
+def test_tripolare_cordatura_e_fattore_geometrico():
+    from iec60909.iec60287_tripolari import _geometric_factor_g
+
+    c = _caso2()
+    assert c.layup_factor == pytest.approx(math.sqrt(1 + (math.pi * 1.29 * 62.1 / 2152) ** 2))
+    assert _caso2(core_lay_length_mm=None).layup_factor == 1.0
+    # G continuo ai due rami (x = 0,03) entro il millesimo relativo dei polinomi
+    assert _geometric_factor_g(0.0299999) == pytest.approx(_geometric_factor_g(0.0300001), rel=1.5e-2)
+    with pytest.raises(ValueError, match="fattore geometrico"):
+        _geometric_factor_g(0.2)
+
+
+def test_tripolare_in_tubo_e_in_aria():
+    c = _caso2()
+    interrato = rating(c, Installation(**POSA_CASO2))
+    tubo = rating(c, Installation(**{**POSA_CASO2, "kind": "ducts", "duct_inner_mm": 180, "duct_outer_mm": 200}))
+    assert tubo.current_a < interrato.current_a
+    aria = rating(c, Installation(**{**POSA_CASO2, "kind": "air", "air_temperature_c": 30}))
+    assert aria.current_a > 0 and aria.t4 > 0
