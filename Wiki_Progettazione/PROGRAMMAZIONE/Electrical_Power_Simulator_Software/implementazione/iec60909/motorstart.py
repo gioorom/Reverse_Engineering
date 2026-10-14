@@ -416,7 +416,7 @@ def results_to_dict(results: list[MotorStartResult]) -> list[dict]:
 
 def start_svg(r: MotorStartResult) -> str:
     """Grafico SVG: velocità, corrente (×Ir/10) e tensione ai morsetti in funzione del tempo."""
-    w, h, ml, mr, mt, mb = 720, 420, 55, 20, 40, 45
+    w, h, ml, mr, mt, mb = 720, 440, 55, 20, 40, 75
     t1 = float(r.t[-1]) if r.t[-1] > 0 else 1.0
     series = [("velocità [p.u.]", r.speed_pu, "#2563eb"),
               ("corrente [×Ir/10]", r.i_line_ir / 10.0, "#dc2626"),
@@ -440,7 +440,10 @@ def start_svg(r: MotorStartResult) -> str:
     for k, (name, s, col) in enumerate(series):
         pts = " ".join(f"{x(float(t)):.1f},{y(float(v)):.1f}" for t, v in zip(r.t, s))
         p.append(f'<polyline fill="none" stroke="{col}" stroke-width="1.8" points="{pts}"/>')
-        p.append(f'<text x="{w - mr - 5}" y="{mt + 14 * (k + 1)}" text-anchor="end" fill="{col}">{name}</text>')
-    p.append(f'<text x="{w / 2}" y="{h - 10}" text-anchor="middle">tempo [s]</text>')
+        # legenda sotto il grafico, fuori dall'area delle curve
+        lx = ml + k * 200
+        p.append(f'<line x1="{lx}" y1="{h - 14}" x2="{lx + 22}" y2="{h - 14}" stroke="{col}" stroke-width="2.5"/>')
+        p.append(f'<text x="{lx + 28}" y="{h - 10}" fill="{col}">{name}</text>')
+    p.append(f'<text x="{w / 2}" y="{h - mb + 32}" text-anchor="middle">tempo [s]</text>')
     p.append("</svg>")
     return "\n".join(p)

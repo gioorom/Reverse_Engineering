@@ -22,6 +22,8 @@ Il repository non ha ancora versioni rilasciate.
 
 #### Corretto
 
+- Avviamento dei motori: legenda del grafico SVG spostata sotto il grafico,
+  non più sovrapposta alle curve.
 - Portate MT: interasse dell'effetto di prossimità per la formazione in
   piano (distanza tra fasi adiacenti, non moltiplicata per √2).
 
