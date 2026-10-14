@@ -1,15 +1,17 @@
 # 15 — Portate dei cavi MT/AT (IEC 60287)
 
 Decimo modulo del simulatore. Calcola la portata in regime permanente di un
-circuito di tre cavi unipolari con isolante estruso, secondo la IEC 60287-1-1
-(perdite) e la IEC 60287-2-1 (resistenze termiche), con fattore di carico 100 %.
+circuito di tre cavi unipolari o di un cavo tripolare con schermi separati
+sulle anime, con o senza armatura a fili, secondo la IEC 60287-1-1 (perdite) e
+la IEC 60287-2-1 (resistenze termiche), con fattore di carico 100 %.
 
 La IEC 60502-2 riporta nell'allegato B tabelle di portata per i cavi da
 3,6/6 a 18/30 kV. Quelle tabelle sono calcolate con lo stesso metodo IEC 60287
 e non sono liberamente consultabili: il modulo esegue il calcolo vero e
 proprio partendo dalla costruzione del cavo e dalla posa.
 
-- Implementazione: [`iec60909/iec60287.py`](../implementazione/iec60909/iec60287.py).
+- Implementazione: [`iec60909/iec60287.py`](../implementazione/iec60909/iec60287.py)
+  e, per i tripolari, [`iec60909/iec60287_tripolari.py`](../implementazione/iec60909/iec60287_tripolari.py).
 - Riga di comando: `python -m iec60909.portate_mt rete.json [--json]`.
 - Dimensionamento: la voce di `cable_sizing` con `ratings` (elenco di voci di
   `cable_ratings`, una per sezione) usa queste portate al posto delle tabelle BT
@@ -22,10 +24,12 @@ Sezione `cable_ratings`: `id`, `cable` (costruzione), `installation` (posa).
 | `cable` | Significato |
 |---|---|
 | `conductor_material`, `area_mm2`, `conductor_diameter_mm`, `r20_ohm_per_km`, `ks`, `kp` | conduttore; R a 20 °C (default IEC 60228), coefficienti dell'effetto pelle e di prossimità (tabella 2: 1 e 1 per corda rotonda con isolante estruso) |
-| `conductor_screen_mm`, `insulation_mm`, `insulation_screen_mm`, `under_screen_mm`, `under_screen_rho_t` | spessori degli strati semiconduttori, dell'isolante e dei nastri sotto lo schermo |
+| `conductor_tape_mm`, `conductor_screen_mm`, `insulation_mm`, `insulation_screen_mm`, `under_screen_mm`, rispettive resistività | spessori del nastro sul conduttore, degli strati semiconduttori, dell'isolante e dei nastri sotto lo schermo |
 | `insulation_eps`, `insulation_tan_delta`, `insulation_rho_t`, `semicon_rho_t` | ε e tanδ (tabella 3: XLPE 2,5; 0,004 fino a 18/30 kV, 0,001 oltre), resistività termiche |
 | `screen_kind`, `screen_material`, `screen_area_mm2`, `screen_thickness_mm`, `screen_lay_factor` | schermo a fili, a nastro o guaina tubolare (sezione π·d·t); fattore di cordatura dei fili |
-| `bedding_mm`, `oversheath_mm`, rispettive resistività | letto e guaina esterna |
+| `bedding_mm`, `oversheath_mm`, rispettive resistività | letto (nei tripolari: tra riempitivi e armatura) e guaina esterna |
+| `cores`, `core_sheath_mm`, `core_sheath_rho_t`, `filler_diameter_mm`, `filler_rho_t`, `core_lay_length_mm` | tripolari (`cores` = 3): guaina sull'anima, diametro sulle anime riunite (default D_anima·(1 + 2/√3)), riempitivi, passo di cordatura delle anime |
+| `armour_material`, `armour_wires`, `armour_wire_diameter_mm`, `armour_lay_length_mm`, `armour_ac_factor` | armatura a fili dei tripolari: `steel` (acciaio, magnetica) o `stainless` (inossidabile, non magnetica), numero e diametro dei fili, passo, rapporto c.a./c.c. |
 | `max_temperature_c`, `t1_factor`, `t3_factor` | temperatura massima del conduttore; fattori sulle resistenze termiche (default automatici, vedi sotto) |
 
 | `installation` | Significato |
@@ -41,7 +45,9 @@ Sezione `cable_ratings`: `id`, `cable` (costruzione), `installation` (posa).
 
 ## Metodo
 
-I = √{[Δθ − Wd·(0,5·T1 + T2 + T3 + T4)] / [R·T1 + R·(1 + λ1)·T2 + R·(1 + λ1)·(T3 + T4)]}
+I = √{[Δθ − Wd·(0,5·T1 + n·(T2 + T3 + T4))] / [R·T1 + n·R·(1 + λ1)·T2 + n·R·(1 + λ1 + λ2)·(T3 + T4)]}
+
+con n = 1 per i cavi unipolari e n = 3 per il tripolare.
 
 - **Resistenza in c.a.:** R = R'·(1 + ys + yp), con R' alla temperatura
   massima. Effetto pelle nei tre campi di xs (fino a 2,8, fino a 3,8, oltre)
@@ -56,7 +62,8 @@ I = √{[Δθ − Wd·(0,5·T1 + T2 + T3 + T4)] / [R·T1 + R·(1 + λ1)·T2 + R�
       centrale e per i due esterni.
   - **Parassite (λ1'')** per le guaine tubolari, con i termini β1, gs, λ0, Δ1
     e Δ2 per trifoglio, cavo centrale ed esterni. Con il collegamento alle due
-    estremità sono ridotte dal fattore F(M, N).
+    estremità sono ridotte dal fattore F(M, N). Δ1 e Δ2 sono calcolati anche
+    per m ≤ 0,1, dove la norma permette di trascurarli, come nei casi CIGRE.
 - **Resistenze termiche:**
   - T1 per strati (semiconduttori e isolante);
   - T3 della guaina esterna;
@@ -75,6 +82,38 @@ I = √{[Δθ − Wd·(0,5·T1 + T2 + T3 + T4)] / [R·T1 + R·(1 + λ1)·T2 + R�
   temperatura media nei tubi e sul riscaldamento della canaletta. Si calcola
   la portata di ciascuno dei tre cavi e il circuito prende la minore.
 
+### Cavo tripolare
+
+Anime con schermo proprio (tipo SL, per esempio guaine di piombo), riunite
+con riempitivi, letto, armatura a fili ed eventuale guaina esterna.
+
+- **Geometria:** le anime sono a contatto, quindi l'interasse s per l'effetto
+  di prossimità e per la reattanza degli schermi è il diametro dell'anima.
+- **Cordatura delle anime** (CIGRE TB 880, GP23). Il fattore
+  f = √(1 + (π·1,29·D_anima/L)²) moltiplica capacità, resistenza e reattanza
+  degli schermi per metro di cavo, e divide T1 e la resistenza termica della
+  guaina sull'anima.
+- **Armatura magnetica (acciaio):**
+  - effetto pelle e di prossimità × 1,5: R = R'·(1 + 1,5·(ys + yp)) (GP25);
+  - perdite per circolazione negli schermi × 1,5 (GP38);
+  - perdite nell'armatura (IEC 60287-1-1, 5.4.3.3.1):
+    λ2 = 1,23·(RA/R)·(2c/dA)²/[(2,77·RA·10⁶/ω)² + 1]·(1 − R·λ1'/Rs), dove:
+    - RA comprende la lunghezza effettiva dei fili e il rapporto c.a./c.c.,
+      da 1,2 per fili da 2 mm a 1,4 per fili da 5 mm, lineare (GP34);
+    - c è la distanza tra gli assi delle anime e del cavo (GP33);
+    - dA è il diametro medio dell'armatura.
+- **Armatura non magnetica (acciaio inossidabile):** λ2 = 0 e nessun
+  fattore 1,5 (GP36).
+- **Resistenze termiche:**
+  - T2 = T2'/(3·f) + ρ·G/(6π): guaina sull'anima più riempitivi e letto, con
+    il fattore geometrico G in funzione dello spessore del letto riferito al
+    diametro dell'anima (GP45);
+  - T3 per la guaina esterna sopra l'armatura;
+  - T4 per un cavo isolato (con il mutuo riscaldamento di altri cavi), in
+    tubo o in aria (Z, E, g del cavo singolo, da indicare se diversi).
+- **Iterazione:** anche sulla temperatura dell'armatura,
+  θA = θs − (I²·R·(1 + λ1) + Wd)·n·T2.
+
 ## Validazione
 
 La CIGRE TB 880 (2022), *Power cable rating examples for calculation tool
@@ -92,6 +131,7 @@ da 15,5 mm, guaina di alluminio da 0,8 mm, posato a 1 m con terreno a 20 °C e
 | 0-2 senza perdite parassite (§4.7) | 682,8145 | 682,8145 |
 | 0-5 in piano in canaletta, cavo limitante (§4.10) | 765,82 | 763,64 (−0,28 %) |
 | 4: 33 kV, 240 mm², schermo a fili, trifoglio interrato (§8, valore CIGRE) | 537,4631 | 536,41 (−0,2 %) |
+| 2: tripolare sottomarino 30 kV, 3 × 630 mm², guaine di piombo, armatura in acciaio | 838,3400 | 838,3400 |
 
 - I primi due valori sono quelli pubblicati da CIGRE. Gli altri vengono dai
   notebook che riproducono i casi della brochure
@@ -123,9 +163,12 @@ eccezioni hanno una sola conferma e sono segnalate:
 
 ## Limiti
 
-- **Cavi:** solo unipolari con isolante estruso. Mancano i cavi tripolari,
-  l'armatura (λ2) e i conduttori Milliken (perdite parassite con schermi
-  collegati alle due estremità e coefficienti ks/kp da indicare a mano).
+- **Cavi:**
+  - tripolari solo con schermi separati sulle anime (tipo SL). Mancano
+    quelli con schermo comune o a cinture e l'armatura a nastri;
+  - armatura solo sui tripolari: per gli unipolari armati non è stata
+    trovata una formula verificabile su due fonti;
+  - conduttori Milliken: ks e kp vanno indicati a mano.
 - **Posa in aria:** senza irraggiamento solare. I coefficienti Z, E, g della
   tabella 2 sono predefiniti solo per trifoglio e piano a contatto; per le
   altre disposizioni vanno indicati.

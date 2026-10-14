@@ -7,6 +7,20 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-10-14
+
+#### Aggiunto
+
+- Portate IEC 60287 dei cavi tripolari con schermi separati sulle anime e
+  armatura a fili in acciaio o acciaio inossidabile: cordatura delle anime,
+  perdite nell'armatura, fattore geometrico dei riempitivi, secondo le
+  indicazioni della CIGRE TB 880; verifica sul caso sottomarino a 30 kV.
+
+#### Corretto
+
+- Portate MT: interasse dell'effetto di prossimità per la formazione in
+  piano (distanza tra fasi adiacenti, non moltiplicata per √2).
+
 ### 2026-10-12
 
 #### Aggiunto

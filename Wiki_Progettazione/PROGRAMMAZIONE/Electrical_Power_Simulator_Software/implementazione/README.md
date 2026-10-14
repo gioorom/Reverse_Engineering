@@ -233,7 +233,8 @@ python -m iec60909.portate_mt rete.json
 
 Sezione `cable_ratings`: `id`, `cable` (costruzione per strati: conduttore,
 semiconduttori, isolante, schermo a fili, nastro o guaina, letto, guaina
-esterna) e `installation` (`kind` `buried`, `ducts` o `air`, `formation`
+esterna; per un tripolare `cores` = 3 con guaina sull'anima, riempitivi,
+cordatura delle anime e armatura a fili `steel` o `stainless`) e `installation` (`kind` `buried`, `ducts` o `air`, `formation`
 `trefoil` o `flat`, `transposed`, profondità, interasse, terreno, `bonding`,
 tubi, coefficienti dell'aria, canaletta, altri cavi vicini). Nel
 dimensionamento, `ratings` elenca le voci da usare come portate per sezione.
