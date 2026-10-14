@@ -1,15 +1,93 @@
 {
-  "name": "Cavi MT 12/20 kV in alluminio, posa interrata a trifoglio",
+  "name": "Cavi MT: unipolari 12/20 kV in alluminio e tripolare sottomarino armato",
   "buses": [],
   "cable_ratings": [
-    {"id": "ARE4H5E_1x185", "cable": {"conductor_material": "al", "area_mm2": 185, "conductor_diameter_mm": 15.9,
-      "conductor_screen_mm": 0.5, "insulation_mm": 5.5, "insulation_screen_mm": 0.5, "screen_kind": "tape",
-      "screen_material": "al", "screen_area_mm2": 20, "screen_thickness_mm": 0.3, "oversheath_mm": 2.5},
-     "installation": {"kind": "buried", "formation": "trefoil", "depth_m": 0.8, "soil_rho_t": 1.5, "u0_kv": 11.547}},
-    {"id": "ARE4H5E_1x185_tubo", "cable": {"conductor_material": "al", "area_mm2": 185, "conductor_diameter_mm": 15.9,
-      "conductor_screen_mm": 0.5, "insulation_mm": 5.5, "insulation_screen_mm": 0.5, "screen_kind": "tape",
-      "screen_material": "al", "screen_area_mm2": 20, "screen_thickness_mm": 0.3, "oversheath_mm": 2.5},
-     "installation": {"kind": "ducts", "formation": "trefoil", "depth_m": 0.8, "soil_rho_t": 1.5, "u0_kv": 11.547,
-       "duct_inner_mm": 94, "duct_outer_mm": 110}}
+    {
+      "id": "ARE4H5E_1x185",
+      "cable": {
+        "conductor_material": "al",
+        "area_mm2": 185,
+        "conductor_diameter_mm": 15.9,
+        "conductor_screen_mm": 0.5,
+        "insulation_mm": 5.5,
+        "insulation_screen_mm": 0.5,
+        "screen_kind": "tape",
+        "screen_material": "al",
+        "screen_area_mm2": 20,
+        "screen_thickness_mm": 0.3,
+        "oversheath_mm": 2.5
+      },
+      "installation": {
+        "kind": "buried",
+        "formation": "trefoil",
+        "depth_m": 0.8,
+        "soil_rho_t": 1.5,
+        "u0_kv": 11.547
+      }
+    },
+    {
+      "id": "ARE4H5E_1x185_tubo",
+      "cable": {
+        "conductor_material": "al",
+        "area_mm2": 185,
+        "conductor_diameter_mm": 15.9,
+        "conductor_screen_mm": 0.5,
+        "insulation_mm": 5.5,
+        "insulation_screen_mm": 0.5,
+        "screen_kind": "tape",
+        "screen_material": "al",
+        "screen_area_mm2": 20,
+        "screen_thickness_mm": 0.3,
+        "oversheath_mm": 2.5
+      },
+      "installation": {
+        "kind": "ducts",
+        "formation": "trefoil",
+        "depth_m": 0.8,
+        "soil_rho_t": 1.5,
+        "u0_kv": 11.547,
+        "duct_inner_mm": 94,
+        "duct_outer_mm": 110
+      }
+    },
+    {
+      "id": "tripolare_sottomarino_3x630",
+      "cable": {
+        "cores": 3,
+        "area_mm2": 630,
+        "conductor_diameter_mm": 30.0,
+        "r20_ohm_per_km": 0.0283,
+        "conductor_tape_mm": 0.25,
+        "conductor_screen_mm": 1.0,
+        "insulation_mm": 8.0,
+        "insulation_screen_mm": 0.9,
+        "under_screen_mm": 1.1,
+        "under_screen_rho_t": 12.0,
+        "semicon_rho_t": 2.5,
+        "insulation_tan_delta": 0.004,
+        "screen_kind": "sheath",
+        "screen_material": "lead",
+        "screen_thickness_mm": 2.3,
+        "core_sheath_mm": 2.5,
+        "core_sheath_rho_t": 2.5,
+        "filler_diameter_mm": 134.9,
+        "bedding_mm": 1.2,
+        "core_lay_length_mm": 2152,
+        "armour_material": "steel",
+        "armour_wires": 71,
+        "armour_wire_diameter_mm": 6.0,
+        "armour_lay_length_mm": 1785,
+        "oversheath_mm": 3.0,
+        "oversheath_rho_t": 6.0
+      },
+      "installation": {
+        "kind": "buried",
+        "depth_m": 1.0,
+        "soil_temperature_c": 15,
+        "soil_rho_t": 0.7,
+        "u0_kv": 17.321,
+        "eddy_both_ends": true
+      }
+    }
   ]
 }

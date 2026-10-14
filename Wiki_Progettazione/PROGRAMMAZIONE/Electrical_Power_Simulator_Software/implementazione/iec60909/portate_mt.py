@@ -30,13 +30,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         print()
         return 0
     out = [f"# Portate IEC 60287 — {net.name}", "",
-           "| Cavo | Sezione [mm²] | Posa | I [A] | R c.a. [Ω/km] | ys | yp | Wd [W/m] | λ1 | T1 | T2 | T3 | T4 "
-           "| θ schermo [°C] |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+           "| Cavo | Sezione [mm²] | Posa | I [A] | R c.a. [Ω/km] | ys | yp | Wd [W/m] | λ1 | λ2 | T1 | T2 | T3 | T4 "
+           "| θ schermo [°C] | θ armatura [°C] |", "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for cr, c, r in rows:
-        posa = f"{cr.installation.get('kind', 'buried')}, {cr.installation.get('formation', 'trefoil')}"
-        out.append(f"| {cr.id} | {c.area_mm2:g} | {posa} | {r.current_a:.1f} | {r.r_ac_ohm_per_m * 1000:.5f} "
-                   f"| {r.ys:.5f} | {r.yp:.5f} | {r.wd_w_per_m:.4f} | {r.lambda1:.5f} | {r.t1:.4f} | {r.t2:.4f} "
-                   f"| {r.t3:.4f} | {r.t4:.4f} | {r.screen_temperature_c:.1f} |")
+        tipo = "tripolare" if c.cores == 3 else cr.installation.get("formation", "trefoil")
+        posa = f"{cr.installation.get('kind', 'buried')}, {tipo}"
+        theta_a = "—" if r.armour_temperature_c is None else f"{r.armour_temperature_c:.1f}"
+        sezione = f"3 × {c.area_mm2:g}" if c.cores == 3 else f"{c.area_mm2:g}"
+        out.append(f"| {cr.id} | {sezione} | {posa} | {r.current_a:.1f} | {r.r_ac_ohm_per_m * 1000:.5f} "
+                   f"| {r.ys:.5f} | {r.yp:.5f} | {r.wd_w_per_m:.4f} | {r.lambda1:.5f} | {r.lambda2:.5f} | {r.t1:.4f} "
+                   f"| {r.t2:.4f} | {r.t3:.4f} | {r.t4:.4f} | {r.screen_temperature_c:.1f} | {theta_a} |")
+        for note in r.notes:
+            out.append(f"|  | | {note} | | | | | | | | | | | | | |")
     sys.stdout.write("\n".join(out) + "\n")
     return 0
 
