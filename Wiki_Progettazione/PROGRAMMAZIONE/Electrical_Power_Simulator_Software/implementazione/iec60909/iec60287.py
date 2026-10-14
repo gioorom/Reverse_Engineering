@@ -173,9 +173,7 @@ def ac_resistance(c: CableConstruction, inst: Installation, theta_c: float) -> t
     if xp2 > 2.8**2:
         raise ValueError("effetto di prossimità: xp > 2,8 fuori dal campo della formula")
     ys = skin_factor(xs2)
-    s = _axis_spacing_m(c, inst)
-    if inst.formation == "flat":
-        s = s * math.sqrt(2.0)  # s = √(s1·s2), s2 = 2·s1 (IEC 60287-1-1, 2.1.4)
+    s = _axis_spacing_m(c, inst)  # in piano: distanza tra fasi adiacenti, s = √(s1·s2) = s (2.1.4)
     dc = c.conductor_diameter_mm / 1000.0
     fp = _y(xp2)
     yp = fp * (dc / s) ** 2 * (0.312 * (dc / s) ** 2 + 1.18 / (fp + 0.27))

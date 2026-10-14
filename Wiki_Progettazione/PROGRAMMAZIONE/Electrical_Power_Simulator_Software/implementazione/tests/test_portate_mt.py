@@ -97,15 +97,17 @@ def test_cigre_tb880_canaletta_in_piano(parassite, attese):
     collegati alle due estremità senza trasposizione (λ1' diverso per ogni cavo). Riferimento:
     notebook che riproduce il caso, che nell'iterazione semplifica il riscaldamento dell'aria
     (25 K costanti nel calcolo della temperatura superficiale e perdite del primo cavo per
-    tutti): scarto atteso qualche millesimo."""
+    tutti): scarto atteso qualche millesimo sul cavo limitante."""
     c = CableConstruction(**CAVO_132)
     inst = Installation(kind="air", formation="flat", air_temperature_c=25, air_z=0.62, air_e=1.95, air_g=0.25,
                         trough_perimeter_m=1.27, u0_kv=U0, eddy_both_ends=parassite)
     r = rating(c, inst)
     assert r.t3 == pytest.approx(0.0541996092, abs=1e-10)  # senza il fattore 1,6 (non interrato)
     assert r.cable == 0  # cavo esterno con la fase in ritardo
-    for got, ref in zip(r.currents_a, attese):
-        assert got == pytest.approx(ref, rel=5e-3)
+    assert r.current_a == pytest.approx(attese[0], rel=5e-3)
+    # il notebook calcola le perdite di tutti i cavi con la corrente del primo: per gli altri
+    # due si confronta solo l'ordine delle portate (centrale > esterno in anticipo > limitante)
+    assert r.currents_a[1] > r.currents_a[2] > r.currents_a[0]
 
 
 def test_piano_trasposto_e_simmetria():

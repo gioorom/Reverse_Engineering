@@ -45,7 +45,8 @@ I = √{[Δθ − Wd·(0,5·T1 + T2 + T3 + T4)] / [R·T1 + R·(1 + λ1)·T2 + R�
 
 - **Resistenza in c.a.:** R = R'·(1 + ys + yp), con R' alla temperatura
   massima. Effetto pelle nei tre campi di xs (fino a 2,8, fino a 3,8, oltre)
-  ed effetto di prossimità secondo la 2.1, con s = √(s1·s2) in piano.
+  ed effetto di prossimità secondo la 2.1; in piano s è la distanza tra fasi
+  adiacenti (√(s1·s2) se diverse).
 - **Perdite dielettriche:** Wd = ω·C·U0²·tanδ, con C = ε/(18·ln(Di/dc)).
 - **Perdite nello schermo:** λ1 = λ1' + λ1''.
   - **Circolazione (λ1')**, solo con schermi collegati alle due estremità:
@@ -89,7 +90,7 @@ da 15,5 mm, guaina di alluminio da 0,8 mm, posato a 1 m con terreno a 20 °C e
 | 0-1 senza perdite parassite (§4.5) | 821,7763 | 821,7763 |
 | 0-1 schermi collegati a un estremo (§4.6.3) | 886,1753 | 886,1753 |
 | 0-2 senza perdite parassite (§4.7) | 682,8145 | 682,8145 |
-| 0-5 in piano in canaletta, cavo limitante (§4.10) | 765,82 | 767,86 (+0,27 %) |
+| 0-5 in piano in canaletta, cavo limitante (§4.10) | 765,82 | 763,64 (−0,28 %) |
 | 4: 33 kV, 240 mm², schermo a fili, trifoglio interrato (§8, valore CIGRE) | 537,4631 | 536,41 (−0,2 %) |
 
 - I primi due valori sono quelli pubblicati da CIGRE. Gli altri vengono dai
@@ -99,8 +100,9 @@ da 15,5 mm, guaina di alluminio da 0,8 mm, posato a 1 m con terreno a 20 °C e
   intermedie: T1, T3, T4, Wd, R in c.a., λ1 e temperatura della guaina.
 - Per il caso 0-5 il notebook semplifica il riscaldamento dell'aria nella
   canaletta: 25 K costanti nel calcolo della temperatura superficiale e
-  perdite del primo cavo applicate a tutti. Lo scarto è lo 0,27 % (0,21 % con
-  le perdite parassite).
+  perdite del primo cavo applicate a tutti. Lo scarto sul cavo limitante è
+  lo 0,28 % (0,33 % con le perdite parassite); per gli altri due cavi il
+  confronto non è significativo.
 - **Caso 4.**
   - Dalla brochure, nella trascrizione della suite di verifica CableSketch,
     coincidono T1 = 0,4110322351 (con il fattore 1,07), T3 = 0,1241941899
