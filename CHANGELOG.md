@@ -23,6 +23,9 @@ Il repository non ha ancora versioni rilasciate.
   di potenza (`check_transfer`, `--verifica-contro-alimentazione`); le
   manovre che superano la tensione minima o il carico ammesso dei rami sono
   respinte e i carichi attendono la manovra successiva o la riparazione.
+- Affidabilità: mancato intervento di interruttori e fusibili
+  (`stuck_probability`, `--mancato-intervento`) con intervento della
+  protezione di riserva e restituzione dopo l'apertura manuale.
 
 #### Corretto
 

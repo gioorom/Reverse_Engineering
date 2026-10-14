@@ -58,6 +58,7 @@ RESTORATION = {
     "isolation": "sezionamento",
     "transfer": "contro-alimentazione",
     "overlap": "sovrapposizione",
+    "backup": "protezione di riserva",
     "momentary": "momentanea",
 }
 
@@ -68,6 +69,7 @@ class _Device:
     kind: str  # "switch" | "breaker" | "fuse"
     normally_open: bool
     switching_time_h: float
+    stuck_probability: float = 0.0
 
 
 @dataclass
@@ -150,7 +152,8 @@ class ReliabilityResult:
 class _Topology:
     """Grafo bipartito nodi–rami (con le sorgenti) e organi di manovra agli estremi."""
 
-    def __init__(self, net: Network, generators_as_sources: bool, default_switching_time_h: float):
+    def __init__(self, net: Network, generators_as_sources: bool, default_switching_time_h: float,
+                 stuck_probability: float = 0.0):
         net.validate()
         self.generators_as_sources = generators_as_sources
         self.buses = [b.id for b in net.buses]
@@ -185,15 +188,19 @@ class _Topology:
 
         self.devices: dict[tuple[str, str], list[_Device]] = {}
         for sw in net.switches:
+            stuck = sw.stuck_probability
+            if stuck is None:
+                stuck = stuck_probability if sw.kind == "breaker" else 0.0
             self._add_device(sw.branch, sw.bus, _Device(
-                sw.id, sw.kind, sw.normally_open, sw.switching_time_h))
+                sw.id, sw.kind, sw.normally_open, sw.switching_time_h, stuck))
         earthing = {et.id for et in net.earthing_transformers}
         for pd in net.protective_devices:
             branch = pd.branch.split(":")[0]  # "<id>:hv|mv|lv" dei trasformatori a tre avvolgimenti
             if branch in earthing:  # protezione del trasformatore di messa a terra: non separa la rete
                 continue
             kind = "fuse" if pd.kind == "fuse" else "breaker"
-            self._add_device(branch, pd.bus, _Device(pd.id, kind, False, default_switching_time_h))
+            stuck = stuck_probability if kind == "breaker" else 0.0
+            self._add_device(branch, pd.bus, _Device(pd.id, kind, False, default_switching_time_h, stuck))
 
         # stato normale degli estremi: aperto se c'è un punto normalmente aperto
         self.normally_open = {end for end, devs in self.devices.items() if any(d.normally_open for d in devs)}
@@ -216,6 +223,8 @@ class _Topology:
                              "(switch, breaker, fuse)")
         if dev.switching_time_h < 0:
             raise ValueError(f"{dev.id}: switching_time_h deve essere >= 0")
+        if not 0.0 <= dev.stuck_probability <= 1.0:
+            raise ValueError(f"{dev.id}: stuck_probability deve essere tra 0 e 1")
         self.devices.setdefault((branch, bus), []).append(dev)
 
     # --- ricerche sul grafo -------------------------------------------------------------
@@ -251,10 +260,12 @@ class _Topology:
             return bus in supplied
         return any(b in supplied for b in self.branches[branch] if (branch, b) not in self.normally_open)
 
-    def zone(self, element: str, stop: tuple[str, ...]) -> tuple[set[str], set[tuple[str, str]]]:
+    def zone(self, element: str, stop: tuple[str, ...],
+             passthrough: frozenset = frozenset()) -> tuple[set[str], set[tuple[str, str]]]:
         """Elementi raggiunti dal guasto di `element` attraverso gli estremi chiusi,
-        fermandosi agli estremi con un organo di tipo `stop`; restituisce anche gli
-        estremi di confine (dove l'organo apre)."""
+        fermandosi agli estremi con un organo di tipo `stop` (salvo quelli in
+        `passthrough`, organi che non aprono); restituisce anche gli estremi di
+        confine (dove l'organo apre)."""
         if element in self.sources:
             return {element}, set()
         region = {element}
@@ -274,7 +285,7 @@ class _Topology:
                 other = end[1] if x in self.branches else end[0]
                 if other in region:
                     continue
-                if any(d.kind in stop for d in self.devices.get(end, ())):
+                if end not in passthrough and any(d.kind in stop for d in self.devices.get(end, ())):
                     boundary.add(end)
                     continue
                 region.add(other)
@@ -386,16 +397,57 @@ def _element_data(net: Network, topo: _Topology) -> dict[str, _Element]:
     return elements
 
 
+def _backup_events(e: _Element, topo: _Topology, points: list[LoadPointResult], trip_zone: set[str],
+                   trip_boundary: set[tuple[str, str]], after_trip: set[str], add, summary) -> None:
+    """Mancato intervento degli organi che devono aprire sul guasto di `e`: per
+    ogni estremo di confine attraversato dalla corrente di guasto (lato esterno
+    alimentato) che non apre (probabilità = prodotto di quelle dei suoi
+    interruttori e fusibili), la zona si allarga fino alla protezione di riserva.
+    I carichi interrotti in più hanno tasso λ·p e durata pari al tempo per
+    aprire a mano l'organo bloccato e richiudere gli interruttori di riserva."""
+    for end in sorted(trip_boundary):
+        if not topo.outer_supplied(end, trip_zone, after_trip):
+            continue
+        devs = [d for d in topo.devices[end] if d.kind in ("breaker", "fuse")]
+        p = 1.0
+        for d in devs:
+            p *= d.stuck_probability
+        if p == 0.0:
+            continue
+        zone, boundary = topo.zone(e.id, ("breaker", "fuse"), frozenset({end}))
+        after = topo.supplied_buses(zone)
+        extra = [q for q in points if q.bus in after_trip and q.bus not in after]
+        if not extra:
+            continue
+        backup = {b for b in boundary if topo.outer_supplied(b, zone, after)}
+        duration = max([d.switching_time_h for d in devs]
+                       + [d.switching_time_h for b in backup for d in topo.devices[b] if d.kind != "fuse"])
+        duration = min(duration, e.repair_time_h)
+        rate = e.failure_rate * p
+        s = summary[e.id]
+        for q in extra:
+            add(q, Contribution(e.id, rate, duration, "backup"))
+            s.customer_interruptions += q.customers * rate
+            s.customer_hours += q.customers * rate * duration
+            s.ens_mwh += q.average_mw * rate * duration
+
+
 def reliability_analysis(net: Network, second_order: bool = True, generators_as_sources: bool = True,
                          cost_per_kwh: Optional[float] = None,
-                         default_switching_time_h: float = 1.0, check_transfer: bool = False,
+                         default_switching_time_h: float = 1.0, stuck_probability: float = 0.0,
+                         check_transfer: bool = False,
                          v_min_pu: float = 0.9, max_loading_percent: float = 100.0) -> ReliabilityResult:
     """Indici di affidabilità dei carichi e del sistema (vedi il docstring del modulo).
+
+    stuck_probability: probabilità di mancata apertura degli interruttori che non
+    ne indicano una propria (switches.stuck_probability).
 
     check_transfer: verifica con il flusso di potenza le configurazioni di
     contro-alimentazione (tensioni >= v_min_pu, carico dei rami con corrente o
     potenza nominale <= max_loading_percent)."""
-    topo = _Topology(net, generators_as_sources, default_switching_time_h)
+    if not 0.0 <= stuck_probability <= 1.0:
+        raise ValueError("stuck_probability deve essere tra 0 e 1")
+    topo = _Topology(net, generators_as_sources, default_switching_time_h, stuck_probability)
     elements = _element_data(net, topo)
     warnings: list[str] = []
 
@@ -442,6 +494,8 @@ def reliability_analysis(net: Network, second_order: bool = True, generators_as_
     for e in elements.values():
         trip_zone, trip_boundary = topo.zone(e.id, ("breaker", "fuse"))
         after_trip = topo.supplied_buses(trip_zone)
+        if e.failure_rate > 0:
+            _backup_events(e, topo, points, trip_zone, trip_boundary, after_trip, add, summary)
         affected = [p for p in points if p.bus not in after_trip]
         if not affected:
             continue

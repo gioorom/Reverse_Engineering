@@ -372,3 +372,32 @@ def test_verifica_contro_alimentazione():
     assert "esercizio normale" in r.warnings[0] and len(r.warnings) == 1
     c3 = {c.element: c for c in _per_carico(r)["C3"].contributions}
     assert c3["L2"].restoration == "transfer"
+
+
+def test_mancato_intervento_protezione_di_riserva():
+    """Interruttore S2 in testa a L2 che non apre con probabilità 0,1: i guasti di L2
+    e L3 fanno intervenire CB e interrompono anche C1 per il tempo di manovra."""
+    base = _per_carico(reliability_analysis(_dorsale(organi_l2="breaker", tie=False)))
+    r = reliability_analysis(_dorsale(organi_l2="breaker", tie=False), stuck_probability=0.1)
+    p = _per_carico(r)
+    riserva = {c.element: c for c in p["C1"].contributions if c.restoration == "backup"}
+    assert set(riserva) == {"L2", "L3"}
+    assert riserva["L2"].failure_rate == pytest.approx(0.1 * 0.1)
+    assert riserva["L3"].failure_rate == pytest.approx(0.3 * 0.1)
+    assert riserva["L3"].duration_h == pytest.approx(1.0)
+    assert p["C1"].unavailability_h == pytest.approx(base["C1"].unavailability_h + 0.04 * 1.0)
+    # C2 e C3 sono già interrotti dai guasti di L2 e L3: nessun contributo in più
+    for cid in ("C2", "C3"):
+        assert p[cid].unavailability_h == pytest.approx(base[cid].unavailability_h)
+    # fusibile FU2 che non fonde (0,2): il guasto di F2 fa aprire S2, C3 interrotto;
+    # durata: apertura manuale della derivazione (2 h) e richiusura di S2 (1 h)
+    net = _dorsale(organi_l2="breaker", tie=False)
+    fu2 = next(sw for sw in net.switches if sw.id == "FU2")
+    fu2.stuck_probability, fu2.switching_time_h = 0.2, 2.0
+    p = _per_carico(reliability_analysis(net))
+    riserva = [c for c in p["C3"].contributions if c.restoration == "backup"]
+    assert len(riserva) == 1 and riserva[0].element == "F2"
+    assert riserva[0].failure_rate == pytest.approx(0.6 * 0.2) and riserva[0].duration_h == 2.0
+    assert not any(c.restoration == "backup" for c in p["C1"].contributions)
+    with pytest.raises(ValueError, match="stuck_probability"):
+        reliability_analysis(net, stuck_probability=1.5)

@@ -1,4 +1,4 @@
-"""Uso: python -m iec60909.affidabilita rete.json [--primo-ordine] [--senza-generatori] [--costo-kwh 10] [--verifica-contro-alimentazione] [--dettagli] [--json]"""
+"""Uso: python -m iec60909.affidabilita rete.json [--primo-ordine] [--senza-generatori] [--costo-kwh 10] [--mancato-intervento 0.01] [--verifica-contro-alimentazione] [--dettagli] [--json]"""
 
 from __future__ import annotations
 
@@ -20,6 +20,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--costo-kwh", type=float, help="costo dell'energia non fornita [per kWh]")
     parser.add_argument("--manovra", type=float, default=1.0,
                         help="tempo di manovra dei dispositivi di protective_devices [h]")
+    parser.add_argument("--mancato-intervento", type=float, default=0.0,
+                        help="probabilità che un interruttore non apra sul guasto (protezione di riserva)")
     parser.add_argument("--verifica-contro-alimentazione", action="store_true",
                         help="verifica con il flusso di potenza le configurazioni di contro-alimentazione")
     parser.add_argument("--v-min", type=float, default=0.9, help="tensione minima ammessa [pu]")
@@ -31,6 +33,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     r = reliability_analysis(net, second_order=not args.primo_ordine,
                              generators_as_sources=not args.senza_generatori,
                              cost_per_kwh=args.costo_kwh, default_switching_time_h=args.manovra,
+                             stuck_probability=args.mancato_intervento,
                              check_transfer=args.verifica_contro_alimentazione, v_min_pu=args.v_min,
                              max_loading_percent=args.carico_max)
     if args.json:

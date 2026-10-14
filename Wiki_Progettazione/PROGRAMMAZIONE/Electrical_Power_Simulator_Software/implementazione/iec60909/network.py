@@ -314,7 +314,9 @@ class Switch:
     kind: "switch" (sezionatore, manovrato dopo il guasto), "breaker"
     (interruttore, apre automaticamente sul guasto) o "fuse" (fusibile, come
     l'interruttore). `normally_open`: punto di apertura (contro-alimentazione).
-    `switching_time_h`: tempo per la manovra.
+    `switching_time_h`: tempo per la manovra. `stuck_probability`:
+    probabilità che l'interruttore o il fusibile non apra sul guasto (None:
+    il valore comune dell'analisi di affidabilità per gli interruttori).
     """
 
     id: str
@@ -323,6 +325,7 @@ class Switch:
     kind: str = "switch"
     normally_open: bool = False
     switching_time_h: float = 1.0
+    stuck_probability: Optional[float] = None
 
 
 @dataclass

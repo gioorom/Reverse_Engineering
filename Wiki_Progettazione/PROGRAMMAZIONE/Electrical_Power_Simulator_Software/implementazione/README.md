@@ -199,11 +199,12 @@ Sezioni `reliability_data` (`element`: id di ramo, nodo o sorgente, oppure
 `@lines`, `@transformers`, `@transformers3w`, `@buses`, `@external_grids`,
 `@generators`; `failure_rate` o `failure_rate_per_km`, `repair_time_h`,
 `temporary_rate`) e `switches` (`id`, `branch`, `bus`, `kind`: `switch`,
-`breaker`, `fuse`; `normally_open`, `switching_time_h`); nei `loads`
+`breaker`, `fuse`; `normally_open`, `switching_time_h`, `stuck_probability`); nei `loads`
 `customers` e `average_mw`. I `protective_devices` valgono come interruttori
 o fusibili. Opzioni: `--primo-ordine` (senza sovrapposizioni),
 `--senza-generatori`, `--manovra` (tempo di manovra dei dispositivi di
-protezione), `--verifica-contro-alimentazione` con `--v-min` e
+protezione), `--mancato-intervento` (probabilità comune di mancata apertura
+degli interruttori), `--verifica-contro-alimentazione` con `--v-min` e
 `--carico-max` (flusso di potenza sulle configurazioni di emergenza). Metodo, validazione e limiti:
 [`../analisi/13_affidabilita.md`](../analisi/13_affidabilita.md).
 
@@ -417,7 +418,8 @@ python -m pytest
   esempi pubblicati (motore 90 kW, lunghezze massime TN di AS/NZS 3000).
 - `tests/test_affidabilita.py`: affidabilità, RBTS Bus 2 (indici pubblicati),
   calcoli a mano, secondo ordine contro Markov e Monte Carlo, verifica delle
-  contro-alimentazioni con il flusso di potenza.
+  contro-alimentazioni con il flusso di potenza, mancato intervento delle
+  protezioni.
 - `tests/test_avviamento.py`: avviamento dei motori, stima del circuito,
   caduta di tensione a mano, metodi di avviamento, integrazione indipendente.
 - `tests/test_armoniche.py`: armoniche, calcoli a mano, risonanza, filtri,

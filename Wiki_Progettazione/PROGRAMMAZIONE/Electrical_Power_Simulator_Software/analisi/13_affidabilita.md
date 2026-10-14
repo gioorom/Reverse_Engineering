@@ -5,7 +5,7 @@ Ottavo modulo del simulatore. Calcola gli indici di affidabilità dei carichi
 (IEEE 1366: SAIFI, SAIDI, CAIDI, ASAI, MAIFI; energia non fornita).
 
 - Implementazione: [`iec60909/reliability.py`](../implementazione/iec60909/reliability.py).
-- Riga di comando: `python -m iec60909.affidabilita rete.json [--dettagli] [--costo-kwh 10] [--primo-ordine] [--verifica-contro-alimentazione [--v-min 0.9] [--carico-max 100]] [--json]`.
+- Riga di comando: `python -m iec60909.affidabilita rete.json [--dettagli] [--costo-kwh 10] [--primo-ordine] [--mancato-intervento 0.01] [--verifica-contro-alimentazione [--v-min 0.9] [--carico-max 100]] [--json]`.
 - Esempio: [`esempi/affidabilita_dorsale.json`](../implementazione/esempi/affidabilita_dorsale.json),
   due dorsali MT da una cabina primaria, con cabine secondarie protette da
   fusibili, sezionatori a ogni nodo e un punto normalmente aperto tra le
@@ -53,6 +53,27 @@ Per ogni guasto permanente di un elemento:
    di tempo di manovra. Un carico rialimentato a quel passo ha durata
    max(sezionamento, manovra).
 4. **Riparazione.** I carichi ancora interrotti aspettano la riparazione.
+
+**Mancato intervento delle protezioni** (`stuck_probability`). Ogni
+interruttore o fusibile può avere una probabilità p di non aprire sul guasto
+(`switches.stuck_probability`; per gli interruttori senza valore proprio vale
+l'opzione comune `--mancato-intervento`, i fusibili hanno 0). Per ogni
+estremo di confine della zona di intervento attraversato dalla corrente di
+guasto (lato esterno alimentato):
+
+- la probabilità che l'estremo non apra è il prodotto di quelle dei suoi
+  organi (un interruttore e un fusibile in serie devono fallire entrambi);
+- se non apre, la zona si allarga oltre quell'estremo fino agli organi a
+  monte (protezione di riserva);
+- i carichi interrotti in più ricevono un evento con tasso λ·p, restituzione
+  «protezione di riserva»;
+- la durata è il tempo per aprire a mano l'organo bloccato e richiudere gli
+  interruttori di riserva (il più lungo dei loro tempi di manovra), al
+  massimo il tempo di riparazione.
+
+È l'approssimazione usuale per p piccolo (Billinton–Allan): il tasso
+dell'evento normale resta λ e non λ·(1 − p), e i carichi già interrotti
+dal guasto non cambiano durata.
 
 **Verifica della contro-alimentazione** (`check_transfer=True`,
 `--verifica-contro-alimentazione`). Ogni configurazione di emergenza della
@@ -165,8 +186,10 @@ CAIDI 1,93 h, ENS 1,29 MWh/anno.
   solo topologica. Con la verifica, il carico considerato è quello di
   progetto (`p_mw`, `q_mvar`), non la punta del periodo del guasto; non c'è
   il distacco parziale dei carichi.
-- **Organi di manovra:** perfettamente affidabili; manca il guasto
-  dell'interruttore che non apre (protezione di riserva).
+- **Organi di manovra:** il mancato intervento è considerato solo per il
+  primo livello (la protezione di riserva apre sempre) e solo per i guasti
+  permanenti; i guasti propri degli organi (apertura intempestiva, guasto
+  attivo) non sono modellati.
 - **Fuori servizio programmati:** non sono considerati (manutenzione).
 - **Guasti a valle:** fusibili e interruttori aprono sempre, senza mancata
   selettività ([`09`](09_coordinamento_protezioni.md) la verifica a parte).
