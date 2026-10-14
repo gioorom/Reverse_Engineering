@@ -401,3 +401,31 @@ def test_mancato_intervento_protezione_di_riserva():
     assert not any(c.restoration == "backup" for c in p["C1"].contributions)
     with pytest.raises(ValueError, match="stuck_probability"):
         reliability_analysis(net, stuck_probability=1.5)
+
+
+def test_guasto_durante_la_manutenzione():
+    """Due linee in parallelo con manutenzione: oltre alla sovrapposizione dei guasti,
+    il guasto di una linea durante la manutenzione dell'altra (Billinton–Allan)
+    λ = λm·λ·rm/8760 per ognuno dei due ordini, r = rm·r/(rm + r)."""
+    lam, rr, lam_m, rm = 2.0, 50.0, 1.0, 8.0
+    net = _parallelo(lam, rr)
+    net.reliability_data[0].maintenance_rate = lam_m
+    net.reliability_data[0].maintenance_time_h = rm
+    p = reliability_analysis(net).load_points[0]
+    manut = [c for c in p.contributions if c.restoration == "maintenance"]
+    assert sorted(c.element for c in manut) == ["P1+P2", "P2+P1"]
+    for c in manut:
+        assert c.failure_rate == pytest.approx(lam_m * lam * rm / 8760, rel=1e-12)
+        assert c.duration_h == pytest.approx(rm * rr / (rm + rr), rel=1e-12)
+    lam_pp = lam * lam * 2 * rr / 8760
+    lam_tot = lam_pp + 2 * lam_m * lam * rm / 8760
+    assert p.failure_rate == pytest.approx(lam_tot, rel=1e-12)
+    assert p.unavailability_h == pytest.approx(lam_pp * rr / 2 + 2 * lam_m * lam * rm / 8760 * rm * rr / (rm + rr))
+    # la manutenzione di un ramo radiale è un'interruzione programmata: nessun contributo
+    r = reliability_analysis(_dorsale(tie=False))
+    net = _dorsale(tie=False)
+    net.reliability_data[0].maintenance_rate, net.reliability_data[0].maintenance_time_h = 1.0, 8.0
+    assert reliability_analysis(net).saidi == pytest.approx(r.saidi)
+    net.reliability_data[0].maintenance_time_h = 0.0
+    with pytest.raises(ValueError, match="maintenance_time_h"):
+        reliability_analysis(net)

@@ -19,7 +19,9 @@ il carico e il tempo di riparazione. I guasti transitori (eliminati dalla
 richiusura) danno interruzioni momentanee ai carichi della zona della fase 1.
 Le sovrapposizioni di due guasti (insiemi di taglio del secondo ordine) danno
 λ = λ1·λ2·(r1 + r2)/8760 e r = r1·r2/(r1 + r2) ai carichi che restano
-alimentati con uno solo dei due elementi fuori servizio.
+alimentati con uno solo dei due elementi fuori servizio; un guasto durante la
+manutenzione di un altro elemento dà λ = λm1·λ2·rm1/8760 e
+r = rm1·r2/(rm1 + r2) (Billinton–Allan).
 
 Verifica facoltativa della contro-alimentazione (check_transfer): ogni
 configurazione di emergenza (elementi guasti tolti, punti normalmente aperti
@@ -58,6 +60,7 @@ RESTORATION = {
     "isolation": "sezionamento",
     "transfer": "contro-alimentazione",
     "overlap": "sovrapposizione",
+    "maintenance": "guasto durante la manutenzione",
     "backup": "protezione di riserva",
     "momentary": "momentanea",
 }
@@ -79,6 +82,8 @@ class _Element:
     failure_rate: float
     repair_time_h: float
     temporary_rate: float
+    maintenance_rate: float = 0.0
+    maintenance_time_h: float = 0.0
 
 
 @dataclass
@@ -375,8 +380,10 @@ def _element_data(net: Network, topo: _Topology) -> dict[str, _Element]:
         if key in target:
             raise ValueError(f"reliability_data: dati ripetuti per {rd.element!r}")
         if rd.repair_time_h < 0 or (rd.failure_rate or 0) < 0 or (rd.failure_rate_per_km or 0) < 0 \
-                or rd.temporary_rate < 0:
+                or rd.temporary_rate < 0 or rd.maintenance_rate < 0 or rd.maintenance_time_h < 0:
             raise ValueError(f"reliability_data {rd.element!r}: valori negativi")
+        if rd.maintenance_rate > 0 and rd.maintenance_time_h == 0:
+            raise ValueError(f"reliability_data {rd.element!r}: maintenance_rate richiede maintenance_time_h")
         if rd.failure_rate is not None and rd.failure_rate_per_km is not None:
             raise ValueError(f"reliability_data {rd.element!r}: indicare failure_rate oppure failure_rate_per_km")
         target[key] = rd
@@ -391,9 +398,10 @@ def _element_data(net: Network, topo: _Topology) -> dict[str, _Element]:
             rate = rd.failure_rate_per_km * topo.length_km[eid]
         else:
             rate = rd.failure_rate or 0.0
-        if rate == 0.0 and rd.temporary_rate == 0.0:
+        if rate == 0.0 and rd.temporary_rate == 0.0 and rd.maintenance_rate == 0.0:
             continue
-        elements[eid] = _Element(eid, cat, rate, rd.repair_time_h, rd.temporary_rate)
+        elements[eid] = _Element(eid, cat, rate, rd.repair_time_h, rd.temporary_rate,
+                                 rd.maintenance_rate, rd.maintenance_time_h)
     return elements
 
 
@@ -543,24 +551,45 @@ def reliability_analysis(net: Network, second_order: bool = True, generators_as_
 
     if second_order:
         failing = [e for e in elements.values() if e.failure_rate > 0]
-        lost_alone = {e.id: {p.id for p in points if p.bus not in topo.supplied_buses({e.id})} for e in failing}
+        maintained = [e for e in elements.values() if e.maintenance_rate > 0]
+        lost_alone = {e.id: {p.id for p in points if p.bus not in topo.supplied_buses({e.id})}
+                      for e in failing + maintained}
+
+        def lost_by(e1: _Element, e2: _Element) -> list[LoadPointResult]:
+            """Carichi persi solo con entrambi gli elementi fuori servizio."""
+            supplied = topo.supplied_buses({e1.id, e2.id})
+            return [p for p in points if p.bus not in supplied
+                    and p.id not in lost_alone[e1.id] and p.id not in lost_alone[e2.id]]
+
+        def add_pair(e1: _Element, e2: _Element, lost: list[LoadPointResult], rate: float,
+                     duration: float, how: str) -> None:
+            for p in lost:
+                add(p, Contribution(f"{e1.id}+{e2.id}", rate, duration, how))
+                for e in (e1, e2):  # metà del contributo a ciascun elemento
+                    summary[e.id].customer_interruptions += p.customers * rate / 2
+                    summary[e.id].customer_hours += p.customers * rate * duration / 2
+                    summary[e.id].ens_mwh += p.average_mw * rate * duration / 2
+
         for i, e1 in enumerate(failing):
             for e2 in failing[i + 1:]:
-                supplied = topo.supplied_buses({e1.id, e2.id})
-                lost = [p for p in points if p.bus not in supplied
-                        and p.id not in lost_alone[e1.id] and p.id not in lost_alone[e2.id]]
+                lost = lost_by(e1, e2)
                 if not lost:
                     continue
                 r1, r2 = e1.repair_time_h, e2.repair_time_h
                 rate = e1.failure_rate * e2.failure_rate * (r1 + r2) / HOURS_PER_YEAR
-                duration = r1 * r2 / (r1 + r2) if r1 + r2 > 0 else 0.0
-                key = f"{e1.id}+{e2.id}"
-                for p in lost:
-                    add(p, Contribution(key, rate, duration, "overlap"))
-                    for e in (e1, e2):  # metà del contributo a ciascun elemento
-                        summary[e.id].customer_interruptions += p.customers * rate / 2
-                        summary[e.id].customer_hours += p.customers * rate * duration / 2
-                        summary[e.id].ens_mwh += p.average_mw * rate * duration / 2
+                add_pair(e1, e2, lost, rate, r1 * r2 / (r1 + r2) if r1 + r2 > 0 else 0.0, "overlap")
+        # guasto di e2 durante la manutenzione di e1 (la manutenzione non è
+        # iniziata durante un guasto: solo l'ordine manutenzione → guasto)
+        for e1 in maintained:
+            for e2 in failing:
+                if e2 is e1:
+                    continue
+                lost = lost_by(e1, e2)
+                if not lost:
+                    continue
+                rm, r2 = e1.maintenance_time_h, e2.repair_time_h
+                rate = e1.maintenance_rate * e2.failure_rate * rm / HOURS_PER_YEAR
+                add_pair(e1, e2, lost, rate, rm * r2 / (rm + r2), "maintenance")
 
     n = sum(p.customers for p in points)
     if n == 0:

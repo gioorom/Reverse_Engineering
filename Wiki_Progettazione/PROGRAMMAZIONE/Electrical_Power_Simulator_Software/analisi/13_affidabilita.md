@@ -110,6 +110,21 @@ secondo ordine). Vale l'approssimazione per guasti indipendenti con λ·r ≪ 1:
 λ = λ1·λ2·(r1 + r2)/8760 e r = r1·r2/(r1 + r2). È il caso di trasformatori
 in parallelo, doppie alimentazioni e reti magliate.
 
+**Guasto durante la manutenzione.** Con `maintenance_rate` λm [1/anno] e
+`maintenance_time_h` rm in `reliability_data`, per ogni coppia ordinata
+(elemento 1 in manutenzione, guasto dell'elemento 2) che separa un carico
+(stessa condizione delle sovrapposizioni):
+
+- λ = λm1·λ2·rm1/8760 e r = rm1·r2/(rm1 + r2) (Billinton–Allan);
+- si conta solo l'ordine manutenzione → guasto: la manutenzione non si
+  inizia con un elemento guasto;
+- la manutenzione da sola è un'interruzione programmata e non entra negli
+  indici (come in IEEE 1366, che esclude le interruzioni pianificate).
+
+Un carico alimentato da due linee in parallelo (λ = 2/anno, r = 50 h,
+manutenzione 1/anno da 8 h) ha così 0,0457 interruzioni/anno dalle
+sovrapposizioni più 2 × 0,0018 dal guasto durante la manutenzione.
+
 ### Indici
 
 | Indice | Definizione |
@@ -190,7 +205,10 @@ CAIDI 1,93 h, ENS 1,29 MWh/anno.
   primo livello (la protezione di riserva apre sempre) e solo per i guasti
   permanenti; i guasti propri degli organi (apertura intempestiva, guasto
   attivo) non sono modellati.
-- **Fuori servizio programmati:** non sono considerati (manutenzione).
+- **Fuori servizio programmati:** solo la sovrapposizione con un guasto; la
+  manutenzione si suppone senza contro-alimentazione e senza rinvio quando
+  un elemento è già guasto; le interruzioni programmate non entrano negli
+  indici.
 - **Guasti a valle:** fusibili e interruttori aprono sempre, senza mancata
   selettività ([`09`](09_coordinamento_protezioni.md) la verifica a parte).
 - **Sovrapposizioni:** calcolate nella configurazione normale, senza

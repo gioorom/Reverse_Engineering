@@ -198,7 +198,7 @@ python -m iec60909.affidabilita esempi/affidabilita_rbts_bus2.json --json
 Sezioni `reliability_data` (`element`: id di ramo, nodo o sorgente, oppure
 `@lines`, `@transformers`, `@transformers3w`, `@buses`, `@external_grids`,
 `@generators`; `failure_rate` o `failure_rate_per_km`, `repair_time_h`,
-`temporary_rate`) e `switches` (`id`, `branch`, `bus`, `kind`: `switch`,
+`temporary_rate`, `maintenance_rate`, `maintenance_time_h`) e `switches` (`id`, `branch`, `bus`, `kind`: `switch`,
 `breaker`, `fuse`; `normally_open`, `switching_time_h`, `stuck_probability`); nei `loads`
 `customers` e `average_mw`. I `protective_devices` valgono come interruttori
 o fusibili. Opzioni: `--primo-ordine` (senza sovrapposizioni),

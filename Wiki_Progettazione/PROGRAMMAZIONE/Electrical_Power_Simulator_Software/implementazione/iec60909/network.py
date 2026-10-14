@@ -298,6 +298,8 @@ class ReliabilityData:
     `failure_rate_per_km` [1/(km·anno)]; tempo di riparazione (o di
     sostituzione) `repair_time_h`; tasso dei guasti transitori eliminati dalla
     richiusura `temporary_rate` [1/anno] (interruzioni momentanee).
+    Fuori servizio programmati (manutenzione): frequenza `maintenance_rate`
+    [1/anno] e durata `maintenance_time_h`.
     """
 
     element: str
@@ -305,6 +307,8 @@ class ReliabilityData:
     failure_rate: Optional[float] = None
     failure_rate_per_km: Optional[float] = None
     temporary_rate: float = 0.0
+    maintenance_rate: float = 0.0
+    maintenance_time_h: float = 0.0
 
 
 @dataclass

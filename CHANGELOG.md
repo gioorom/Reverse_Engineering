@@ -26,6 +26,8 @@ Il repository non ha ancora versioni rilasciate.
 - Affidabilità: mancato intervento di interruttori e fusibili
   (`stuck_probability`, `--mancato-intervento`) con intervento della
   protezione di riserva e restituzione dopo l'apertura manuale.
+- Affidabilità: guasto durante la manutenzione di un altro elemento
+  (`maintenance_rate`, `maintenance_time_h`), formule di Billinton–Allan.
 
 #### Corretto
 
