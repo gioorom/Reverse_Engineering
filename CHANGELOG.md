@@ -19,6 +19,10 @@ Il repository non ha ancora versioni rilasciate.
 
 - Dimensionamento dei cavi: circuiti monofase (campo `phases`), con portata a
   2 conduttori caricati e caduta di tensione fase-neutro.
+- Affidabilità: verifica facoltativa delle contro-alimentazioni con il flusso
+  di potenza (`check_transfer`, `--verifica-contro-alimentazione`); le
+  manovre che superano la tensione minima o il carico ammesso dei rami sono
+  respinte e i carichi attendono la manovra successiva o la riparazione.
 
 #### Corretto
 

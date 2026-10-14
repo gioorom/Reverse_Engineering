@@ -5,7 +5,7 @@ Ottavo modulo del simulatore. Calcola gli indici di affidabilità dei carichi
 (IEEE 1366: SAIFI, SAIDI, CAIDI, ASAI, MAIFI; energia non fornita).
 
 - Implementazione: [`iec60909/reliability.py`](../implementazione/iec60909/reliability.py).
-- Riga di comando: `python -m iec60909.affidabilita rete.json [--dettagli] [--costo-kwh 10] [--primo-ordine] [--json]`.
+- Riga di comando: `python -m iec60909.affidabilita rete.json [--dettagli] [--costo-kwh 10] [--primo-ordine] [--verifica-contro-alimentazione [--v-min 0.9] [--carico-max 100]] [--json]`.
 - Esempio: [`esempi/affidabilita_dorsale.json`](../implementazione/esempi/affidabilita_dorsale.json),
   due dorsali MT da una cabina primaria, con cabine secondarie protette da
   fusibili, sezionatori a ogni nodo e un punto normalmente aperto tra le
@@ -53,6 +53,28 @@ Per ogni guasto permanente di un elemento:
    di tempo di manovra. Un carico rialimentato a quel passo ha durata
    max(sezionamento, manovra).
 4. **Riparazione.** I carichi ancora interrotti aspettano la riparazione.
+
+**Verifica della contro-alimentazione** (`check_transfer=True`,
+`--verifica-contro-alimentazione`). Ogni configurazione di emergenza della
+fase 3 è risolta con il flusso di potenza ([`07`](07_flusso_di_potenza.md)):
+
+- la rete contiene solo i nodi alimentati, senza gli elementi della parte
+  guasta e senza i rami con un estremo ancora aperto (un trasformatore a tre
+  avvolgimenti con un avvolgimento aperto è tolto per intero);
+- la manovra è respinta se una tensione scende sotto `v_min_pu` (0,9) o un
+  ramo con corrente o potenza nominale (`max_i_ka`, `sn_mva`) supera
+  `max_loading_percent` (100 %), oppure se il flusso non è risolvibile (per
+  esempio un'isola senza nodo di saldo);
+- i limiti già superati in esercizio normale contano solo se la manovra li
+  peggiora di più di 0,005 pu o di 1 punto percentuale; l'avviso li elenca
+  con il valore normale;
+- se una manovra è respinta, i carichi che ne dipendono restano interrotti
+  fino al punto normalmente aperto successivo (se la sua configurazione è
+  accettata) o fino alla riparazione;
+- ogni manovra respinta compare negli avvisi con le violazioni.
+
+La verifica è a manovra intera: non c'è il distacco parziale dei carichi
+per rendere accettabile la configurazione.
 
 La durata è sempre al massimo il tempo di riparazione. Per ogni carico i
 risultati sono λ = Σλ_k, U = Σλ_k·r_k e r = U/λ.
@@ -139,10 +161,10 @@ CAIDI 1,93 h, ENS 1,29 MWh/anno.
 
 ## Limiti
 
-- **Capacità delle linee:** la contro-alimentazione è solo topologica; non
-  verifica il carico delle linee né la caduta di tensione. Per questo serve
-  il flusso di potenza ([`07`](07_flusso_di_potenza.md)) sulla
-  configurazione di emergenza.
+- **Capacità delle linee:** senza `check_transfer` la contro-alimentazione è
+  solo topologica. Con la verifica, il carico considerato è quello di
+  progetto (`p_mw`, `q_mvar`), non la punta del periodo del guasto; non c'è
+  il distacco parziale dei carichi.
 - **Organi di manovra:** perfettamente affidabili; manca il guasto
   dell'interruttore che non apre (protezione di riserva).
 - **Fuori servizio programmati:** non sono considerati (manutenzione).

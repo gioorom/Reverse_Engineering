@@ -21,12 +21,21 @@ Le sovrapposizioni di due guasti (insiemi di taglio del secondo ordine) danno
 λ = λ1·λ2·(r1 + r2)/8760 e r = r1·r2/(r1 + r2) ai carichi che restano
 alimentati con uno solo dei due elementi fuori servizio.
 
+Verifica facoltativa della contro-alimentazione (check_transfer): ogni
+configurazione di emergenza (elementi guasti tolti, punti normalmente aperti
+chiusi fino a quel tempo di manovra) è risolta con il flusso di potenza; se una
+linea o un trasformatore supera il carico ammesso o una tensione scende sotto
+v_min_pu la manovra non è accettata e i carichi che ne dipendono aspettano la
+fase successiva o la riparazione.
+
 Indici IEEE 1366: SAIFI, SAIDI, CAIDI, ASAI, MAIFI; energia non fornita ENS e
 AENS; costo delle interruzioni facoltativo.
 """
 
 from __future__ import annotations
 
+import copy
+import math
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Optional
@@ -143,6 +152,7 @@ class _Topology:
 
     def __init__(self, net: Network, generators_as_sources: bool, default_switching_time_h: float):
         net.validate()
+        self.generators_as_sources = generators_as_sources
         self.buses = [b.id for b in net.buses]
         self.branches: dict[str, list[str]] = {}
         self.category: dict[str, str] = {b: "buses" for b in self.buses}
@@ -272,6 +282,73 @@ class _Topology:
         return region, boundary
 
 
+# elenchi della rete che non partecipano al flusso di potenza
+_STUDY_LISTS = ("arc_flash", "protective_devices", "stability_events", "harmonic_sources", "harmonic_filters",
+                "motor_starts", "reliability_data", "switches", "cable_ratings", "cable_sizing")
+# elementi collegati a un solo nodo
+_SHUNT_LISTS = ("external_grids", "generators", "motors", "static_generators", "earthing_transformers",
+                "loads", "shunts")
+
+
+def _configuration(net: Network, topo: _Topology, removed: set[str], closed: frozenset,
+                   supplied: set[str]) -> Network:
+    """Copia della rete nella configurazione di emergenza: solo i nodi alimentati,
+    senza gli elementi guasti e senza i rami con un estremo aperto."""
+    cfg = copy.copy(net)
+    for name in _STUDY_LISTS:
+        setattr(cfg, name, [])
+
+    def open_end(br: str) -> bool:
+        return any((br, b) in topo.normally_open and (br, b) not in closed for b in topo.branches[br])
+
+    def keep_branch(br: str) -> bool:
+        return br not in removed and not open_end(br) and all(b in supplied for b in topo.branches[br])
+
+    cfg.buses = [b for b in net.buses if b.id in supplied]
+    cfg.lines = [x for x in net.lines if keep_branch(x.id)]
+    cfg.transformers = [x for x in net.transformers if keep_branch(x.id)]
+    cfg.transformers3w = [x for x in net.transformers3w if keep_branch(x.id)]
+    for name in _SHUNT_LISTS:
+        setattr(cfg, name, [x for x in getattr(net, name) if x.bus in supplied and x.id not in removed])
+    if not topo.generators_as_sources:  # generatori esclusi: non alimentano le isole
+        cfg.generators = []
+    return cfg
+
+
+def _violations(cfg: Network, v_min_pu: float, max_loading_percent: float,
+                base: Optional[dict[str, float]] = None) -> dict[str, float]:
+    """Limiti superati nella configurazione: tensioni [pu] dei nodi e carichi [%] dei
+    rami (o il motivo per cui non è risolvibile, con valore nan). Con `base` (le
+    violazioni dell'esercizio normale) restano solo quelle nuove o peggiorate di
+    più di 0,005 pu o di 1 punto percentuale."""
+    from .loadflow import run_load_flow
+
+    try:
+        lf = run_load_flow(cfg)
+    except ValueError as exc:
+        return {f"flusso di potenza non risolto ({exc})": math.nan}
+    if not lf.converged:
+        return {"flusso di potenza non convergente": math.nan}
+    out = {b.bus: b.vm_pu for b in lf.buses if b.vm_pu < v_min_pu}
+    out.update({br.id: br.loading_percent for br in lf.branches
+                if br.loading_percent is not None and br.loading_percent > max_loading_percent})
+    if base:
+        buses = {b.id for b in cfg.buses}
+        out = {k: v for k, v in out.items() if k not in base
+               or (v < base[k] - 0.005 if k in buses else v > base[k] + 1.0)}
+    return out
+
+
+def _describe(violations: dict[str, float], buses: set[str], base: Optional[dict[str, float]] = None) -> str:
+    """Elenco leggibile delle violazioni, con il valore dell'esercizio normale se già fuori limite."""
+    def fmt(k: str, v: float) -> str:
+        return f"{v:.3f} pu" if k in buses else f"{v:.1f} %"
+
+    return ", ".join(k if math.isnan(v) else f"{k} {fmt(k, v)}"
+                     + (f" (normale {fmt(k, base[k])})" if base and k in base else "")
+                     for k, v in violations.items())
+
+
 def _element_data(net: Network, topo: _Topology) -> dict[str, _Element]:
     defaults: dict[str, ReliabilityData] = {}
     specific: dict[str, ReliabilityData] = {}
@@ -311,8 +388,13 @@ def _element_data(net: Network, topo: _Topology) -> dict[str, _Element]:
 
 def reliability_analysis(net: Network, second_order: bool = True, generators_as_sources: bool = True,
                          cost_per_kwh: Optional[float] = None,
-                         default_switching_time_h: float = 1.0) -> ReliabilityResult:
-    """Indici di affidabilità dei carichi e del sistema (vedi il docstring del modulo)."""
+                         default_switching_time_h: float = 1.0, check_transfer: bool = False,
+                         v_min_pu: float = 0.9, max_loading_percent: float = 100.0) -> ReliabilityResult:
+    """Indici di affidabilità dei carichi e del sistema (vedi il docstring del modulo).
+
+    check_transfer: verifica con il flusso di potenza le configurazioni di
+    contro-alimentazione (tensioni >= v_min_pu, carico dei rami con corrente o
+    potenza nominale <= max_loading_percent)."""
     topo = _Topology(net, generators_as_sources, default_switching_time_h)
     elements = _element_data(net, topo)
     warnings: list[str] = []
@@ -340,6 +422,22 @@ def reliability_analysis(net: Network, second_order: bool = True, generators_as_
     for end in topo.normally_open:
         ties[end] = max(d.switching_time_h for d in topo.devices[end] if d.normally_open)
     tie_times = sorted(set(ties.values()))
+    checked: dict[tuple[frozenset, frozenset], dict[str, float]] = {}
+    base: dict[str, float] = {}
+
+    def transfer_violations(removed: set[str], closed: frozenset, supplied: set[str]) -> dict[str, float]:
+        key = (frozenset(removed), closed)
+        if key not in checked:
+            checked[key] = _violations(_configuration(net, topo, removed, closed, supplied),
+                                       v_min_pu, max_loading_percent, base)
+        return checked[key]
+
+    if check_transfer:
+        # limiti già superati in esercizio normale: contano solo se la manovra li peggiora
+        base = _violations(_configuration(net, topo, set(), frozenset(), normal), v_min_pu, max_loading_percent)
+        if base:
+            warnings.append("esercizio normale già fuori dai limiti della verifica di contro-alimentazione "
+                            "(contano solo i peggioramenti): " + _describe(base, normal))
 
     for e in elements.values():
         trip_zone, trip_boundary = topo.zone(e.id, ("breaker", "fuse"))
@@ -364,7 +462,14 @@ def reliability_analysis(net: Network, second_order: bool = True, generators_as_
         steps = []
         for t in tie_times:
             closed = frozenset(end for end, tt in ties.items() if tt <= t)
-            steps.append((max(t_iso, t), topo.supplied_buses(region, closed)))
+            buses = topo.supplied_buses(region, closed)
+            if check_transfer and any(p.bus in buses and p.bus not in after_iso for p in affected):
+                bad = transfer_violations(region, closed, buses)
+                if bad:
+                    warnings.append(f"guasto di {e.id}: contro-alimentazione a {max(t_iso, t):g} h "
+                                    f"non accettata: " + _describe(bad, buses | normal, base))
+                    continue
+            steps.append((max(t_iso, t), buses))
         s = summary[e.id]
         for p in affected:
             if p.bus in after_iso:

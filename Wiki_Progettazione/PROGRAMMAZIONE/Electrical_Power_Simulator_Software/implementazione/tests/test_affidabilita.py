@@ -326,3 +326,49 @@ def test_rbts_bus2_punti_di_carico(tipo):
         assert p.failure_rate == pytest.approx(lam, abs=1.01e-3)
         assert p.unavailability_h == pytest.approx(u, abs=1.01e-2)
         assert p.duration_h == pytest.approx(rr, rel=4e-3)
+
+
+def test_verifica_contro_alimentazione():
+    # linea di contro-alimentazione da 1 kA: la manovra regge, durate invariate
+    net = _dorsale()
+    for ln in net.lines:
+        ln.max_i_ka = 1.0
+    base = _per_carico(reliability_analysis(_dorsale()))
+    r = reliability_analysis(net, check_transfer=True)
+    for cid, p in _per_carico(r).items():
+        assert p.unavailability_h == pytest.approx(base[cid].unavailability_h, rel=1e-12)
+    assert not r.warnings
+    # linea T da 50 A: non riprende C2 + C3 (2,5 MW ≈ 72 A a 20 kV) dopo il guasto di L1,
+    # che attendono la riparazione, ma riprende il solo C3 (≈ 43 A) dopo il guasto di L2
+    tie = next(ln for ln in net.lines if ln.id == "T")
+    tie.max_i_ka = 0.05
+    r = reliability_analysis(net, check_transfer=True)
+    p = _per_carico(r)
+    c3 = {c.element: c for c in p["C3"].contributions}
+    assert c3["L1"].restoration == "repair" and c3["L1"].duration_h == 4.0
+    assert c3["L2"].restoration == "transfer" and c3["L2"].duration_h == 1.5
+    c2 = {c.element: c for c in p["C2"].contributions}
+    assert c2["L1"].restoration == "repair"
+    assert any("guasto di L1" in w and "T " in w for w in r.warnings)
+    # linea T da 30 A: C3 la carica al 144 %, ammesso solo con il limite al 150 %
+    tie.max_i_ka = 0.03
+    c3 = {c.element: c for c in _per_carico(reliability_analysis(net, check_transfer=True))["C3"].contributions}
+    assert c3["L2"].restoration == "repair"
+    r = reliability_analysis(net, check_transfer=True, max_loading_percent=150.0)
+    c3 = {c.element: c for c in _per_carico(r)["C3"].contributions}
+    assert c3["L2"].restoration == "transfer" and c3["L1"].restoration == "repair"
+    # linea T di 40 km: dopo il guasto di L1 la tensione di B2…A3 scende a 0,945 pu
+    # (respinta con v_min 0,96), dopo il guasto di L2 quella di B3 e A3 resta a 0,969 pu
+    net = _dorsale()
+    next(ln for ln in net.lines if ln.id == "T").length_km = 40.0
+    r = reliability_analysis(net, check_transfer=True, v_min_pu=0.96)
+    c3 = {c.element: c for c in _per_carico(r)["C3"].contributions}
+    assert c3["L1"].restoration == "repair" and c3["L2"].restoration == "transfer"
+    assert len(r.warnings) == 1 and "A3 0.946 pu" in r.warnings[0]
+    # L1 già sovraccarica in esercizio normale: la contro-alimentazione che la scarica è accettata
+    net = _dorsale()
+    next(ln for ln in net.lines if ln.id == "L1").max_i_ka = 0.05
+    r = reliability_analysis(net, check_transfer=True)
+    assert "esercizio normale" in r.warnings[0] and len(r.warnings) == 1
+    c3 = {c.element: c for c in _per_carico(r)["C3"].contributions}
+    assert c3["L2"].restoration == "transfer"

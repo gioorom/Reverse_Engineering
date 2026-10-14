@@ -203,7 +203,8 @@ Sezioni `reliability_data` (`element`: id di ramo, nodo o sorgente, oppure
 `customers` e `average_mw`. I `protective_devices` valgono come interruttori
 o fusibili. Opzioni: `--primo-ordine` (senza sovrapposizioni),
 `--senza-generatori`, `--manovra` (tempo di manovra dei dispositivi di
-protezione). Metodo, validazione e limiti:
+protezione), `--verifica-contro-alimentazione` con `--v-min` e
+`--carico-max` (flusso di potenza sulle configurazioni di emergenza). Metodo, validazione e limiti:
 [`../analisi/13_affidabilita.md`](../analisi/13_affidabilita.md).
 
 ### Dimensionamento dei cavi
@@ -415,7 +416,8 @@ python -m pytest
 - `tests/test_cavi.py`: dimensionamento dei cavi, calcoli a mano, tabelle IEC 60364-5-52,
   esempi pubblicati (motore 90 kW, lunghezze massime TN di AS/NZS 3000).
 - `tests/test_affidabilita.py`: affidabilità, RBTS Bus 2 (indici pubblicati),
-  calcoli a mano, secondo ordine contro Markov e Monte Carlo.
+  calcoli a mano, secondo ordine contro Markov e Monte Carlo, verifica delle
+  contro-alimentazioni con il flusso di potenza.
 - `tests/test_avviamento.py`: avviamento dei motori, stima del circuito,
   caduta di tensione a mano, metodi di avviamento, integrazione indipendente.
 - `tests/test_armoniche.py`: armoniche, calcoli a mano, risonanza, filtri,
