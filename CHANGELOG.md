@@ -14,7 +14,8 @@ Il repository non ha ancora versioni rilasciate.
 - Portate IEC 60287 dei cavi tripolari con schermi separati sulle anime e
   armatura a fili in acciaio o acciaio inossidabile: cordatura delle anime,
   perdite nell'armatura, fattore geometrico dei riempitivi, secondo le
-  indicazioni della CIGRE TB 880; verifica sul caso sottomarino a 30 kV.
+  indicazioni della CIGRE TB 880; verifica sui casi sottomarini a 30 kV e
+  220 kV (opzione `layup_on_conductor` per la cordatura sul conduttore).
 
 #### Corretto
 

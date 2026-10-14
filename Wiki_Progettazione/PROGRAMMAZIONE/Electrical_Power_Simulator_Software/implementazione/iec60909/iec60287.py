@@ -38,7 +38,7 @@ DUCT_CONSTANTS = {"plastic": (1.87, 0.312, 0.0037)}
 AIR_ARRANGEMENTS = {
     "trefoil": (0.96, 1.25, 0.20),  # tre cavi a trifoglio
     "flat_touching": (0.62, 1.95, 0.25),  # tre cavi orizzontali a contatto
-    "single": (0.21, 3.94, 0.60),  # cavo singolo, non a parete (una sola fonte)
+    "single": (0.21, 3.94, 0.60),  # cavo singolo (anche tripolare), non a parete
 }
 
 
@@ -80,6 +80,7 @@ class CableConstruction:
     filler_diameter_mm: Optional[float] = None  # tripolari: diametro sulle anime riunite
     filler_rho_t: float = 6.0
     core_lay_length_mm: Optional[float] = None  # tripolari: passo di cordatura delle anime
+    layup_on_conductor: bool = False  # cordatura anche sulla resistenza del conduttore (CIGRE TB 880 caso 8)
     armour_material: Optional[str] = None  # "steel" (magnetico) | "stainless" (non magnetico)
     armour_wires: int = 0
     armour_wire_diameter_mm: float = 0.0

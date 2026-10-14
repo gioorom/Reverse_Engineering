@@ -108,6 +108,8 @@ def rating_three_core(c: CableConstruction, inst: Installation, max_iter: int = 
     fp = _y(xp2)
     yp = fp * (dc / s) ** 2 * (0.312 * (dc / s) ** 2 + 1.18 / (fp + 0.27))
     r = r1 * (1.0 + k_mag * (ys + yp))
+    if c.layup_on_conductor:
+        r *= f  # resistenza dell'anima riferita al metro di cavo (TB 880 caso 8; non nel caso 2)
     # perdite dielettriche per anima (capacità per metro di cavo)
     cap = c.insulation_eps / (18.0 * math.log(d["insulation"] / d["conductor_screen"])) * 1e-9 * f
     wd = omega * cap * (inst.u0_kv * 1e3) ** 2 * c.insulation_tan_delta

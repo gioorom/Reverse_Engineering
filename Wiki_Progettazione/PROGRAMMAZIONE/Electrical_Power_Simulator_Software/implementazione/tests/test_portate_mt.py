@@ -192,8 +192,11 @@ POSA_CASO2 = dict(depth_m=1.0, soil_temperature_c=15, soil_rho_t=0.7, u0_kv=30 /
 
 
 def test_tripolare_armato_cigre_tb880_caso_2():
-    """Valori di riferimento del caso 2 (RA, λ2, temperatura dell'armatura e portata) come
-    riportati nell'implementazione CableDesign (fcamaraneto/CableDesign)."""
+    """Valori della brochure per il caso 2: λ2 = 0,4206526837 (p. 174, citato dalla suite
+    cable-sketch-validation) e I = 838,34 A, riportati con RA, λ1'', gs e temperatura
+    dell'armatura nell'implementazione CableDesign (fcamaraneto/CableDesign). Ipotesi CIGRE:
+    cordatura su C, X, Rs, T1 e guaina dell'anima ma non sulla resistenza del conduttore,
+    fattore 1,5 dell'armatura magnetica, perdite parassite comprese."""
     c = _caso2()
     d = c.diameters_mm()
     assert (d["core"], d["under_armour"], d["armour_mean"], d["outer"]) == pytest.approx((62.1, 137.3, 143.3, 155.3))
@@ -255,3 +258,26 @@ def test_tripolare_in_tubo_e_in_aria():
     assert tubo.current_a < interrato.current_a
     aria = rating(c, Installation(**{**POSA_CASO2, "kind": "air", "air_temperature_c": 30}))
     assert aria.current_a > 0 and aria.t4 > 0
+
+
+def test_tripolare_cigre_tb880_caso_8():
+    """Caso 8 (TB 880 §12): cavo sottomarino 220 kV, 3 × 1000 mm² Cu, guaine di piombo, 133 fili
+    d'armatura non magnetici da 5 mm. Valori della brochure (tabella 12-4, citati dalla suite
+    cable-sketch-validation): fattore di cordatura 1,0118110892 e resistenza in c.a. per metro
+    di cavo 2,7277156257·10⁻⁵ Ω/m, con la cordatura applicata anche al conduttore. La portata
+    (1134,82 A) è quella di due implementazioni di terzi, non pubblicata nella brochure."""
+    c = CableConstruction(
+        cores=3, area_mm2=1000, conductor_diameter_mm=38.6, r20_ohm_per_km=0.0176, conductor_tape_mm=0.2,
+        conductor_screen_mm=1.5, insulation_mm=23.0, insulation_screen_mm=1.4, under_screen_mm=0.7,
+        under_screen_rho_t=12.0, semicon_rho_t=2.5, insulation_tan_delta=0.001, screen_kind="sheath",
+        screen_material="lead", screen_thickness_mm=3.6, core_sheath_mm=2.6, core_sheath_rho_t=2.5,
+        filler_diameter_mm=226, bedding_mm=0.5, core_lay_length_mm=2750, layup_on_conductor=True,
+        armour_material="stainless", armour_wires=133, armour_wire_diameter_mm=5.0, armour_lay_length_mm=2900,
+        oversheath_mm=4.0, oversheath_rho_t=6.0)
+    assert c.diameters_mm()["outer"] == pytest.approx(245.0)
+    r = rating(c, Installation(depth_m=1.0, soil_temperature_c=15, soil_rho_t=0.7, u0_kv=220 / math.sqrt(3),
+                               eddy_both_ends=True))
+    assert r.layup_factor == pytest.approx(1.0118110892, abs=1e-10)
+    assert r.r_ac_ohm_per_m == pytest.approx(2.7277156257e-5, rel=1e-10)
+    assert r.lambda2 == 0
+    assert r.current_a == pytest.approx(1134.82, abs=0.01)

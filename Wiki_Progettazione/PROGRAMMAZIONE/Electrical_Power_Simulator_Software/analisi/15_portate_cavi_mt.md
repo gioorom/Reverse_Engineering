@@ -28,7 +28,7 @@ Sezione `cable_ratings`: `id`, `cable` (costruzione), `installation` (posa).
 | `insulation_eps`, `insulation_tan_delta`, `insulation_rho_t`, `semicon_rho_t` | ε e tanδ (tabella 3: XLPE 2,5; 0,004 fino a 18/30 kV, 0,001 oltre), resistività termiche |
 | `screen_kind`, `screen_material`, `screen_area_mm2`, `screen_thickness_mm`, `screen_lay_factor` | schermo a fili, a nastro o guaina tubolare (sezione π·d·t); fattore di cordatura dei fili |
 | `bedding_mm`, `oversheath_mm`, rispettive resistività | letto (nei tripolari: tra riempitivi e armatura) e guaina esterna |
-| `cores`, `core_sheath_mm`, `core_sheath_rho_t`, `filler_diameter_mm`, `filler_rho_t`, `core_lay_length_mm` | tripolari (`cores` = 3): guaina sull'anima, diametro sulle anime riunite (default D_anima·(1 + 2/√3)), riempitivi, passo di cordatura delle anime |
+| `cores`, `core_sheath_mm`, `core_sheath_rho_t`, `filler_diameter_mm`, `filler_rho_t`, `core_lay_length_mm`, `layup_on_conductor` | tripolari (`cores` = 3): guaina sull'anima, diametro sulle anime riunite (default D_anima·(1 + 2/√3)), riempitivi, passo di cordatura delle anime, cordatura anche sulla resistenza del conduttore |
 | `armour_material`, `armour_wires`, `armour_wire_diameter_mm`, `armour_lay_length_mm`, `armour_ac_factor` | armatura a fili dei tripolari: `steel` (acciaio, magnetica) o `stainless` (inossidabile, non magnetica), numero e diametro dei fili, passo, rapporto c.a./c.c. |
 | `max_temperature_c`, `t1_factor`, `t3_factor` | temperatura massima del conduttore; fattori sulle resistenze termiche (default automatici, vedi sotto) |
 
@@ -39,7 +39,7 @@ Sezione `cable_ratings`: `id`, `cable` (costruzione), `installation` (posa).
 | `depth_m`, `soil_temperature_c`, `soil_rho_t` | profondità dell'asse (trifoglio: baricentro), terreno |
 | `bonding`, `eddy_both_ends` | collegamento degli schermi `both_ends`, `single_point`, `cross_bonded`; perdite parassite anche con collegamento alle due estremità (scelta del WG CIGRE B1.56) |
 | `duct_inner_mm`, `duct_outer_mm`, `duct_type`, `duct_rho_t` | tubi (costanti U, V, Y della tabella 4 per i tubi in plastica) |
-| `air_temperature_c`, `air_arrangement`, `air_z`, `air_e`, `air_g`, `trough_perimeter_m` | posa in aria: coefficienti Z, E, g della tabella 2 della IEC 60287-2-1 (default `trefoil` 0,96/1,25/0,20 e `flat_touching` 0,62/1,95/0,25, confermati da due fonti; per le altre disposizioni vanno indicati); canaletta chiusa non riempita |
+| `air_temperature_c`, `air_arrangement`, `air_z`, `air_e`, `air_g`, `trough_perimeter_m` | posa in aria: coefficienti Z, E, g della tabella 2 della IEC 60287-2-1 (default `trefoil` 0,96/1,25/0,20, `flat_touching` 0,62/1,95/0,25 e `single` 0,21/3,94/0,60 per il cavo singolo, anche tripolare, confermati da due fonti; per le altre disposizioni vanno indicati); canaletta chiusa non riempita |
 | `other_cables_m` | posizioni (x, y) di altri cavi uguali e ugualmente caricati (mutuo riscaldamento) |
 | `u0_kv`, `frequency_hz` | tensione verso terra e frequenza |
 
@@ -92,7 +92,9 @@ con riempitivi, letto, armatura a fili ed eventuale guaina esterna.
 - **Cordatura delle anime** (CIGRE TB 880, GP23). Il fattore
   f = √(1 + (π·1,29·D_anima/L)²) moltiplica capacità, resistenza e reattanza
   degli schermi per metro di cavo, e divide T1 e la resistenza termica della
-  guaina sull'anima.
+  guaina sull'anima. La brochure lo applica anche alla resistenza del
+  conduttore nel caso 8 ma non nel caso 2: è un'opzione (`layup_on_conductor`,
+  predefinita no).
 - **Armatura magnetica (acciaio):**
   - effetto pelle e di prossimità × 1,5: R = R'·(1 + 1,5·(ys + yp)) (GP25);
   - perdite per circolazione negli schermi × 1,5 (GP38);
@@ -131,7 +133,8 @@ da 15,5 mm, guaina di alluminio da 0,8 mm, posato a 1 m con terreno a 20 °C e
 | 0-2 senza perdite parassite (§4.7) | 682,8145 | 682,8145 |
 | 0-5 in piano in canaletta, cavo limitante (§4.10) | 765,82 | 763,64 (−0,28 %) |
 | 4: 33 kV, 240 mm², schermo a fili, trifoglio interrato (§8, valore CIGRE) | 537,4631 | 536,41 (−0,2 %) |
-| 2: tripolare sottomarino 30 kV, 3 × 630 mm², guaine di piombo, armatura in acciaio | 838,3400 | 838,3400 |
+| 2: tripolare sottomarino 30 kV, 3 × 630 mm², guaine di piombo, armatura in acciaio (valore CIGRE) | 838,3400 | 838,3400 |
+| 8: tripolare sottomarino 220 kV, 3 × 1000 mm², armatura non magnetica (valore di terzi) | 1134,82 | 1134,82 |
 
 - I primi due valori sono quelli pubblicati da CIGRE. Gli altri vengono dai
   notebook che riproducono i casi della brochure
@@ -153,6 +156,17 @@ da 15,5 mm, guaina di alluminio da 0,8 mm, posato a 1 m con terreno a 20 °C e
     schermo: CIGRE ne considera la cordatura, il cui passo non è nelle fonti
     aperte. Con `screen_lay_factor` si può indicare.
 
+- **Casi tripolari.**
+  - **Caso 2:** λ2 = 0,4206526837 è attribuito alla brochure (p. 174) dalla
+    suite cable-sketch-validation e 838,34 A da un secondo repository. Con
+    l'implementazione CableDesign coincidono anche la resistenza
+    dell'armatura (1,2798804135·10⁻⁴ Ω/m), gs, λ1'' prima del fattore F e la
+    temperatura dell'armatura, a 10 cifre.
+  - **Caso 8:** coincidono il fattore di cordatura (1,0118110892) e la
+    resistenza in c.a. per metro di cavo (2,7277156257·10⁻⁵ Ω/m) pubblicati
+    nella tabella 12-4. La portata della brochure non è nelle fonti aperte;
+    quella calcolata coincide con due implementazioni indipendenti.
+
 Le formule e le costanti sono state confrontate con più implementazioni
 aperte indipendenti della norma (Alliander cable-thermal-model, DiTuS,
 C4_open, CableDesign, IEC_Power_Cable_tools e i notebook TB 880). Due
@@ -170,8 +184,8 @@ eccezioni hanno una sola conferma e sono segnalate:
     trovata una formula verificabile su due fonti;
   - conduttori Milliken: ks e kp vanno indicati a mano.
 - **Posa in aria:** senza irraggiamento solare. I coefficienti Z, E, g della
-  tabella 2 sono predefiniti solo per trifoglio e piano a contatto; per le
-  altre disposizioni vanno indicati.
+  tabella 2 sono predefiniti per trifoglio, piano a contatto e cavo singolo
+  (anche tripolare); per le altre disposizioni vanno indicati.
 - **Tubi:** costanti U, V, Y solo per i tubi in plastica; niente blocchi di
   calcestruzzo o letti di posa con resistività diversa (fattore Gb).
 - **Cross-bonding:** i tratti si suppongono perfettamente bilanciati, con
