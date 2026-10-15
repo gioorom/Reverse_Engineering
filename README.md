@@ -69,7 +69,7 @@ convenzioni per chi contribuisce sono in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Strumento | Uso | Note |
 | --------- | --- | ---- |
-| [REA – Reverse Engineer Anything](https://github.com/morluto/rea) | Analisi di applicazioni JavaScript/Electron, .NET, siti web e binari nativi | Pacchetto npm `rea-agents@6.4.0`, registrato come server MCP in `.mcp.json` |
+| [REA – Reverse Engineer Anything](https://github.com/morluto/rea) | Analisi di applicazioni JavaScript/Electron, .NET, siti web e binari nativi | Pacchetto npm `rea-agents@6.5.0`, registrato come server MCP in `.mcp.json` |
 | [Ghidra 12.1.4](https://github.com/NationalSecurityAgency/ghidra) | Motore per l'analisi dei binari nativi usato da REA | Richiede JDK 21 a 64 bit e la variabile `GHIDRA_INSTALL_DIR` |
 | Python 3.10+ | Implementazioni e test dei progetti (es. `iec60909`) | numpy; pytest e pandapower per i test |
 
@@ -86,7 +86,7 @@ git clone https://github.com/gioorom/Reverse_Engineering.git
 # copia eventuali file già presenti nella vecchia cartella PROGRAMMAZIONE in:
 #   Reverse_Engineering\Wiki_Progettazione\PROGRAMMAZIONE\
 
-npm install --global rea-agents@6.4.0
+npm install --global rea-agents@6.5.0
 rea setup --client claude_code   # registra REA e installa la skill
 rea doctor                       # verifica
 
@@ -119,7 +119,7 @@ sessione esegui (o inserisci nello script di setup dell'ambiente)
 bash scripts/setup-cloud.sh
 ```
 
-Lo script è idempotente: installa `rea-agents@6.4.0` e Ghidra 12.1.4 in
+Lo script è idempotente: installa `rea-agents@6.5.0` e Ghidra 12.1.4 in
 `/opt/ghidra_12.1.4_PUBLIC` (verificando l'hash SHA-256 dell'archivio) e salta
 i passi già fatti. Richiede un JDK 21+.
 
