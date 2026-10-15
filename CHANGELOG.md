@@ -16,6 +16,9 @@ Il repository non ha ancora versioni rilasciate.
   (Node 22.19+, Ghidra 12.1.4, JDK 21); `rea doctor` riconosce Ghidra.
   Modifiche incompatibili della 6.5.0 solo nella forma di alcuni risultati
   (campi che possono valere `null`, `get_call_graph`, `--filter-output`).
+- `scripts/setup-cloud.sh` installa anche la skill di REA per Claude Code
+  (`rea setup --skill-client claude_code`), segnalata come mancante da
+  `rea doctor`; viene reinstallata quando cambia la versione di REA.
 
 ### 2026-10-14
 

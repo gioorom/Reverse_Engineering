@@ -31,7 +31,7 @@ Reverse_Engineering/
 ├── .editorconfig             ← stile dei file (UTF-8, LF, indentazione)
 ├── .github/                  ← modelli per pull request e segnalazioni
 ├── scripts/
-│   └── setup-cloud.sh        ← installa REA + Ghidra nelle sessioni cloud
+│   └── setup-cloud.sh        ← installa REA + skill + Ghidra nelle sessioni cloud
 └── Wiki_Progettazione/
     └── PROGRAMMAZIONE/       ← cartella di lavoro principale
         ├── README.md         ← indice dei progetti
@@ -119,9 +119,11 @@ sessione esegui (o inserisci nello script di setup dell'ambiente)
 bash scripts/setup-cloud.sh
 ```
 
-Lo script è idempotente: installa `rea-agents@6.5.0` e Ghidra 12.1.4 in
-`/opt/ghidra_12.1.4_PUBLIC` (verificando l'hash SHA-256 dell'archivio) e salta
-i passi già fatti. Richiede un JDK 21+.
+Lo script è idempotente: installa `rea-agents@6.5.0`, la skill di REA per
+Claude Code (`~/.claude/skills/reverse-engineer-anything`, con
+`rea setup --skill-client claude_code`; il server MCP resta quello di
+`.mcp.json`) e Ghidra 12.1.4 in `/opt/ghidra_12.1.4_PUBLIC` (verificando
+l'hash SHA-256 dell'archivio) e salta i passi già fatti. Richiede un JDK 21+.
 
 ## Sincronizzazione
 
