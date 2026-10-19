@@ -7,6 +7,17 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-10-19
+
+#### Modificato
+
+- REA aggiornato da `rea-agents@6.5.0` a `rea-agents@6.7.0` (include la
+  6.6.0, non pubblicata su npm), con la skill per Claude Code reinstallata.
+  Requisiti invariati (Node 22.19+, Ghidra 12.1.4, JDK 21). Modifiche
+  incompatibili solo nella forma di alcuni risultati (evidenze salvate,
+  catture del browser, `version_code` Android come stringa, errori tipizzati
+  degli scenari UI nativi).
+
 ### 2026-10-15
 
 #### Modificato
