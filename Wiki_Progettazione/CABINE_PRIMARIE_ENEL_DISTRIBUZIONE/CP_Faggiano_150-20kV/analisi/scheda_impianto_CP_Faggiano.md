@@ -135,6 +135,10 @@ Muro centrato fra i plinti TR1/TR2 (asse Y 6200).
 
 **TR2 (TR Verde) con castelletto sul lato esterno.** Orientamento: spalle ai TR guardando la linea, TR Rosso = TR1 a sinistra, TR Verde = TR2 a destra. Il castelletto MT del TR2 è passato da Y 7200 a **Y 17 600**: trafo, castelletto, sbarre MT, collegamenti e cavi sono stati specchiati rispetto al piano Y 6200 in componenti `*_TR2`, e isolatori e terminali ricopiati in posizione speculare (script `tr2_specchio.py`). Il lato MT è stato tolto dalla definizione condivisa `STALLO_TRAFO`, quindi ogni stallo ha i suoi pezzi. Con lo specchio la sequenza delle fasi MT del TR2 risulta invertita rispetto al TR1: va verificata con lo schema dei collegamenti.
 
+**Armadi del TR (comando motore CSC e cassetta ausiliari) sulla sinistra di entrambi i trafo** (lato −Y): TR1 a Y −3100…−2650 (stesso lato del castelletto), TR2 a Y 9300…9750 (lato muro). Script `build_finale.py`.
+
+**Modello SolidCraft finale:** `modelli/CP_Faggiano_Sezione_AT.solidcraft` e `.step`, ricostruito da `build_finale.py` a partire da `modelli/CP_Faggiano_Sezione_AT_base_SolidCraft.step` (geometria importata senza storia: la versione con le operazioni sulle parti annidate non si riapriva correttamente).
+
 Parametri SolidCraft: `MT_L`, `MT_S`, `MT_H`, `MT_X0`, `MT_Y0`, `MT_FB`, `MT_FH`.
 
 ## 3. Verifiche eseguite (verificatore)
