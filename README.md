@@ -31,7 +31,8 @@ Reverse_Engineering/
 ├── .editorconfig             ← stile dei file (UTF-8, LF, indentazione)
 ├── .github/                  ← modelli per pull request e segnalazioni
 ├── scripts/
-│   └── setup-cloud.sh        ← installa REA + skill + Ghidra nelle sessioni cloud
+│   ├── setup-cloud.sh        ← installa REA + skill + Ghidra nelle sessioni cloud
+│   └── setup-mac.sh          ← installa REA, SolidCraft, OpenSCAD (e Ghidra) su macOS
 └── Wiki_Progettazione/
     └── PROGRAMMAZIONE/       ← cartella di lavoro principale
         ├── README.md         ← indice dei progetti
@@ -124,6 +125,39 @@ Claude Code (`~/.claude/skills/reverse-engineer-anything`, con
 `rea setup --skill-client claude_code`; il server MCP resta quello di
 `.mcp.json`) e Ghidra 12.1.4 in `/opt/ghidra_12.1.4_PUBLIC` (verificando
 l'hash SHA-256 dell'archivio) e salta i passi già fatti. Richiede un JDK 21+.
+
+## Mac
+
+Sul Mac, dalla cartella del repository:
+
+```bash
+bash scripts/setup-mac.sh              # REA, SolidCraft, OpenSCAD
+bash scripts/setup-mac.sh --ghidra     # anche Ghidra 12.1.4 (con JDK 21)
+bash scripts/setup-mac.sh --senza-openscad
+```
+
+Prerequisiti: [Homebrew](https://brew.sh) e Xcode (per OpenSCAD serve Xcode
+completo, per il resto bastano gli strumenti da riga di comando). Lo script è
+idempotente e installa le versioni fissate in testa al file, tutte da GitHub
+o npm:
+
+| Strumento | Versione | Origine |
+| --- | --- | --- |
+| REA (`rea-agents`) + skill Claude Code | 6.7.0 | npm (sorgenti su `morluto/rea`) |
+| SolidCraft | 0.20.0 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` → `/Applications` |
+| OpenSCAD | `openscad-2026.10-TEST4` | compilato dai sorgenti GitHub `openscad/openscad` (dipendenze Homebrew) → `/Applications` |
+| Ghidra (facoltativo) | 12.1.4 | release GitHub, hash SHA-256 verificato → `~/.local` |
+
+Note:
+
+- OpenSCAD non pubblica eseguibili per macOS su GitHub (solo i sorgenti):
+  l'ultima versione stabile, la 2021.01, è del 2021; il tag
+  `openscad-2026.10-TEST4` è una versione di prova della prossima release.
+  La compilazione richiede parecchio tempo.
+- SolidCraft non è firmato: al primo avvio clic destro sull'app e **Apri**.
+- Ghidra 12.2 non è usato: REA 6.7.0 accetta solo Ghidra 12.1.x.
+- Le versioni installate sono riepilogate in
+  `~/.config/reverse-engineering/versioni-installate.txt`.
 
 ## Sincronizzazione
 

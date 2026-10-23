@@ -7,6 +7,15 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-10-23
+
+#### Aggiunto
+
+- `scripts/setup-mac.sh`: installazione su macOS di REA 6.7.0 con la skill per
+  Claude Code, SolidCraft 0.20.0 (dmg della release GitHub), OpenSCAD compilato
+  dai sorgenti GitHub (tag `openscad-2026.10-TEST4`) e, facoltativo, Ghidra
+  12.1.4.
+
 ### 2026-10-19
 
 #### Modificato

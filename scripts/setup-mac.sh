@@ -1,0 +1,119 @@
+#!/bin/bash
+# Installa su macOS gli strumenti del repository, scaricandoli da GitHub/npm:
+#   - REA (rea-agents, npm) con la skill per Claude Code;
+#   - SolidCraft (immagine disco della release GitHub tangency-labs/solidcraft);
+#   - OpenSCAD (compilato dai sorgenti GitHub openscad/openscad: il progetto
+#     non pubblica eseguibili per macOS su GitHub);
+#   - Ghidra 12.1.4 (facoltativo, per i binari nativi con REA; richiede JDK 21).
+#
+# Uso:   bash scripts/setup-mac.sh [--senza-openscad] [--ghidra]
+# Idempotente: salta ciò che è già alla versione indicata qui sotto.
+# Prerequisiti: Homebrew (https://brew.sh) e gli strumenti da riga di comando
+# di Xcode (xcode-select --install); OpenSCAD richiede Xcode completo.
+set -euo pipefail
+
+REA_VERSION="6.7.0"
+SOLIDCRAFT_VERSION="0.20.0"
+OPENSCAD_REF="openscad-2026.10-TEST4"
+GHIDRA_VERSION="12.1.4"
+GHIDRA_BUILD_DATE="20260921"
+GHIDRA_SHA256="ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db"
+
+CON_OPENSCAD=1
+CON_GHIDRA=0
+for arg in "$@"; do
+  case "$arg" in
+    --senza-openscad) CON_OPENSCAD=0 ;;
+    --ghidra) CON_GHIDRA=1 ;;
+    *) echo "opzione sconosciuta: $arg" >&2; exit 2 ;;
+  esac
+done
+
+[ "$(uname -s)" = "Darwin" ] || { echo "Questo script è per macOS." >&2; exit 1; }
+command -v brew >/dev/null || { echo "Serve Homebrew: https://brew.sh" >&2; exit 1; }
+xcode-select -p >/dev/null 2>&1 || { echo "Servono gli strumenti di Xcode: xcode-select --install" >&2; exit 1; }
+
+SRC_DIR="$HOME/.local/src"
+STATE_FILE="$HOME/.config/reverse-engineering/versioni-installate.txt"
+mkdir -p "$SRC_DIR" "$(dirname "$STATE_FILE")"
+
+app_version() {  # versione di un'app in /Applications (vuota se assente)
+  /usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$1/Contents/Info.plist" 2>/dev/null || true
+}
+
+# --- REA -------------------------------------------------------------------
+if ! command -v node >/dev/null || ! node -e '
+  const [a, b] = process.versions.node.split(".").map(Number);
+  process.exit(a > 22 || (a === 22 && b >= 19) ? 0 : 1)'; then
+  brew install node@22
+  export PATH="$(brew --prefix node@22)/bin:$PATH"
+fi
+if ! command -v rea >/dev/null || [ "$(rea --version)" != "$REA_VERSION" ]; then
+  npm install --global "rea-agents@${REA_VERSION}"
+  rm -rf "$HOME/.claude/skills/reverse-engineer-anything"
+fi
+if [ ! -f "$HOME/.claude/skills/reverse-engineer-anything/SKILL.md" ]; then
+  rea setup --skill-client claude_code --yes >/dev/null
+fi
+
+# --- Ghidra (facoltativo) ----------------------------------------------------
+GHIDRA_DIR="$HOME/.local/ghidra_${GHIDRA_VERSION}_PUBLIC"
+if [ "$CON_GHIDRA" = 1 ] && [ ! -x "$GHIDRA_DIR/support/analyzeHeadless" ]; then
+  brew install openjdk@21
+  tmp="$(mktemp -d)"
+  curl -fsSL -o "$tmp/ghidra.zip" \
+    "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_BUILD_DATE}.zip"
+  echo "${GHIDRA_SHA256}  $tmp/ghidra.zip" | shasum -a 256 -c -
+  unzip -q "$tmp/ghidra.zip" -d "$HOME/.local"
+  rm -rf "$tmp"
+fi
+
+# --- SolidCraft --------------------------------------------------------------
+if [ "$(app_version /Applications/SolidCraft.app)" != "$SOLIDCRAFT_VERSION" ]; then
+  tmp="$(mktemp -d)"
+  curl -fL -o "$tmp/solidcraft.dmg" \
+    "https://github.com/tangency-labs/solidcraft/releases/download/v${SOLIDCRAFT_VERSION}/solidcraft-macos-universal.dmg"
+  hdiutil attach -nobrowse -readonly -mountpoint "$tmp/mnt" "$tmp/solidcraft.dmg" >/dev/null
+  app="$(find "$tmp/mnt" -maxdepth 1 -name '*.app' | head -n 1)"
+  [ -n "$app" ] || { hdiutil detach "$tmp/mnt" >/dev/null; echo "SolidCraft.app non trovato nel dmg" >&2; exit 1; }
+  rm -rf /Applications/SolidCraft.app
+  ditto "$app" /Applications/SolidCraft.app
+  hdiutil detach "$tmp/mnt" >/dev/null
+  rm -rf "$tmp"
+  echo "SolidCraft non è firmato: al primo avvio clic destro sull'app in Applicazioni e scegli Apri."
+fi
+
+# --- OpenSCAD ----------------------------------------------------------------
+if [ "$CON_OPENSCAD" = 1 ] && [ "$(grep '^openscad=' "$STATE_FILE" 2>/dev/null | cut -d= -f2)" != "$OPENSCAD_REF" ]; then
+  src="$SRC_DIR/$OPENSCAD_REF"
+  [ -d "$src/.git" ] || git clone --depth 1 --branch "$OPENSCAD_REF" \
+    --recurse-submodules --shallow-submodules https://github.com/openscad/openscad.git "$src"
+  (
+    cd "$src"
+    ./scripts/macosx-build-homebrew.sh
+    cmake -B build -DEXPERIMENTAL=1 -DCMAKE_BUILD_TYPE=Release
+    cmake --build build -j "$(sysctl -n hw.ncpu)"
+  )
+  app="$(find "$src/build" -maxdepth 2 -name 'OpenSCAD.app' | head -n 1)"
+  [ -n "$app" ] || { echo "OpenSCAD.app non trovato in $src/build" >&2; exit 1; }
+  rm -rf /Applications/OpenSCAD.app
+  ditto "$app" /Applications/OpenSCAD.app
+fi
+
+# --- riepilogo ---------------------------------------------------------------
+{
+  echo "rea=$(rea --version)"
+  echo "solidcraft=$(app_version /Applications/SolidCraft.app)"
+  if [ "$CON_OPENSCAD" = 1 ]; then
+    echo "openscad=$OPENSCAD_REF"
+  else
+    grep '^openscad=' "$STATE_FILE" 2>/dev/null || true
+  fi
+  if [ -x "$GHIDRA_DIR/support/analyzeHeadless" ]; then echo "ghidra=$GHIDRA_VERSION"; fi
+} > "$STATE_FILE.new"
+mv "$STATE_FILE.new" "$STATE_FILE"
+echo "Versioni installate ($STATE_FILE):"
+cat "$STATE_FILE"
+if [ -x "$GHIDRA_DIR/support/analyzeHeadless" ]; then
+  echo "Per REA: export GHIDRA_INSTALL_DIR=$GHIDRA_DIR"
+fi
