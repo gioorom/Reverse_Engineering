@@ -1,0 +1,26 @@
+[
+["open",{"path":"C:\\Users\\pietr\\Workspace\\01_COMMESSE\\CP_Faggiano_TA\\Seazione AT STEP.step","up":"y"}],
+["measure",{"body":"plinto"}],
+["set_parameter",{"name":"MT_L","value":"7400 mm","comment":"Muro tagliafiamme: lunghezza lungo X stallo (trafo + >=1 m oltre radiatori/passanti)"}],
+["set_parameter",{"name":"MT_S","value":"300 mm","comment":"Spessore muro c.a. REI 120 (EN 1992-1-2 tab. 5.4: >=160 mm, adottati 300)"}],
+["set_parameter",{"name":"MT_H","value":"5000 mm","comment":"Altezza fuori terra >= sommita passante AT/conservatore (+4740) - CEI EN 61936-1 8.7.2"}],
+["set_parameter",{"name":"MT_X0","value":"20000 mm","comment":"Inizio muro lungo X sito"}],
+["set_parameter",{"name":"MT_Y0","value":"4700 mm","comment":"Faccia muro lato TR1 da asse TR1 (plinto a 4000, castelletto TR2 da ~6330)"}],
+["set_parameter",{"name":"MT_FB","value":"1000 mm","comment":"Larghezza trave di fondazione"}],
+["set_parameter",{"name":"MT_FH","value":"800 mm","comment":"Altezza trave di fondazione sotto quota 0"}],
+["batch",{"verbose":false,"commands":[
+ {"command":"component.activate","params":{"component":"root"}},
+ {"command":"solid.box","params":{"corner":["MT_X0","MT_Y0",0],"length":"MT_L","width":"MT_S","height":"MT_H","operation":"new","body_name":"MURO_TAGLIAFIAMME_REI120","name":"Muro tagliafiamme"}},
+ {"command":"solid.box","params":{"corner":["MT_X0","MT_Y0 + MT_S / 2 - MT_FB / 2","-MT_FH"],"length":"MT_L","width":"MT_FB","height":"MT_FH","operation":"new","body_name":"FONDAZIONE_MURO_TAGLIAFIAMME","name":"Fondazione muro"}},
+ {"command":"material.create","params":{"name":"Calcestruzzo C30/37 armato","density_g_cm3":2.5,"color":"#A8A49C","pbr":{"metallic":0,"roughness":0.9,"dielectric_ior":1.5}}},
+ {"command":"material.assign","params":{"bodies":["MURO_TAGLIAFIAMME_REI120","FONDAZIONE_MURO_TAGLIAFIAMME"],"material":"Calcestruzzo C30/37 armato"}},
+ {"command":"appearance.assign","params":{"bodies":["MURO_TAGLIAFIAMME_REI120"],"color":"#B5B1A8","pbr":{"metallic":0,"roughness":0.9,"dielectric_ior":1.5}}},
+ {"command":"appearance.assign","params":{"bodies":["FONDAZIONE_MURO_TAGLIAFIAMME"],"color":"#8E8A82"}},
+ {"command":"component.from_bodies","params":{"bodies":["MURO_TAGLIAFIAMME_REI120","FONDAZIONE_MURO_TAGLIAFIAMME"]}}
+]}],
+["execute",{"command":"component.metadata.set","params":{"component":"MURO_TAGLIAFIAMME_REI120","part_number":"CPF-MT-01","description":"Muro tagliafiamme TR1/TR2 in c.a. REI 120, 7400x300x5000 mm","properties":{"IfcClass":"IfcWall","PredefinedType":"SOLIDWALL","FireRating":"REI 120","Materiale":"Calcestruzzo C30/37 XC4, acciaio B450C, copriferro 35 mm","Norma":"CEI EN 61936-1 par. 8.7.2; EN 1992-1-2; D.M. 15/07/2014","Stallo":"TR1-TR2","Fonte":"Progetto CP Faggiano"}}}],
+["execute",{"command":"component.metadata.set","params":{"component":"FONDAZIONE_MURO_TAGLIAFIAMME","part_number":"CPF-MT-02","description":"Trave di fondazione muro tagliafiamme 7400x1000x800 mm","properties":{"IfcClass":"IfcFooting","PredefinedType":"STRIP_FOOTING","Materiale":"Calcestruzzo C25/30 XC2, acciaio B450C","Stallo":"TR1-TR2"}}}],
+["measure",{"body":"MURO_TAGLIAFIAMME_REI120"}],
+["measure",{"body":"conservatore"}],
+["screenshot",{"source":"model","view":"iso","path":"C:\\Users\\pietr\\Desktop\\sc_mcp\\muro_iso2.png","width":1400,"height":900}]
+]

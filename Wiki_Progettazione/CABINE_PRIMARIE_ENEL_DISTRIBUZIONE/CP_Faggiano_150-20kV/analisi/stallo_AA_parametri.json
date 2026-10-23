@@ -1,0 +1,370 @@
+{
+ "_fonti": {
+  "P-006": "DD01-PUG-HMS-DW00-1-389471-n-P-006 rev.01 Sezioni elettriche parte AT, scala 1:50 (Faggiano)",
+  "E-002": "DD01-PUG-HMS-DW00-1-389471-2-E-002 Datasheet interruttore AT GE GL313F1/F3 4031P",
+  "M-009": "DD01-PUG-HMS-DW00-1-389471-4-M-009 Sezionatore AT lato linea GE S3C/S3CT (D1210-AA-IT)",
+  "E-007": "DD01-PUG-HMS-DW00-1-389474-2-E-007 Scaricatore Tridelta SBKC 138/SM-II (Guagnano)",
+  "C-036": "DD01-PUB-HMS-DW00-1-389474-n-C-036 Sostegno scaricatori Tridelta 221281 H4940 (Guagnano)",
+  "C-041": "DD01-PUG-HMS-DW00-1-389471-2-C-041 Sostegno terna isolatori portanti H4850/H5350",
+  "DJ1003": "Bonomi S050645 isolatore portante ISI-BUL-A16+15-GG",
+  "LM1034/LM1085": "Unificazione ENEL LM1034 (Ed.1 1973), LM1085 (Ed.1 1973)",
+  "TBEA": "TBEA 1TBC.710.H10299.1 outline SZ-25000/150"
+ },
+ "_note": "DC = da confermare: quote misurate in scala 1:50 dalla P-006 (tolleranza ~ +/-30 mm) o stimate",
+ "layout": {
+  "X": {
+   "TV_2": -16700,
+   "QS_3": -14200,
+   "TA_4": -10700,
+   "QF_5": -8200,
+   "QSB_6": -4200,
+   "SB_7": 0,
+   "QSB_6p": 4200,
+   "QF_5p": 8200,
+   "TA_4p": 10700,
+   "SC_8": 13700,
+   "IS_7p": 19200,
+   "TR_9": 23700
+  },
+  "Y_fasi": [
+   -2200,
+   0,
+   2200
+  ],
+  "Y_portale_sbarre": -4200,
+  "Z_fondazione": 200,
+  "Z_sbarre": 7200,
+  "Z_derivazione": 4700,
+  "Z_plinto_TR": 650,
+  "Y_sbarre": [
+   -4500,
+   5200
+  ]
+ },
+ "DJ1003": {
+  "H": 1500,
+  "d_big": 235,
+  "d_small": 200,
+  "n_big": 16,
+  "n_small": 15,
+  "d_trunk": 130,
+  "flange_bot": [
+   235,
+   15
+  ],
+  "fit_bot": [
+   180,
+   160
+  ],
+  "fit_top": [
+   160,
+   110
+  ]
+ },
+ "LS6096_1": {
+  "H": 4850,
+  "tubo": [
+   219.1,
+   5.9
+  ],
+  "piastra_base": [
+   550,
+   15
+  ],
+  "trave": [
+   4700,
+   250,
+   100
+  ],
+  "passo_iso": 2200
+ },
+ "LS6096_2": {
+  "H": 5350,
+  "tubo": [
+   219.1,
+   5.9
+  ],
+  "piastra_base": [
+   550,
+   15
+  ],
+  "trave": [
+   4700,
+   250,
+   100
+  ],
+  "passo_iso": 2200
+ },
+ "DY43_SC": {
+  "H": 4940,
+  "tubo": [
+   168.3,
+   6.3
+  ],
+  "piastra_base": [
+   550,
+   15
+  ],
+  "piastra_testa": [
+   300,
+   15
+  ]
+ },
+ "DY43_TA": {
+  "H": 3150,
+  "tubo": [
+   168.3,
+   6.3
+  ],
+  "piastra_base": [
+   550,
+   15
+  ],
+  "piastra_testa": [
+   400,
+   20
+  ]
+ },
+ "DY43_TV": {
+  "H": 2050,
+  "tubo": [
+   168.3,
+   6.3
+  ],
+  "piastra_base": [
+   550,
+   15
+  ],
+  "piastra_testa": [
+   400,
+   20
+  ]
+ },
+ "SBKC138": {
+  "H": 1337,
+  "Hges": 1513,
+  "h_base": 83,
+  "d_base": 260,
+  "d_big": 205,
+  "d_small": 153,
+  "d_trunk": 95,
+  "n_big": 14,
+  "n_small": 13,
+  "stud": [
+   40,
+   93
+  ]
+ },
+ "GL313_polo": {
+  "h_inf": 1400,
+  "h_mid": 100,
+  "h_cam": 1600,
+  "h_top": 100,
+  "d_mid": 420,
+  "d_top": 380,
+  "iso_inf": [
+   200,
+   360,
+   310,
+   13,
+   12
+  ],
+  "camera": [
+   260,
+   400,
+   350,
+   15,
+   14
+  ]
+ },
+ "GL313_sost": {
+  "H": 2850,
+  "lato": 500,
+  "ang": 80,
+  "piastra": [
+   600,
+   20
+  ]
+ },
+ "FK3_armadio": {
+  "L": 450,
+  "P": 350,
+  "H": 850,
+  "z0": 600,
+  "dx": 410
+ },
+ "S3C": {
+  "interasse_col": 1120,
+  "telaio": [
+   2500,
+   300,
+   150
+  ],
+  "col_H": 1450,
+  "col": [
+   150,
+   230,
+   190,
+   15,
+   14
+  ],
+  "lama": [
+   2300,
+   80,
+   50
+  ],
+  "z_lama": 1660
+ },
+ "S3C_sost": {
+  "H": 2800,
+  "tubo_c": [
+   273,
+   8
+  ],
+  "tubo_l": [
+   114.3,
+   5
+  ],
+  "dx_l": 500,
+  "trave": [
+   1300,
+   250,
+   100
+  ]
+ },
+ "CMM": {
+  "L": 400,
+  "P": 300,
+  "H": 600,
+  "z0": 700,
+  "dx": -500
+ },
+ "TA_DY34": {
+  "base": [
+   500,
+   200
+  ],
+  "iso": [
+   1600,
+   220,
+   400,
+   340,
+   20,
+   19
+  ],
+  "testa": [
+   560,
+   400
+  ],
+  "cupola": [
+   320,
+   100
+  ],
+  "z_P": 1950,
+  "pad": [
+   100,
+   100,
+   20
+  ]
+ },
+ "TV_DY46": {
+  "base": [
+   520,
+   700
+  ],
+  "iso": [
+   1750,
+   180,
+   330,
+   280,
+   18,
+   17
+  ],
+  "cap": [
+   260,
+   80
+  ],
+  "stud": [
+   40,
+   50
+  ]
+ },
+ "LM1034_1": {
+  "base": [
+   160,
+   15
+  ],
+  "stelo": 70,
+  "h_asse": 150,
+  "d_tubo": 40,
+  "barile": [
+   90,
+   200
+  ]
+ },
+ "LM1041": {
+  "base": [
+   160,
+   15
+  ],
+  "stelo": 90,
+  "h_asse": 150,
+  "d_tubo": 100,
+  "barile": [
+   150,
+   250
+  ]
+ },
+ "LM1085": {
+  "codolo": [
+   60,
+   110
+  ],
+  "h_asse": 150,
+  "d_tubo": 40,
+  "barile": [
+   80,
+   160
+  ]
+ },
+ "SBARRA": {
+  "D": 100,
+  "s": 5
+ },
+ "COND": {
+  "D": 40
+ },
+ "TR_TBEA": {
+  "Ltot": 6960,
+  "Wtot": 3600,
+  "skid": 250,
+  "vasca": [
+   6200,
+   1900,
+   2650
+  ],
+  "Y_1V_da_estremo": 2969,
+  "AT_dx": -625,
+  "AT_passo": 1650,
+  "AT_Ztop": 4088,
+  "MT_Ztop": 3213,
+  "MT_passo": 253,
+  "conserv": [
+   1050,
+   3500,
+   1315,
+   3560
+  ],
+  "rad": [
+   850,
+   40,
+   2000,
+   8,
+   600
+  ]
+ },
+ "FOND_TR": {
+  "X": 6400,
+  "Y": 8000
+ }
+}
