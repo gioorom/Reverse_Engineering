@@ -1,11 +1,11 @@
-[
+﻿[
 ["open",{"path":"C:\\Users\\pietr\\Workspace\\01_COMMESSE\\CP_Faggiano_TA\\Seazione AT STEP.step","up":"y"}],
 ["measure",{"body":"plinto"}],
 ["set_parameter",{"name":"MT_L","value":"7400 mm","comment":"Muro tagliafiamme: lunghezza lungo X stallo (trafo + >=1 m oltre radiatori/passanti)"}],
 ["set_parameter",{"name":"MT_S","value":"300 mm","comment":"Spessore muro c.a. REI 120 (EN 1992-1-2 tab. 5.4: >=160 mm, adottati 300)"}],
 ["set_parameter",{"name":"MT_H","value":"5000 mm","comment":"Altezza fuori terra >= sommita passante AT/conservatore (+4740) - CEI EN 61936-1 8.7.2"}],
 ["set_parameter",{"name":"MT_X0","value":"20000 mm","comment":"Inizio muro lungo X sito"}],
-["set_parameter",{"name":"MT_Y0","value":"4700 mm","comment":"Faccia muro lato TR1 da asse TR1 (plinto a 4000, castelletto TR2 da ~6330)"}],
+["set_parameter",{"name":"MT_Y0","value":"6050 mm","comment":"Faccia muro lato TR1: muro centrato fra i plinti TR1/TR2 (asse Y 6200)"}],
 ["set_parameter",{"name":"MT_FB","value":"1000 mm","comment":"Larghezza trave di fondazione"}],
 ["set_parameter",{"name":"MT_FH","value":"800 mm","comment":"Altezza trave di fondazione sotto quota 0"}],
 ["batch",{"verbose":false,"commands":[

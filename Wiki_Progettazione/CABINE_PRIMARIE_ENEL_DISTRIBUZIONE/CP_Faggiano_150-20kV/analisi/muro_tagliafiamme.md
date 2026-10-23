@@ -9,7 +9,8 @@
 | Plinti TR | 6400 × 8000 × 650, distanza netta 4400 | modello |
 | Ingombro radiatori | fino a ±2540 da asse TR | modello SolidCraft (misura) |
 | Sommità conservatore / terminale AT | +4590 / +4740 | modello SolidCraft (misura) |
-| Castelletto MT del TR2 | da Y ≈ +7200 a +8100 | modello |
+| Castelletti MT | TR1 (Rosso) a Y −5200, TR2 (Verde) a Y +17 600: entrambi sul lato esterno | modello SolidCraft |
+| Orientamento | spalle ai TR guardando la linea: TR Rosso = TR1 a sinistra, TR Verde = TR2 a destra (Y +) | utente |
 
 ## Norma
 
@@ -25,8 +26,9 @@ Spessore: EN 1992-1-2, tab. 5.4 (pareti REI 120 in c.a.: ≥ 160 mm) → adottat
 
 ## Verifiche geometriche (dal modello)
 
-- Faccia del muro lato TR1 a 700 mm dal bordo del plinto TR1 ✔
-- Faccia del muro lato TR2 a circa 2200 mm dal castelletto MT del TR2 ✔
+- Muro centrato fra i plinti: Y 6050…6350 (asse 6200), fondazione Y 5700…6700
+- 2050 mm dal plinto TR1 (bordo a 4000) e 2050 mm dal plinto TR2 (bordo a 8400) ✔
+- Fra i due trafo ci sono solo i plinti: i castelletti MT sono entrambi sul lato esterno ✔
 - Nessuna sovrapposizione con plinti, castelletti o conduttori ✔
 
 ## Da fare

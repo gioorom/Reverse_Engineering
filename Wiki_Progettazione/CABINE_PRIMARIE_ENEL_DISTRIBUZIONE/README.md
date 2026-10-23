@@ -14,4 +14,4 @@ Progettazione elettromeccanica di cabine primarie AT/MT secondo gli standard Ene
 
 | Impianto | Contenuto | Stato |
 | --- | --- | --- |
-| [CP Faggiano 150/20 kV](CP_Faggiano_150-20kV/) | Sezione AT: 2 stalli linea, 2 stalli trafo Matelec, sbarre, castelletti MT, armadi di comando, sezionatori con lame di terra, muro tagliafiamme | Modello Fusion v10, muro tagliafiamme in SolidCraft |
+| [CP Faggiano 150/20 kV](CP_Faggiano_150-20kV/) | Sezione AT: 2 stalli linea, 2 stalli trafo Matelec, sbarre, castelletti MT, armadi di comando, sezionatori con lame di terra, muro tagliafiamme | Modello Fusion v10; in SolidCraft muro tagliafiamme centrale e castelletti MT lato esterno |

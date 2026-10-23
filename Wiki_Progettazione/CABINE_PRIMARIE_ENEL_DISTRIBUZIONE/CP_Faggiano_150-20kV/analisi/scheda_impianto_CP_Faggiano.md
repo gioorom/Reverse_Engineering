@@ -128,8 +128,12 @@ Realizzato in SolidCraft 0.20 via MCP sul modello STEP della sezione AT (aperto 
 
 | Elemento | Posizione (sito, mm) | Dimensioni (mm) | Materiale |
 | --- | --- | --- | --- |
-| MURO_TAGLIAFIAMME_REI120 (IfcWall) | X 20000…27400, Y 4700…5000, Z 0…5000 | 7400 × 300 × 5000 | c.a. C30/37 XC4, B450C, copriferro 35 |
-| FONDAZIONE_MURO_TAGLIAFIAMME (IfcFooting) | X 20000…27400, Y 4350…5350, Z −800…0 | 7400 × 1000 × 800 | c.a. C25/30 XC2 |
+| MURO_TAGLIAFIAMME_REI120 (IfcWall) | X 20000…27400, Y 6050…6350, Z 0…5000 | 7400 × 300 × 5000 | c.a. C30/37 XC4, B450C, copriferro 35 |
+| FONDAZIONE_MURO_TAGLIAFIAMME (IfcFooting) | X 20000…27400, Y 5700…6700, Z −800…0 | 7400 × 1000 × 800 | c.a. C25/30 XC2 |
+
+Muro centrato fra i plinti TR1/TR2 (asse Y 6200).
+
+**TR2 (TR Verde) con castelletto sul lato esterno.** Orientamento: spalle ai TR guardando la linea, TR Rosso = TR1 a sinistra, TR Verde = TR2 a destra. Il castelletto MT del TR2 è passato da Y 7200 a **Y 17 600**: trafo, castelletto, sbarre MT, collegamenti e cavi sono stati specchiati rispetto al piano Y 6200 in componenti `*_TR2`, e isolatori e terminali ricopiati in posizione speculare (script `tr2_specchio.py`). Il lato MT è stato tolto dalla definizione condivisa `STALLO_TRAFO`, quindi ogni stallo ha i suoi pezzi. Con lo specchio la sequenza delle fasi MT del TR2 risulta invertita rispetto al TR1: va verificata con lo schema dei collegamenti.
 
 Parametri SolidCraft: `MT_L`, `MT_S`, `MT_H`, `MT_X0`, `MT_Y0`, `MT_FB`, `MT_FH`.
 
