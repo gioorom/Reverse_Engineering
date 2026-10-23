@@ -19,7 +19,7 @@ Modello 3D della sezione AT della cabina primaria Enel Distribuzione di Faggiano
 - `analisi/muro_tagliafiamme.md` — dimensionamento e norma del muro tagliafiamme
 - `analisi/stallo_AA_parametri.json` — quote e parametri dello stallo
 - `implementazione/fusion/` — script nell'ordine: `fusion_stallo_AA.py`, `update_TR_matelec.py`, `fase2_stallo2_castelletto.py`, `fase3_dettaglio_materiali.py`, `fase3b_nomi_materiali.py`, `fase4_armadi_comando.py`, `fase5_sezionatore_terra.py`
-- `implementazione/solidcraft/` — `scl.py` e `sc.py` (client MCP), `muro_tagliafiamme_solidcraft.json`, `tr2_specchio.py`, `build_finale.py`
+- `implementazione/solidcraft/` — `scl.py` e `sc.py` (client MCP), `muro_tagliafiamme_solidcraft.json`, `tr2_specchio.py`, `build_finale.py`, `piatti_MT_cu.py`
 
 ## Uso di SolidCraft via MCP
 
@@ -27,6 +27,7 @@ Modello 3D della sezione AT della cabina primaria Enel Distribuzione di Faggiano
 2. Esegui: `python sc.py muro_tagliafiamme_solidcraft.json` (apre lo STEP con `up: y`, crea parametri, muro, fondazione, materiale e attributi BIM).
 3. Esegui: `python tr2_specchio.py` (porta il castelletto MT del TR2 sul lato esterno e centra il muro), poi esporta lo STEP.
 4. Modello finale: `python build_finale.py modelli\CP_Faggiano_Sezione_AT_base_SolidCraft.step modelli` (armadi TR a sinistra, muro parametrico, attributi BIM, salvataggio e verifica dopo la riapertura).
+5. Collegamento MT in rame: `python piatti_MT_cu.py modelli\CP_Faggiano_Sezione_AT.solidcraft modelli\CP_Faggiano_Sezione_AT.step`.
 
 Nota: SolidCraft 0.20 non riapre correttamente le operazioni (copia, specchio) fatte su corpi di componenti annidati in uno STEP importato; per questo il modello finale parte da uno STEP senza storia.
 
@@ -39,5 +40,6 @@ Nota: SolidCraft 0.20 non riapre correttamente le operazioni (copia, specchio) f
 - [x] Muro tagliafiamme TR1/TR2 REI 120, centrale (SolidCraft)
 - [x] Castelletto MT del TR2 (Verde) sul lato esterno (SolidCraft, `tr2_specchio.py`)
 - [x] Armadi dei TR sulla sinistra di entrambi i trafo (SolidCraft, `build_finale.py`)
+- [x] Collegamento passanti MT → castelletto in piatto Cu 100x10 (SolidCraft, `piatti_MT_cu.py`)
 - [ ] Il modello Fusion ha ancora il castelletto del TR2 sul lato interno
 - [ ] Planimetria P-001, disegni GE, vasca olio, rete di terra (vedi punti aperti nella scheda)

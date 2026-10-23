@@ -137,6 +137,17 @@ Muro centrato fra i plinti TR1/TR2 (asse Y 6200).
 
 **Armadi del TR (comando motore CSC e cassetta ausiliari) sulla sinistra di entrambi i trafo** (lato −Y): TR1 a Y −3100…−2650 (stesso lato del castelletto), TR2 a Y 9300…9750 (lato muro). Script `build_finale.py`.
 
+**Collegamento passanti MT TR → castelletto: piatto di rame Cu-ETP 100 × 10** (componenti `COLL_MT_CU100x10_TR1` / `_TR2`, script `piatti_MT_cu.py`; sostituisce il vecchio collegamento a corda). Per ogni fase quattro tratti:
+
+| Tratto | Percorso (TR1; TR2 speculare rispetto a Y 6200) | Posa |
+| --- | --- | --- |
+| B1 | risalita dalla bandiera del passante MT (Z 3560) a Z 4435 | di costa, imbullonato alla bandiera |
+| B2 | dal passante (X 23515/23885/24255, Y −2200) all'isolatore portante C8-125 (X 23330/23700/24070, Y −4367) | di piatto, Z 4435…4445 |
+| B3 | dall'isolatore verso la sbarra della propria fase | di piatto, Z 4435…4445 |
+| B4 | risalita sulla faccia lato TR della sbarra del castelletto fino a Z 4935 | di costa, sovrapposizione 100 mm |
+
+Distanze MT verificate (24 kV, N = 220 mm): fra i piatti B2 di fasi vicine ≈ 270 mm, fra B3 della L1 e le sbarre L2/L3 sovrastanti 390 mm, fra la risalita L1 e la sbarra L2 350 mm ✔. Da confermare con il costruttore il foro e la bulloneria della bandiera.
+
 **Modello SolidCraft finale:** `modelli/CP_Faggiano_Sezione_AT.solidcraft` e `.step`, ricostruito da `build_finale.py` a partire da `modelli/CP_Faggiano_Sezione_AT_base_SolidCraft.step` (geometria importata senza storia: la versione con le operazioni sulle parti annidate non si riapriva correttamente).
 
 Parametri SolidCraft: `MT_L`, `MT_S`, `MT_H`, `MT_X0`, `MT_Y0`, `MT_FB`, `MT_FH`.
