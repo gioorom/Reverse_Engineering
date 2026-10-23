@@ -137,7 +137,7 @@ Muro centrato fra i plinti TR1/TR2 (asse Y 6200).
 
 **Armadi del TR (comando motore CSC e cassetta ausiliari) sulla sinistra di entrambi i trafo** (lato −Y): TR1 a Y −3100…−2650 (stesso lato del castelletto), TR2 a Y 9300…9750 (lato muro). Script `build_finale.py`.
 
-**Collegamento passanti MT TR → castelletto: piatto di rame Cu-ETP 100 × 10** (componenti `COLL_MT_CU100x10_TR1` / `_TR2`, script `piatti_MT_cu.py`; sostituisce il vecchio collegamento a corda). Per ogni fase quattro tratti:
+**Collegamento passanti MT TR → castelletto: piatto di rame Cu-ETP 100 × 10** (componenti `COLL_MT_CU100x10_TR1` / `_TR2`, script `piatti_MT_cu.py`; sostituisce il vecchio collegamento a tubo, i cui 12 corpi `collegamento_MT*` sono stati tolti con `rimuovi_tubi_MT.py`). Per ogni fase quattro tratti:
 
 | Tratto | Percorso (TR1; TR2 speculare rispetto a Y 6200) | Posa |
 | --- | --- | --- |

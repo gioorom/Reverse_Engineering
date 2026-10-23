@@ -19,7 +19,7 @@ Modello 3D della sezione AT della cabina primaria Enel Distribuzione di Faggiano
 - `analisi/muro_tagliafiamme.md` — dimensionamento e norma del muro tagliafiamme
 - `analisi/stallo_AA_parametri.json` — quote e parametri dello stallo
 - `implementazione/fusion/` — script nell'ordine: `fusion_stallo_AA.py`, `update_TR_matelec.py`, `fase2_stallo2_castelletto.py`, `fase3_dettaglio_materiali.py`, `fase3b_nomi_materiali.py`, `fase4_armadi_comando.py`, `fase5_sezionatore_terra.py`
-- `implementazione/solidcraft/` — `scl.py` e `sc.py` (client MCP), `muro_tagliafiamme_solidcraft.json`, `tr2_specchio.py`, `build_finale.py`, `piatti_MT_cu.py`
+- `implementazione/solidcraft/` — `scl.py` e `sc.py` (client MCP), `muro_tagliafiamme_solidcraft.json`, `tr2_specchio.py`, `build_finale.py`, `piatti_MT_cu.py`, `rimuovi_tubi_MT.py`
 
 ## Uso di SolidCraft via MCP
 
