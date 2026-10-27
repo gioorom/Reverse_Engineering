@@ -22,6 +22,12 @@ Il repository non ha ancora versioni rilasciate.
 - SolidCraft per macOS aggiornato da 0.20.0 a 0.24.0 (`scripts/setup-mac.sh`);
   dalla 0.23 l'app è firmata e notarizzata.
 
+#### Aggiunto
+
+- `scripts/setup-mac.sh` installa Open CAD Studio v2026.43 (dmg Apple Silicon
+  della release GitHub, opzione `--senza-opencadstudio`) e verifica l'hash
+  SHA-256 dei dmg di SolidCraft e Open CAD Studio.
+
 ### 2026-10-23
 
 #### Aggiunto

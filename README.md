@@ -32,7 +32,7 @@ Reverse_Engineering/
 ├── .github/                  ← modelli per pull request e segnalazioni
 ├── scripts/
 │   ├── setup-cloud.sh        ← installa REA + skill + Ghidra nelle sessioni cloud
-│   └── setup-mac.sh          ← installa REA, SolidCraft, OpenSCAD (e Ghidra) su macOS
+│   └── setup-mac.sh          ← installa REA, SolidCraft, Open CAD Studio, OpenSCAD (e Ghidra) su macOS
 └── Wiki_Progettazione/
     └── PROGRAMMAZIONE/       ← cartella di lavoro principale
         ├── README.md         ← indice dei progetti
@@ -132,9 +132,9 @@ l'hash SHA-256 dell'archivio) e salta i passi già fatti. Richiede un JDK 21+.
 Sul Mac, dalla cartella del repository:
 
 ```bash
-bash scripts/setup-mac.sh              # REA, SolidCraft, OpenSCAD
+bash scripts/setup-mac.sh              # REA, SolidCraft, Open CAD Studio, OpenSCAD
 bash scripts/setup-mac.sh --ghidra     # anche Ghidra 12.1.4 (con JDK 21)
-bash scripts/setup-mac.sh --senza-openscad
+bash scripts/setup-mac.sh --senza-openscad --senza-opencadstudio
 ```
 
 Prerequisiti: [Homebrew](https://brew.sh) e Xcode (per OpenSCAD serve Xcode
@@ -145,7 +145,8 @@ o npm:
 | Strumento | Versione | Origine |
 | --- | --- | --- |
 | REA (`rea-agents`) + skill Claude Code | 6.8.0 | npm (sorgenti su `morluto/rea`) |
-| SolidCraft | 0.24.0 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` → `/Applications` |
+| SolidCraft | 0.24.0 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` (hash SHA-256 verificato) → `/Applications` |
+| Open CAD Studio | v2026.43 | release GitHub `HakanSeven12/OpenCADStudio`, `OpenCADStudio-v<versione>-macos-arm64.dmg` (hash SHA-256 verificato) → `/Applications` |
 | OpenSCAD | `openscad-2026.10-TEST4` | compilato dai sorgenti GitHub `openscad/openscad` (dipendenze Homebrew) → `/Applications` |
 | Ghidra (facoltativo) | 12.1.4 | release GitHub, hash SHA-256 verificato → `~/.local` |
 
@@ -156,6 +157,11 @@ Note:
   `openscad-2026.10-TEST4` è una versione di prova della prossima release.
   La compilazione richiede parecchio tempo.
 - SolidCraft è firmato e notarizzato da Apple dalla 0.23; installa anche `solidcraft-cli` nel PATH.
+- Open CAD Studio esce ogni domenica (versioni `anno.settimana`), solo per Mac
+  con Apple Silicon; non è notarizzato: se macOS blocca il primo avvio,
+  approvalo in Impostazioni di Sistema → Privacy e sicurezza.
+- Gli hash dei dmg sono stati calcolati sui file delle release al momento
+  dell'aggiornamento dello script (le release non pubblicano checksum).
 - Se Node manca o è più vecchio di quanto richiede REA, lo script installa `node@22` con Homebrew.
 - Ghidra 12.2 non è usato: REA 6.8.0 accetta solo Ghidra 12.1.x.
 - Le versioni installate sono riepilogate in
