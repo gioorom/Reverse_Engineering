@@ -7,6 +7,21 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-10-27
+
+#### Modificato
+
+- REA aggiornato da `rea-agents@6.7.0` a `rea-agents@6.8.0` (`.mcp.json`,
+  `scripts/setup-cloud.sh`, `scripts/setup-mac.sh`, `README.md`, `CLAUDE.md`).
+  Richiede Node `^22.23.4 || ^24.22.1 || >=26.12.1`: entrambi gli script
+  controllano la versione; `setup-cloud.sh` installa Node 22.23.4 dalla
+  release ufficiale (hash SHA-256 verificato), `setup-mac.sh` usa Homebrew.
+  Ghidra resta 12.1.4 (REA 6.8.0 accetta solo 12.1.x). Modifiche
+  incompatibili solo nella forma di alcuni risultati (`analyze_function` con
+  riepilogo di default, formato `--format jsonl`, schemi MCP compatti).
+- SolidCraft per macOS aggiornato da 0.20.0 a 0.24.0 (`scripts/setup-mac.sh`);
+  dalla 0.23 l'app è firmata e notarizzata.
+
 ### 2026-10-23
 
 #### Aggiunto

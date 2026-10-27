@@ -12,8 +12,8 @@
 # di Xcode (xcode-select --install); OpenSCAD richiede Xcode completo.
 set -euo pipefail
 
-REA_VERSION="6.7.0"
-SOLIDCRAFT_VERSION="0.20.0"
+REA_VERSION="6.8.0"
+SOLIDCRAFT_VERSION="0.24.0"
 OPENSCAD_REF="openscad-2026.10-TEST4"
 GHIDRA_VERSION="12.1.4"
 GHIDRA_BUILD_DATE="20260921"
@@ -42,11 +42,17 @@ app_version() {  # versione di un'app in /Applications (vuota se assente)
 }
 
 # --- REA -------------------------------------------------------------------
-if ! command -v node >/dev/null || ! node -e '
-  const [a, b] = process.versions.node.split(".").map(Number);
-  process.exit(a > 22 || (a === 22 && b >= 19) ? 0 : 1)'; then
-  brew install node@22
+# REA 6.8.0 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
+node_ok() {
+  command -v node >/dev/null && node -e '
+  const [a, b, c] = process.versions.node.split(".").map(Number);
+  const ge = (x, y, z) => b > y || (b === y && c >= z);
+  process.exit((a === 22 && ge(22, 23, 4)) || (a === 24 && ge(24, 22, 1)) || (a === 26 && ge(26, 12, 1)) || a > 26 ? 0 : 1)'
+}
+if ! node_ok; then
+  brew install node@22 || brew upgrade node@22
   export PATH="$(brew --prefix node@22)/bin:$PATH"
+  node_ok || { echo "Node $(node -v) non soddisfa i requisiti di REA ${REA_VERSION}" >&2; exit 1; }
 fi
 if ! command -v rea >/dev/null || [ "$(rea --version)" != "$REA_VERSION" ]; then
   npm install --global "rea-agents@${REA_VERSION}"
@@ -80,8 +86,7 @@ if [ "$(app_version /Applications/SolidCraft.app)" != "$SOLIDCRAFT_VERSION" ]; t
   ditto "$app" /Applications/SolidCraft.app
   hdiutil detach "$tmp/mnt" >/dev/null
   rm -rf "$tmp"
-  echo "SolidCraft non è firmato: al primo avvio clic destro sull'app in Applicazioni e scegli Apri."
-fi
+  fi
 
 # --- OpenSCAD ----------------------------------------------------------------
 if [ "$CON_OPENSCAD" = 1 ] && [ "$(grep '^openscad=' "$STATE_FILE" 2>/dev/null | cut -d= -f2)" != "$OPENSCAD_REF" ]; then
