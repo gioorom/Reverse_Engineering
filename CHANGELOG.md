@@ -7,6 +7,14 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-10-28
+
+#### Modificato
+
+- SolidCraft per macOS aggiornato da 0.24.0 a 0.25.1 (`scripts/setup-mac.sh`,
+  nuovo hash SHA-256 del dmg). I nuovi progetti si salvano come `.sc` e
+  l'identificativo dell'app diventa `io.tangencylabs.solidcraft`.
+
 ### 2026-10-27
 
 #### Modificato
