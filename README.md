@@ -145,7 +145,7 @@ o npm:
 | Strumento | Versione | Origine |
 | --- | --- | --- |
 | REA (`rea-agents`) + skill Claude Code | 6.8.0 | npm (sorgenti su `morluto/rea`) |
-| SolidCraft | 0.25.1 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` (hash SHA-256 verificato) → `/Applications` |
+| SolidCraft | 0.26.0 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` (hash SHA-256 verificato) → `/Applications` |
 | Open CAD Studio | v2026.43 | release GitHub `HakanSeven12/OpenCADStudio`, `OpenCADStudio-v<versione>-macos-arm64.dmg` (hash SHA-256 verificato) → `/Applications` |
 | OpenSCAD | `openscad-2026.10-TEST4` | compilato dai sorgenti GitHub `openscad/openscad` (dipendenze Homebrew) → `/Applications` |
 | Ghidra (facoltativo) | 12.1.4 | release GitHub, hash SHA-256 verificato → `~/.local` |
