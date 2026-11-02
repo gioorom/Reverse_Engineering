@@ -7,6 +7,13 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-11-02
+
+#### Modificato
+
+- SolidCraft per macOS aggiornato da 0.27.1 a 0.30.0 e Open CAD Studio da
+  v2026.43 a v2026.44 (`scripts/setup-mac.sh`, nuovi hash SHA-256 dei dmg).
+
 ### 2026-10-30
 
 #### Modificato
