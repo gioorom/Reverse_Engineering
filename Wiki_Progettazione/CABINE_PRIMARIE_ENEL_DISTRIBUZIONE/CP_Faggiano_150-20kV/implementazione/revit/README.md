@@ -68,3 +68,18 @@ contenuti nel piano e con Pset `CPF_CP_Faggiano` (Stallo, Apparecchio, Occorrenz
 
 In IFC4 l'interruttore è un IfcProtectiveDevice (non IfcSwitchingDevice) e il sezionatore non ha un tipo
 predefinito: si usa USERDEFINED con ObjectType.
+
+## Georeferenziazione PROVVISORIA (03/11/2026)
+
+`python georeferenzia.py <ifc_in> <ifczip_out>` imposta la posizione nel modello Revit (coordinate condivise e
+luogo) e nell'IFC (IfcProjectedCRS + IfcMapConversion, RefLatitude/RefLongitude/RefElevation di IfcSite).
+
+| Dato | Valore | Stato |
+| --- | --- | --- |
+| Sistema | EPSG:6708 RDN2008 / UTM 33N, quote Genova 1942 | |
+| Origine modello (asse 7, ±0,00) | E 702 180,00 – N 4 476 770,00 | **provvisorio**: centro di Faggiano, non la CP |
+| Quota piano piazzale | 56,00 m s.l.m. | **provvisorio**: quota del comune |
+| Rotazione asse X sito rispetto all'Est | 0° | **provvisorio** |
+| WGS84 | 40,417° N – 17,383° E | coerente con E/N |
+
+Da sostituire con i dati della planimetria P-001 o del rilievo: cambiare i parametri in testa allo script e rilanciarlo.
