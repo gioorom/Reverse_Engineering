@@ -37,3 +37,34 @@ acciaio verniciato, isolatore, calcestruzzo) assegnati per faccia.
 
 Limiti: geometria a mesh (DirectShape, non famiglie parametriche); circa 8 000 triangoli più piccoli della
 tolleranza di Revit (0,8 mm) sono stati scartati.
+
+## Export IFC4 con classi (03/11/2026)
+
+`python esporta_ifc.py <cartella>` esporta da Revit l'IFC4 della vista "CPF - Sezione AT 3D" e, con IfcOpenShell,
+assegna a ogni elemento la classe IFC4 corretta (l'esportatore di Revit porta i DirectShape fuori come
+IfcBuildingElementProxy e non legge IfcExportAs). `allinea_parametri_ifc.py` riporta le stesse classi nei parametri
+IfcExportAs / IfcExportType del modello Revit.
+
+File: `modelli/CP_Faggiano_Sezione_AT.ifczip` (IFC4, 95 MB non compresso). 242 elementi, tutti con geometria,
+contenuti nel piano e con Pset `CPF_CP_Faggiano` (Stallo, Apparecchio, Occorrenza, Descrizione, CategoriaRevit, Impianto).
+
+| Classe IFC4 | PredefinedType | N. |
+| --- | --- | --- |
+| IfcTransformer | VOLTAGE (TR 25 MVA e TV) | 8 |
+| IfcTransformer | CURRENT (TA) | 12 |
+| IfcProtectiveDevice | CIRCUITBREAKER (poli interruttore GL313) | 12 |
+| IfcProtectiveDevice | VARISTOR (scaricatori) | 6 |
+| IfcSwitchingDevice | USERDEFINED: DISCONNECTOR | 15 |
+| IfcSwitchingDevice | USERDEFINED: DISCONNECTOR_WITH_EARTHING_SWITCH | 6 |
+| IfcElectricDistributionBoard | SWITCHBOARD (armadi di comando) | 13 |
+| IfcDiscreteAccessory | USERDEFINED: INSULATOR | 30 |
+| IfcCableFitting | CONNECTOR (morsetti, terminali MT) | 42 |
+| IfcCableSegment | BUSBARSEGMENT (sbarre AT, sbarre e piatti Cu MT) | 10 |
+| IfcCableSegment | CONDUCTORSEGMENT (conduttori, cavi MT) | 8 |
+| IfcMember | POST (sostegni) | 63 |
+| IfcWall | SOLIDWALL (muro tagliafiamme) | 1 |
+| IfcFooting | PAD_FOOTING / STRIP_FOOTING | 2 + 1 |
+| IfcBuildingElementProxy | USERDEFINED (rinvii, tubi cavi) | 13 |
+
+In IFC4 l'interruttore è un IfcProtectiveDevice (non IfcSwitchingDevice) e il sezionatore non ha un tipo
+predefinito: si usa USERDEFINED con ObjectType.
