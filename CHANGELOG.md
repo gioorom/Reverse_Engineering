@@ -7,6 +7,13 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-11-09
+
+#### Modificato
+
+- Open CAD Studio per macOS aggiornato da v2026.44 a v2026.45
+  (`scripts/setup-mac.sh`, nuovo hash SHA-256 del dmg).
+
 ### 2026-11-03
 
 #### Modificato
