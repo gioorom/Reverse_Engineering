@@ -7,6 +7,15 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-11-12
+
+#### Modificato
+
+- SolidCraft per macOS aggiornato da 0.30.1 a 0.40.1 (`scripts/setup-mac.sh`).
+  L'hash SHA-256 del dmg coincide con quello pubblicato nel file
+  `SHA256SUMS.txt` della release. Il formato dei progetti passa alla
+  versione 52: i progetti delle versioni precedenti si aprono nella 0.40.
+
 ### 2026-11-09
 
 #### Modificato
