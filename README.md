@@ -95,7 +95,15 @@ cd Reverse_Engineering
 claude
 ```
 
-Per l'analisi di binari nativi serve Ghidra 12.1.4 (gratuito):
+In alternativa, dalla cartella del repository, uno script installa tutto
+(Git e Node 22 se mancano, REA con la skill, JDK 21 e Ghidra 12.1.4 con
+`GHIDRA_INSTALL_DIR`); richiede `winget` e non è ancora stato provato su un PC:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\setup-windows.ps1
+```
+
+A mano, per l'analisi di binari nativi serve Ghidra 12.1.4 (gratuito):
 scarica `ghidra_12.1.4_PUBLIC_20260921.zip` dalle
 [release ufficiali](https://github.com/NationalSecurityAgency/ghidra/releases/tag/Ghidra_12.1.4_build),
 estrailo (es. in `C:\tools\`), installa un JDK 21 a 64 bit e imposta la

@@ -9,6 +9,12 @@ Il repository non ha ancora versioni rilasciate.
 
 ### 2026-11-12
 
+#### Aggiunto
+
+- `scripts/setup-windows.ps1`: installa su Windows Git e Node 22 (se mancano),
+  REA con la registrazione in Claude Code e la skill, JDK 21 e Ghidra 12.1.4
+  (hash SHA-256 verificato). Non ancora provato su un PC Windows.
+
 #### Modificato
 
 - REA aggiornato da `rea-agents@6.8.0` a `rea-agents@6.9.0` (`.mcp.json`,
