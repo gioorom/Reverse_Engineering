@@ -108,11 +108,17 @@ if ($reaInstallata -ne $ReaVersion) {
   Update-Path
 }
 # registra REA in Claude Code (file .claude.json dell'utente) e installa la skill
-rea setup --client claude_code --yes | Out-Null
-if ($LASTEXITCODE -ne 0) { throw 'rea setup non riuscito: esegui "rea setup --client claude_code" per vedere il motivo.' }
+$esitoSetup = rea setup --client claude_code --yes 2>&1
+$setupRiuscito = ($LASTEXITCODE -eq 0)
+if (-not $setupRiuscito) {
+  # mostra il messaggio di REA e prosegue: il resto e' gia' installato
+  $esitoSetup | ForEach-Object { Write-Host $_ }
+  Write-Warning 'rea setup non riuscito (messaggio qui sopra): REA e'' installato ma non ancora collegato a Claude Code.'
+}
 
 # --- riepilogo --------------------------------------------------------------------
-Write-Host "REA $(rea --version) installato e registrato in Claude Code."
+if ($setupRiuscito) { Write-Host "REA $(rea --version) installato e registrato in Claude Code." }
+else { Write-Host "REA $(rea --version) installato." }
 if (-not $SenzaGhidra) { Write-Host "Ghidra in $GhidraDir (GHIDRA_INSTALL_DIR impostata per l'utente)." }
 if ($NodeAggiunto) {
   Write-Host "Node ${NodeVersion} in $NodeAggiunto (aggiunto al PATH dell'utente)."
