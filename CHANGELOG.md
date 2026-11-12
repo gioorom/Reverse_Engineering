@@ -7,7 +7,7 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
-### 2026-11-13
+### 2026-11-12
 
 #### Modificato
 
@@ -18,11 +18,6 @@ Il repository non ha ancora versioni rilasciate.
   e Deno, firmware (Intel HEX, S-record, U-Boot, ESP, UF2, DfuSe), archivi
   UnityFS e Godot, acquisizioni NTFS, contratti OpenAPI/GraphQL e cache di
   codice V8; risultati paginati per le analisi native.
-
-### 2026-11-12
-
-#### Modificato
-
 - SolidCraft per macOS aggiornato da 0.30.1 a 0.40.1 (`scripts/setup-mac.sh`).
   L'hash SHA-256 del dmg coincide con quello pubblicato nel file
   `SHA256SUMS.txt` della release. Il formato dei progetti passa alla
