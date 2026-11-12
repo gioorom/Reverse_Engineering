@@ -1,5 +1,6 @@
 # Installa su Windows cio' che serve a Claude Code per il reverse engineering:
-#   - Git e Node.js 22 (se mancano o Node e' troppo vecchio per REA);
+#   - Git (con winget) e Node.js 22 (zip ufficiale in una cartella dell'utente),
+#     se mancano o se Node e' troppo vecchio per REA;
 #   - REA (rea-agents, npm), registrato in Claude Code con la sua skill;
 #   - JDK 21 e Ghidra 12.1.4 (per i binari nativi), con GHIDRA_INSTALL_DIR.
 #
@@ -16,7 +17,11 @@ $ReaVersion = '6.9.0'
 $GhidraVersion = '12.1.4'
 $GhidraBuildDate = '20260921'
 $GhidraSha256 = 'ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db'
-$GhidraRoot = Join-Path $env:LOCALAPPDATA 'Programs'
+$NodeVersion = '22.23.5'
+$NodeSha256 = '4a191082e9706866830379d577d2cc8a50c776fcd9436a8d061b063ed0d9a0e3'
+$ProgrammiUtente = Join-Path $env:LOCALAPPDATA 'Programs'
+$GhidraRoot = $ProgrammiUtente
+$NodeAggiunto = $null
 $GhidraDir = Join-Path $GhidraRoot "ghidra_${GhidraVersion}_PUBLIC"
 
 function Test-Comando($nome) { [bool](Get-Command $nome -ErrorAction SilentlyContinue) }
@@ -25,6 +30,7 @@ function Test-Comando($nome) { [bool](Get-Command $nome -ErrorAction SilentlyCon
 function Update-Path {
   $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' +
               [Environment]::GetEnvironmentVariable('Path', 'User')
+  if ($script:NodeAggiunto) { $env:Path = "$script:NodeAggiunto;$env:Path" }
 }
 
 function Install-ConWinget($id) {
@@ -49,11 +55,30 @@ if (-not (Test-Comando winget)) {
 
 # --- Git e Node ---------------------------------------------------------------
 if (-not (Test-Comando git)) { Install-ConWinget 'Git.Git' }
+# Node dal pacchetto zip ufficiale, in una cartella dell'utente: non richiede
+# diritti di amministratore e non tocca un eventuale Node gia' installato
 if (-not (Test-Node)) {
-  Install-ConWinget 'OpenJS.NodeJS.22'
-  if (-not (Test-Node)) {
-    throw "Node $(node -v) non soddisfa i requisiti di REA ${ReaVersion}: installa Node 22.23.4 o successivo da https://nodejs.org"
+  $nodeNome = "node-v${NodeVersion}-win-x64"
+  $nodeDir = Join-Path $ProgrammiUtente $nodeNome
+  if (-not (Test-Path (Join-Path $nodeDir 'node.exe'))) {
+    $zip = Join-Path $env:TEMP "$nodeNome.zip"
+    Write-Host "Scarico Node ${NodeVersion}..."
+    curl.exe -fL -o $zip "https://nodejs.org/dist/v${NodeVersion}/$nodeNome.zip"
+    if ($LASTEXITCODE -ne 0) { throw 'Download di Node non riuscito.' }
+    $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
+    if ($hash -ne $NodeSha256) { Remove-Item $zip; throw "Hash di Node errato: $hash" }
+    New-Item -ItemType Directory -Force $ProgrammiUtente | Out-Null
+    Expand-Archive -Path $zip -DestinationPath $ProgrammiUtente -Force
+    Remove-Item $zip
   }
+  # in testa al PATH dell'utente (per le prossime finestre) e di questa finestra
+  $pathUtente = [Environment]::GetEnvironmentVariable('Path', 'User')
+  if (($pathUtente -split ';') -notcontains $nodeDir) {
+    [Environment]::SetEnvironmentVariable('Path', "$nodeDir;$pathUtente", 'User')
+  }
+  $env:Path = "$nodeDir;$env:Path"
+  $script:NodeAggiunto = $nodeDir
+  if (-not (Test-Node)) { throw "Node $(node -v) non soddisfa i requisiti di REA ${ReaVersion}." }
 }
 
 # --- JDK e Ghidra (facoltativi) -------------------------------------------------
@@ -89,6 +114,10 @@ if ($LASTEXITCODE -ne 0) { throw 'rea setup non riuscito: esegui "rea setup --cl
 # --- riepilogo --------------------------------------------------------------------
 Write-Host "REA $(rea --version) installato e registrato in Claude Code."
 if (-not $SenzaGhidra) { Write-Host "Ghidra in $GhidraDir (GHIDRA_INSTALL_DIR impostata per l'utente)." }
+if ($NodeAggiunto) {
+  Write-Host "Node ${NodeVersion} in $NodeAggiunto (aggiunto al PATH dell'utente)."
+  Write-Host "Se in una nuova finestra 'node -v' mostra ancora una versione vecchia, disinstalla il vecchio Node da Impostazioni > App."
+}
 Write-Host 'Verifica: riapri PowerShell ed esegui "rea doctor".'
 if (-not (Test-Comando claude)) {
   Write-Host 'Claude Code non trovato: installa Claude Desktop da https://claude.ai/download'
