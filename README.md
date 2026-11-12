@@ -97,7 +97,7 @@ claude
 
 In alternativa, dalla cartella del repository, uno script installa tutto
 (Git e Node 24 se mancano; un Node troppo vecchio viene aggiornato, REA con la skill, JDK 21 e Ghidra 12.1.4 con
-`GHIDRA_INSTALL_DIR`); richiede `winget` e non è ancora stato provato su un PC:
+`GHIDRA_INSTALL_DIR`); richiede `winget` (provato su Windows x64 con un Node 24 già installato):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup-windows.ps1

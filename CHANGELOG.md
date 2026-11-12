@@ -13,7 +13,7 @@ Il repository non ha ancora versioni rilasciate.
 
 - `scripts/setup-windows.ps1`: installa su Windows Git e Node 22 (se mancano),
   REA con la registrazione in Claude Code e la skill, JDK 21 e Ghidra 12.1.4
-  (hash SHA-256 verificato). Non ancora provato su un PC Windows.
+  (hash SHA-256 verificato). Provato su un PC Windows x64 con Node 24 già installato: REA 6.9.0 collegata a Claude Code e Ghidra rilevato.
 
 #### Modificato
 
