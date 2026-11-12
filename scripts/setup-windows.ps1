@@ -1,6 +1,7 @@
 # Installa su Windows cio' che serve a Claude Code per il reverse engineering:
-#   - Git (con winget) e Node.js 22 (zip ufficiale in una cartella dell'utente),
-#     se mancano o se Node e' troppo vecchio per REA;
+#   - Git (con winget) e Node.js 24: se Node manca, zip ufficiale in una cartella
+#     dell'utente; se c'e' ma e' troppo vecchio per REA, aggiornato con
+#     l'installer ufficiale;
 #   - REA (rea-agents, npm), registrato in Claude Code con la sua skill;
 #   - JDK 21 e Ghidra 12.1.4 (per i binari nativi), con GHIDRA_INSTALL_DIR.
 #
@@ -17,8 +18,9 @@ $ReaVersion = '6.9.0'
 $GhidraVersion = '12.1.4'
 $GhidraBuildDate = '20260921'
 $GhidraSha256 = 'ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db'
-$NodeVersion = '22.23.5'
-$NodeSha256 = '4a191082e9706866830379d577d2cc8a50c776fcd9436a8d061b063ed0d9a0e3'
+$NodeVersion = '24.22.3'
+$NodeZipSha256 = 'e612af99f626ab415ea225af6bce5c971feb448cb5cae250bb1c3fa50c5f7d9f'
+$NodeMsiSha256 = '4a1ab5bdec5434bae58efae6c3e5077a011f6f1e76d2b47b7b10af043f7db545'
 $ProgrammiUtente = Join-Path $env:LOCALAPPDATA 'Programs'
 $GhidraRoot = $ProgrammiUtente
 $NodeAggiunto = $null
@@ -55,29 +57,55 @@ if (-not (Test-Comando winget)) {
 
 # --- Git e Node ---------------------------------------------------------------
 if (-not (Test-Comando git)) { Install-ConWinget 'Git.Git' }
-# Node dal pacchetto zip ufficiale, in una cartella dell'utente: non richiede
-# diritti di amministratore e non tocca un eventuale Node gia' installato
+# Se c'e' gia' un Node di sistema (installer ufficiale) e' quello che vince nel
+# PATH: va aggiornato lui. Un Node portatile lasciato da una versione precedente
+# di questo script viene tolto dal PATH dell'utente.
+$nodeDiSistema = Join-Path $env:ProgramFiles 'nodejs\node.exe'
+if (Test-Path $nodeDiSistema) {
+  $portatile = Join-Path $ProgrammiUtente 'node-v*-win-x64'
+  $voci = [Environment]::GetEnvironmentVariable('Path', 'User') -split ';' |
+          Where-Object { $_ -and ($_ -notlike $portatile) }
+  [Environment]::SetEnvironmentVariable('Path', ($voci -join ';'), 'User')
+  Update-Path
+}
 if (-not (Test-Node)) {
-  $nodeNome = "node-v${NodeVersion}-win-x64"
-  $nodeDir = Join-Path $ProgrammiUtente $nodeNome
-  if (-not (Test-Path (Join-Path $nodeDir 'node.exe'))) {
-    $zip = Join-Path $env:TEMP "$nodeNome.zip"
+  if (Test-Path $nodeDiSistema) {
+    # aggiorna il Node di sistema con l'installer ufficiale (hash verificato)
+    $major = [int]((& $nodeDiSistema -p 'process.versions.node') -split '\.')[0]
+    if ($major -gt 24) { throw "Node $major installato ma troppo vecchio per REA: aggiornalo da https://nodejs.org" }
+    $msi = Join-Path $env:TEMP "node-v${NodeVersion}-x64.msi"
     Write-Host "Scarico Node ${NodeVersion}..."
-    curl.exe -fL -o $zip "https://nodejs.org/dist/v${NodeVersion}/$nodeNome.zip"
+    curl.exe -fL -o $msi "https://nodejs.org/dist/v${NodeVersion}/node-v${NodeVersion}-x64.msi"
     if ($LASTEXITCODE -ne 0) { throw 'Download di Node non riuscito.' }
-    $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
-    if ($hash -ne $NodeSha256) { Remove-Item $zip; throw "Hash di Node errato: $hash" }
-    New-Item -ItemType Directory -Force $ProgrammiUtente | Out-Null
-    Expand-Archive -Path $zip -DestinationPath $ProgrammiUtente -Force
-    Remove-Item $zip
+    $hash = (Get-FileHash -Algorithm SHA256 $msi).Hash.ToLower()
+    if ($hash -ne $NodeMsiSha256) { Remove-Item $msi; throw "Hash di Node errato: $hash" }
+    Write-Host 'Aggiorno Node: conferma la richiesta di Windows (Controllo account utente).'
+    $p = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /passive /norestart" -Wait -PassThru
+    Remove-Item $msi
+    if ($p.ExitCode -ne 0) { throw "Aggiornamento di Node non riuscito (codice $($p.ExitCode))." }
+    Update-Path
+  } else {
+    # nessun Node: zip ufficiale in una cartella dell'utente, senza diritti di amministratore
+    $nodeNome = "node-v${NodeVersion}-win-x64"
+    $nodeDir = Join-Path $ProgrammiUtente $nodeNome
+    if (-not (Test-Path (Join-Path $nodeDir 'node.exe'))) {
+      $zip = Join-Path $env:TEMP "$nodeNome.zip"
+      Write-Host "Scarico Node ${NodeVersion}..."
+      curl.exe -fL -o $zip "https://nodejs.org/dist/v${NodeVersion}/$nodeNome.zip"
+      if ($LASTEXITCODE -ne 0) { throw 'Download di Node non riuscito.' }
+      $hash = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
+      if ($hash -ne $NodeZipSha256) { Remove-Item $zip; throw "Hash di Node errato: $hash" }
+      New-Item -ItemType Directory -Force $ProgrammiUtente | Out-Null
+      Expand-Archive -Path $zip -DestinationPath $ProgrammiUtente -Force
+      Remove-Item $zip
+    }
+    $pathUtente = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if (($pathUtente -split ';') -notcontains $nodeDir) {
+      [Environment]::SetEnvironmentVariable('Path', "$nodeDir;$pathUtente", 'User')
+    }
+    $env:Path = "$nodeDir;$env:Path"
+    $script:NodeAggiunto = $nodeDir
   }
-  # in testa al PATH dell'utente (per le prossime finestre) e di questa finestra
-  $pathUtente = [Environment]::GetEnvironmentVariable('Path', 'User')
-  if (($pathUtente -split ';') -notcontains $nodeDir) {
-    [Environment]::SetEnvironmentVariable('Path', "$nodeDir;$pathUtente", 'User')
-  }
-  $env:Path = "$nodeDir;$env:Path"
-  $script:NodeAggiunto = $nodeDir
   if (-not (Test-Node)) { throw "Node $(node -v) non soddisfa i requisiti di REA ${ReaVersion}." }
 }
 
@@ -122,7 +150,6 @@ else { Write-Host "REA $(rea --version) installato." }
 if (-not $SenzaGhidra) { Write-Host "Ghidra in $GhidraDir (GHIDRA_INSTALL_DIR impostata per l'utente)." }
 if ($NodeAggiunto) {
   Write-Host "Node ${NodeVersion} in $NodeAggiunto (aggiunto al PATH dell'utente)."
-  Write-Host "Se in una nuova finestra 'node -v' mostra ancora una versione vecchia, disinstalla il vecchio Node da Impostazioni > App."
 }
 Write-Host 'Verifica: riapri PowerShell ed esegui "rea doctor".'
 if (-not (Test-Comando claude)) {
