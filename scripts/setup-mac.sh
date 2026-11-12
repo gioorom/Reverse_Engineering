@@ -14,7 +14,7 @@
 # di Xcode (xcode-select --install); OpenSCAD richiede Xcode completo.
 set -euo pipefail
 
-REA_VERSION="6.8.0"
+REA_VERSION="6.9.0"
 SOLIDCRAFT_VERSION="0.40.1"
 SOLIDCRAFT_SHA256="b84638aa2cd18a4ba65f83b538546677d5dec39cb657e6d4a1ba44ad1679f770"
 OPENCADSTUDIO_VERSION="2026.45"
@@ -67,7 +67,7 @@ app_version() {  # versione di un'app in /Applications (vuota se assente)
 }
 
 # --- REA -------------------------------------------------------------------
-# REA 6.8.0 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
+# REA 6.9.0 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
 node_ok() {
   command -v node >/dev/null && node -e '
   const [a, b, c] = process.versions.node.split(".").map(Number);

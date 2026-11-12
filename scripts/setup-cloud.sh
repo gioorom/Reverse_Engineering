@@ -3,8 +3,8 @@
 # Idempotente: salta i passi già fatti. Richiede JDK 21+ (javac nel PATH).
 set -euo pipefail
 
-REA_VERSION="6.8.0"
-NODE_VERSION="22.23.4"  # REA 6.8.0 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
+REA_VERSION="6.9.0"
+NODE_VERSION="22.23.4"  # REA 6.9.0 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
 GHIDRA_VERSION="12.1.4"
 GHIDRA_BUILD_DATE="20260921"
 GHIDRA_SHA256="ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db"

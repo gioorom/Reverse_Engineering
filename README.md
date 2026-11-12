@@ -70,7 +70,7 @@ convenzioni per chi contribuisce sono in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Strumento | Uso | Note |
 | --------- | --- | ---- |
-| [REA – Reverse Engineer Anything](https://github.com/morluto/rea) | Analisi di applicazioni JavaScript/Electron, .NET, siti web e binari nativi | Pacchetto npm `rea-agents@6.8.0`, registrato come server MCP in `.mcp.json` |
+| [REA – Reverse Engineer Anything](https://github.com/morluto/rea) | Analisi di applicazioni JavaScript/Electron, .NET, siti web e binari nativi | Pacchetto npm `rea-agents@6.9.0`, registrato come server MCP in `.mcp.json` |
 | [Ghidra 12.1.4](https://github.com/NationalSecurityAgency/ghidra) | Motore per l'analisi dei binari nativi usato da REA | Richiede JDK 21 a 64 bit e la variabile `GHIDRA_INSTALL_DIR` |
 | Python 3.10+ | Implementazioni e test dei progetti (es. `iec60909`) | numpy; pytest e pandapower per i test |
 
@@ -87,7 +87,7 @@ git clone https://github.com/gioorom/Reverse_Engineering.git
 # copia eventuali file già presenti nella vecchia cartella PROGRAMMAZIONE in:
 #   Reverse_Engineering\Wiki_Progettazione\PROGRAMMAZIONE\
 
-npm install --global rea-agents@6.8.0
+npm install --global rea-agents@6.9.0
 rea setup --client claude_code   # registra REA e installa la skill
 rea doctor                       # verifica
 
@@ -121,7 +121,7 @@ bash scripts/setup-cloud.sh
 ```
 
 Lo script è idempotente: se serve aggiorna Node alla 22.23.4 (release ufficiale,
-hash verificato), installa `rea-agents@6.8.0`, la skill di REA per
+hash verificato), installa `rea-agents@6.9.0`, la skill di REA per
 Claude Code (`~/.claude/skills/reverse-engineer-anything`, con
 `rea setup --skill-client claude_code`; il server MCP resta quello di
 `.mcp.json`) e Ghidra 12.1.4 in `/opt/ghidra_12.1.4_PUBLIC` (verificando
@@ -144,7 +144,7 @@ o npm:
 
 | Strumento | Versione | Origine |
 | --- | --- | --- |
-| REA (`rea-agents`) + skill Claude Code | 6.8.0 | npm (sorgenti su `morluto/rea`) |
+| REA (`rea-agents`) + skill Claude Code | 6.9.0 | npm (sorgenti su `morluto/rea`) |
 | SolidCraft | 0.40.1 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` (hash SHA-256 verificato) → `/Applications` |
 | Open CAD Studio | v2026.45 | release GitHub `HakanSeven12/OpenCADStudio`, `OpenCADStudio-v<versione>-macos-arm64.dmg` (hash SHA-256 verificato) → `/Applications` |
 | OpenSCAD | `openscad-2026.10-TEST4` | compilato dai sorgenti GitHub `openscad/openscad` (dipendenze Homebrew) → `/Applications` |
@@ -163,7 +163,7 @@ Note:
 - Gli hash dei dmg sono stati calcolati sui file delle release al momento
   dell'aggiornamento dello script (le release non pubblicano checksum).
 - Se Node manca o è più vecchio di quanto richiede REA, lo script installa `node@22` con Homebrew.
-- Ghidra 12.2 non è usato: REA 6.8.0 accetta solo Ghidra 12.1.x.
+- Ghidra 12.2 non è usato: REA 6.9.0 accetta solo Ghidra 12.1.x.
 - Le versioni installate sono riepilogate in
   `~/.config/reverse-engineering/versioni-installate.txt`.
 

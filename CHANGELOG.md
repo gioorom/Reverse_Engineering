@@ -7,6 +7,18 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-11-13
+
+#### Modificato
+
+- REA aggiornato da `rea-agents@6.8.0` a `rea-agents@6.9.0` (`.mcp.json`,
+  `CLAUDE.md`, `README.md`, `scripts/setup-cloud.sh`, `scripts/setup-mac.sh`).
+  Requisito di Node invariato; Ghidra resta 12.1.4 (REA 6.9.0 accetta solo
+  12.1.x). Novità principali: estrazione di eseguibili .NET single-file, Bun
+  e Deno, firmware (Intel HEX, S-record, U-Boot, ESP, UF2, DfuSe), archivi
+  UnityFS e Godot, acquisizioni NTFS, contratti OpenAPI/GraphQL e cache di
+  codice V8; risultati paginati per le analisi native.
+
 ### 2026-11-12
 
 #### Modificato
