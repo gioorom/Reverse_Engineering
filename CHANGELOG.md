@@ -19,6 +19,14 @@ Il repository non ha ancora versioni rilasciate.
 - `.github/workflows/provarele.yml`: test e compilazione di ProvaRelè su
   Windows a ogni caricamento; l'eseguibile si scarica dagli Artifacts.
 
+#### Modificato
+
+- SolidCraft per macOS aggiornato da 0.40.1 a 0.41.0 (`scripts/setup-mac.sh`).
+  L'hash SHA-256 del dmg scaricato coincide con quello pubblicato nel file
+  `SHA256SUMS.txt` della release. Novità principali: plugin installabili da
+  file zip, punti di aggancio negli schizzi e nei giunti, un solo sistema di
+  pannelli per Design e Render, esportazione GLB con i componenti per nome.
+
 ### 2026-11-12
 
 #### Aggiunto
