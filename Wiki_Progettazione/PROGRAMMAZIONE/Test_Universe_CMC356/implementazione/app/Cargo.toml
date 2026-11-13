@@ -1,0 +1,9 @@
+[package]
+name = "prova-rele"
+description = "Prove sui relè di protezione con la cassetta OMICRON CMC 356"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+prova-rele-core = { path = "../core" }
