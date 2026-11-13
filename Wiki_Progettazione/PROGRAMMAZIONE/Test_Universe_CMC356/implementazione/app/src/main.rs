@@ -32,13 +32,27 @@ fn run(renderer: eframe::Renderer) -> eframe::Result {
     )
 }
 
-fn main() -> eframe::Result {
+fn main() {
     // Su Windows si disegna con DirectX, che funziona anche senza scheda
     // grafica dedicata e in desktop remoto, dove OpenGL spesso manca; se non
     // parte si prova con OpenGL. Altrove si usa OpenGL.
-    if cfg!(windows) {
-        run(eframe::Renderer::Wgpu).or_else(|_| run(eframe::Renderer::Glow))
+    let result = if cfg!(windows) {
+        run(eframe::Renderer::Wgpu).or_else(|directx| {
+            run(eframe::Renderer::Glow)
+                .map_err(|opengl| format!("DirectX: {directx}\nOpenGL: {opengl}"))
+        })
     } else {
-        run(eframe::Renderer::Glow)
+        run(eframe::Renderer::Glow).map_err(|error| error.to_string())
+    };
+    if let Err(details) = result {
+        // senza finestra l'errore non si vedrebbe: lo si mostra in un avviso
+        let message = format!("ProvaRelè non riesce ad aprire la finestra.\n\n{details}");
+        eprintln!("{message}");
+        rfd::MessageDialog::new()
+            .set_level(rfd::MessageLevel::Error)
+            .set_title("ProvaRelè")
+            .set_description(message)
+            .show();
+        std::process::exit(1);
     }
 }

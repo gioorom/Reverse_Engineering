@@ -43,10 +43,12 @@ jobs:
       - name: Prova di avvio
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath target\release\prova-rele.exe -ArgumentList esempi\cabina_mt.json -PassThru
+          $p = Start-Process -FilePath target\release\prova-rele.exe -ArgumentList esempi\cabina_mt.json -RedirectStandardError avvio-errori.txt -PassThru
           Start-Sleep -Seconds 15
-          if ($p.HasExited) { throw "Il programma si è chiuso da solo (codice $($p.ExitCode))" }
-          Stop-Process -Id $p.Id
+          $chiuso = $p.HasExited
+          if (-not $chiuso) { Stop-Process -Id $p.Id }
+          $errori = Get-Content avvio-errori.txt -Raw
+          if ($chiuso -or $errori) { throw "Il programma non si è avviato.`n$errori" }
 
       - name: Pubblicazione dell'eseguibile
         uses: actions/upload-artifact@v4
