@@ -155,7 +155,7 @@ pub fn plan(s: &DistanceSettings, tr: &Transformers, frequency_hz: f64) -> ShotP
                     let (outputs, loop_voltage) =
                         fault_outputs(s, fault, z, angle, nominal, frequency_hz);
                     let description = format!(
-                        "{} {}: {side}, {:.0} % della portata = {z:.3} ohm secondari",
+                        "{} {} {side}: {:.0} % della portata = {z:.3} ohm sec.",
                         fault.label(),
                         zone.name,
                         factor * 100.0
@@ -186,7 +186,7 @@ pub fn summary(s: &DistanceSettings) -> Vec<(String, String)> {
     rows.push(("Compensazione di terra k0".to_string(), format!("{} / {}°", s.k0_magnitude, s.k0_angle_deg)));
     rows.push(("Corrente di prova".to_string(), format!("{} A secondari", s.test_current_a)));
     rows.push(("Margine sulla portata".to_string(), format!("{} %", s.reach_margin_pct)));
-    rows.extend(tolerance_rows(&s.tolerances, "impedenza"));
+    rows.extend(tolerance_rows(&s.tolerances, "sull'impedenza"));
     rows
 }
 

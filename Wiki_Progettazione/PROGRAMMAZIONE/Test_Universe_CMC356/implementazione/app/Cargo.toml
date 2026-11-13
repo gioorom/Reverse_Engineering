@@ -7,7 +7,8 @@ license.workspace = true
 
 [dependencies]
 prova-rele-core = { path = "../core" }
-eframe = "0.29"
+# glow (OpenGL) su Linux e macOS, wgpu (DirectX) su Windows: vedi main.rs
+eframe = { version = "0.29", features = ["wgpu"] }
 rfd = "0.15"
 open = "5"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }

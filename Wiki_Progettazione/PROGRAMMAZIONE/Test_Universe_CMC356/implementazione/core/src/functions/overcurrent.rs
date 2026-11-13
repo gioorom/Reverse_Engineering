@@ -117,11 +117,11 @@ pub fn plan(
                 }
                 (OvercurrentKind::Residual, _) if tr.has_residual_ct => {
                     outputs.currents[3] = Phasor::new(i, 0.0);
-                    "Corrente residua sul TO (I 4)".to_string()
+                    "Residua sul TO (I 4)".to_string()
                 }
                 (OvercurrentKind::Residual, _) => {
                     outputs.currents[0] = Phasor::new(i, 0.0);
-                    "Corrente residua su L1".to_string()
+                    "Residua su L1".to_string()
                 }
                 _ => {
                     // terna di sequenza inversa: L2 in anticipo, L3 in ritardo
@@ -130,7 +130,7 @@ pub fn plan(
                         Phasor::new(i, 120.0),
                         Phasor::new(i, -120.0),
                     ]);
-                    "Terna di sequenza inversa".to_string()
+                    "Sequenza inversa".to_string()
                 }
             };
             plan.push(
@@ -155,7 +155,7 @@ pub fn summary(s: &OvercurrentSettings) -> Vec<(String, String)> {
             rows.push(("Moltiplicatore di tempo".to_string(), format!("{multiplier}")));
         }
     }
-    rows.extend(tolerance_rows(&s.tolerances, "corrente"));
+    rows.extend(tolerance_rows(&s.tolerances, "sulla corrente"));
     rows
 }
 
@@ -168,7 +168,7 @@ pub(crate) fn basis_unit(basis: Basis, unit: &str) -> String {
 
 pub(crate) fn tolerance_rows(t: &Tolerances, quantity: &str) -> Vec<(String, String)> {
     vec![
-        (format!("Tolleranza sulla {quantity}"), format!("{} %", t.quantity_pct)),
+        (format!("Tolleranza {quantity}"), format!("{} %", t.quantity_pct)),
         (
             "Tolleranza sul tempo".to_string(),
             format!("{} % (minimo {} ms)", t.time_pct, t.time_abs_s * 1000.0),

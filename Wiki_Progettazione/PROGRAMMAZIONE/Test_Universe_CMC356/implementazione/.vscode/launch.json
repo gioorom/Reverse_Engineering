@@ -1,0 +1,27 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug di ProvaRelè",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "-p", "prova-rele"],
+        "filter": { "name": "prova-rele", "kind": "bin" }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Debug di ProvaRelè con la prova di esempio",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": ["build", "-p", "prova-rele"],
+        "filter": { "name": "prova-rele", "kind": "bin" }
+      },
+      "args": ["esempi/cabina_mt.json"],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

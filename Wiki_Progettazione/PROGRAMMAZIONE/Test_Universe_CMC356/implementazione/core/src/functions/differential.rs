@@ -252,7 +252,7 @@ pub fn summary(kind: DifferentialKind, s: &DifferentialSettings) -> Vec<(String,
     }
     rows.push(("Tempo".to_string(), format!("{} s", s.delay_s)));
     rows.push(("Margine di prova".to_string(), format!("{} %", s.margin_pct)));
-    rows.extend(tolerance_rows(&s.tolerances, "corrente"));
+    rows.extend(tolerance_rows(&s.tolerances, "sulla corrente"));
     rows
 }
 

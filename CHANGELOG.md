@@ -7,6 +7,18 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-11-13
+
+#### Aggiunto
+
+- Progetto `Test_Universe_CMC356`: ProvaRelè, programma in Rust per le prove
+  sui relè di protezione con la cassetta OMICRON CMC 356. Dati della prova,
+  un modulo per ognuna delle 14 funzioni ANSI richieste, calcolo dei punti di
+  prova e degli esiti attesi, report HTML. Non comanda ancora lo strumento:
+  gli esiti misurati si inseriscono a mano.
+- `.github/workflows/provarele.yml`: test e compilazione di ProvaRelè su
+  Windows a ogni caricamento; l'eseguibile si scarica dagli Artifacts.
+
 ### 2026-11-12
 
 #### Aggiunto

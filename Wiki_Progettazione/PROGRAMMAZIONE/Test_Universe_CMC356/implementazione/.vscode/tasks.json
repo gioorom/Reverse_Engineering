@@ -1,0 +1,33 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Avvia ProvaRelè",
+      "type": "shell",
+      "command": "cargo run -p prova-rele",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Avvia ProvaRelè con la prova di esempio",
+      "type": "shell",
+      "command": "cargo run -p prova-rele -- esempi/cabina_mt.json",
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Esegui i test",
+      "type": "shell",
+      "command": "cargo test --workspace",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": ["$rustc"]
+    },
+    {
+      "label": "Compila il programma finale (release)",
+      "type": "shell",
+      "command": "cargo build --release -p prova-rele",
+      "group": "build",
+      "problemMatcher": ["$rustc"]
+    }
+  ]
+}

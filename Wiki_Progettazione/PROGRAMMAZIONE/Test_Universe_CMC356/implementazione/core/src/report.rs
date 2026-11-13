@@ -109,7 +109,7 @@ h3{font-size:10.5pt;margin:4mm 0 1mm}table{border-collapse:collapse;width:100%;m
 th,td{border:1px solid #bbb;padding:1mm 2mm;text-align:left;vertical-align:top}\
 table.kv th{width:32%;background:#f2f2f2;font-weight:600}thead th{background:#e8e8e8}\
 td.passed{color:#0a6b2d;font-weight:600}td.failed{color:#b00020;font-weight:600}td.pending{color:#666}\
-p.verdict{font-size:12pt;font-weight:600}pre{margin:0;font-family:inherit;white-space:pre-wrap}\
+p.verdict{font-size:12pt;font-weight:600}pre{margin:0;font-family:inherit;white-space:pre}\
 .small{color:#555;font-size:9pt}section{break-inside:avoid-page}";
 
 pub fn html_report(project: &Project, form: ReportForm) -> String {

@@ -30,5 +30,5 @@ del progetto annota solo dove si trovano e la versione.
 
 | Progetto | Target | Stato |
 | -------- | ------ | ----- |
-| [Test Universe / CMC 356](Test_Universe_CMC356/) | OMICRON Test Universe (comando della cassetta prova relè CMC 356) | Requisiti e piano di analisi scritti; analisi non iniziata |
+| [Test Universe / CMC 356](Test_Universe_CMC356/) | OMICRON Test Universe (comando della cassetta prova relè CMC 356) | ProvaRelè (Rust): dati della prova, 14 moduli ANSI, punti di prova, esiti e report implementati e testati; connessione allo strumento e analisi di Test Universe non iniziate |
 | [Electrical Power Simulator Software](Electrical_Power_Simulator_Software/) | Simulatore reti elettriche (ispirato a ETAP) | Cortocircuito IEC 60909, flusso di potenza, arc flash IEEE 1584 e coordinamento delle protezioni, stabilità transitoria, armoniche, avviamento dei motori, affidabilità, dimensionamento dei cavi e portate MT (IEC 60287) implementati e testati |

@@ -82,7 +82,7 @@ fn shots_table(ui: &mut egui::Ui, module: &mut TestModule, plan: &ShotPlan, show
     egui::Grid::new(("shots", module.function))
         .num_columns(columns)
         .striped(true)
-        .spacing([22.0, 8.0])
+        .spacing([16.0, 8.0])
         .show(ui, |ui| {
             let mut titles = vec!["N.", "Prova"];
             if show_outputs {
@@ -119,7 +119,7 @@ fn measured(ui: &mut egui::Ui, id: impl std::hash::Hash, value: &mut Option<Meas
             Some(Measured::Trip { .. }) => "Intervento",
             Some(Measured::NoTrip) => "Nessun intervento",
         };
-        egui::ComboBox::from_id_salt(id).selected_text(label).width(150.0).show_ui(ui, |ui| {
+        egui::ComboBox::from_id_salt(id).selected_text(label).width(140.0).show_ui(ui, |ui| {
             if ui.selectable_label(value.is_none(), "Da eseguire").clicked() {
                 *value = None;
             }
@@ -239,7 +239,7 @@ fn overcurrent(ui: &mut egui::Ui, id: Id, function: AnsiFunction, s: &mut Overcu
         widgets::list(ui, &mut s.multiples, 0.05, " ×");
         ui.end_row();
 
-        widgets::tolerance_rows(ui, &mut s.tolerances, Some("corrente"));
+        widgets::tolerance_rows(ui, &mut s.tolerances, Some("sulla corrente"));
     });
 }
 
@@ -283,7 +283,7 @@ fn directional(ui: &mut egui::Ui, id: Id, s: &mut DirectionalSettings) {
         widgets::list(ui, &mut s.pickup_multiples, 0.05, " ×");
         ui.end_row();
 
-        widgets::tolerance_rows(ui, &mut s.tolerances, Some("corrente"));
+        widgets::tolerance_rows(ui, &mut s.tolerances, Some("sulla corrente"));
     });
 }
 
@@ -314,7 +314,7 @@ fn voltage(ui: &mut egui::Ui, id: Id, kind: VoltageKind, s: &mut VoltageSettings
         widgets::list(ui, &mut s.multiples, 0.05, " ×");
         ui.end_row();
 
-        widgets::tolerance_rows(ui, &mut s.tolerances, Some("tensione"));
+        widgets::tolerance_rows(ui, &mut s.tolerances, Some("sulla tensione"));
     });
 }
 
@@ -436,7 +436,7 @@ fn distance(ui: &mut egui::Ui, id: Id, s: &mut DistanceSettings) {
         positive(ui, &mut s.reach_margin_pct, 0.5, " %");
         ui.end_row();
 
-        widgets::tolerance_rows(ui, &mut s.tolerances, Some("impedenza"));
+        widgets::tolerance_rows(ui, &mut s.tolerances, Some("sull'impedenza"));
     });
     ui.weak("Ogni zona è provata lungo l'angolo di linea, dentro e fuori dalla portata.");
 }
@@ -516,7 +516,7 @@ fn differential(ui: &mut egui::Ui, id: Id, kind: DifferentialKind, s: &mut Diffe
         positive(ui, &mut s.margin_pct, 0.5, " %");
         ui.end_row();
 
-        widgets::tolerance_rows(ui, &mut s.tolerances, Some("corrente"));
+        widgets::tolerance_rows(ui, &mut s.tolerances, Some("sulla corrente"));
     });
     match kind {
         DifferentialKind::Line => ui.weak(

@@ -107,6 +107,18 @@ mod tests {
     }
 
     #[test]
+    fn example_file_opens_and_matches_the_current_format() {
+        let text = include_str!("../../esempi/cabina_mt.json");
+        let p = Project::from_json(text).unwrap();
+        assert_eq!(p.enabled_modules().count(), 7);
+        assert_eq!(p.verdict(), Verdict::Failed);
+        // i risultati salvati corrispondono ai punti di prova calcolati oggi
+        for module in p.enabled_modules() {
+            assert_eq!(module.results.len(), p.plan(module).shots.len());
+        }
+    }
+
+    #[test]
     fn project_verdict_counts_only_enabled_modules() {
         let mut p = Project::default();
         p.modules[0].enabled = true;

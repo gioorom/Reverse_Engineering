@@ -1,1 +1,3 @@
 target/
+# la configurazione di Visual Studio Code di questo progetto va versionata
+!.vscode/

@@ -129,7 +129,7 @@ pub fn transformers(ui: &mut egui::Ui, id: impl std::hash::Hash + Copy, tr: &mut
 /// si mostra solo la tolleranza sul tempo.
 pub fn tolerance_rows(ui: &mut egui::Ui, tol: &mut Tolerances, quantity: Option<&str>) {
     if let Some(quantity) = quantity {
-        ui.label(format!("Tolleranza sulla {quantity}"));
+        ui.label(format!("Tolleranza {quantity}"));
         number(ui, &mut tol.quantity_pct, 0.1, " %");
         ui.end_row();
     }

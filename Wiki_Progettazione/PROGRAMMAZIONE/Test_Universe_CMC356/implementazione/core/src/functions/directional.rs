@@ -158,7 +158,7 @@ pub fn summary(s: &DirectionalSettings) -> Vec<(String, String)> {
         ("Tensione di prova".to_string(), format!("{} V secondari", s.test_voltage)),
         ("Corrente nelle prove di angolo".to_string(), format!("{} × soglia", s.test_multiple)),
     ];
-    rows.extend(tolerance_rows(&s.tolerances, "corrente"));
+    rows.extend(tolerance_rows(&s.tolerances, "sulla corrente"));
     rows
 }
 

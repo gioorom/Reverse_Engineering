@@ -204,7 +204,7 @@ impl App {
     }
 
     fn navigation(&mut self, ctx: &egui::Context) {
-        egui::SidePanel::left("navigation").resizable(false).exact_width(300.0).show(ctx, |ui| {
+        egui::SidePanel::left("navigation").resizable(false).exact_width(260.0).show(ctx, |ui| {
             ui.add_space(8.0);
             // voci a tutta larghezza, allineate a sinistra
             let layout = egui::Layout::top_down_justified(egui::Align::LEFT);

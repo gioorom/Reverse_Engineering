@@ -96,19 +96,28 @@ Un modulo per funzione; in ogni modulo si impostano i rapporti di TA e TV.
 - [ ] Target identificato e versione annotata
 - [ ] Analisi con REA (`analisi/`)
 - [ ] Conclusioni con evidenze
-- [ ] Implementazione (`implementazione/`)
-- [ ] Test
+- [x] Implementazione senza strumento ([`implementazione/`](implementazione/)):
+      dati della prova, 14 moduli, punti di prova, esiti, report
+- [x] Test della libreria di calcolo (57 test)
+- [ ] Connessione alla CMC 356 (rimandata)
+- [ ] Confronto dei punti di prova e dei report con Test Universe
 
-L'analisi non è ancora iniziata: la cartella d'installazione è sul PC di
-lavoro e va analizzata da una sessione di Claude Code avviata su quel PC, dove
-REA e Ghidra sono già installati.
+Il programma, **ProvaRelè**, è stato scritto senza guardare Test Universe: i
+punti di prova vengono dalle norme e dalla pratica delle prove sui relè. La
+connessione allo strumento è rimandata; per ora gli esiti misurati si
+inseriscono a mano. L'analisi di Test Universe non è iniziata: la cartella
+d'installazione è sul PC di lavoro e va analizzata da una sessione di Claude
+Code avviata su quel PC, dove REA e Ghidra sono già installati.
 
 ## Domande aperte
 
 - La CMC 356 ha la licenza CM Engine?
 - La 87L si prova da un solo estremo, o servono due cassette sincronizzate?
-- Interfaccia: applicazione desktop per Windows soltanto?
+- Come sono fatti i report di Test Universe, da confrontare con quello di ProvaRelè?
 
 ## Conclusioni
 
-Nessuna, per ora.
+Nessuna sull'analisi di Test Universe, per ora. Il report di ProvaRelè ha la
+struttura abituale dei report di prova (dati della prova, tarature, tabella
+con atteso, misurato, scarto ed esito, in forma estesa o sintetica) ma non è
+stato ancora confrontato con quello di Test Universe.

@@ -96,7 +96,7 @@ pub fn summary(kind: VoltageKind, s: &VoltageSettings) -> Vec<(String, String)> 
         rows.push(("Tensione misurata".to_string(), m.to_string()));
     }
     rows.push(("Tempo".to_string(), format!("{} s", s.delay_s)));
-    rows.extend(tolerance_rows(&s.tolerances, "tensione"));
+    rows.extend(tolerance_rows(&s.tolerances, "sulla tensione"));
     rows
 }
 

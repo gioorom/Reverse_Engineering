@@ -1,0 +1,848 @@
+{
+  "info": {
+    "relay_name": "REF615",
+    "feeder": "Linea 1",
+    "plant": "Cabina di consegna MT (esempio)",
+    "location": "Milano",
+    "engineer": "Mario Rossi",
+    "date": "13/11/2026"
+  },
+  "frequency_hz": 50.0,
+  "transformers": {
+    "ct": {
+      "primary": 300.0,
+      "secondary": 5.0
+    },
+    "ct_direction": "TowardLine",
+    "has_residual_ct": true,
+    "residual_ct": {
+      "primary": 100.0,
+      "secondary": 1.0
+    },
+    "vt": {
+      "primary": 20000.0,
+      "secondary": 100.0
+    },
+    "residual_vt": {
+      "primary": 20000.0,
+      "secondary": 100.0
+    }
+  },
+  "modules": [
+    {
+      "function": "F50",
+      "enabled": true,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Overcurrent": {
+          "basis": "Primary",
+          "pickup": 600.0,
+          "characteristic": {
+            "DefiniteTime": {
+              "delay_s": 0.05
+            }
+          },
+          "multiples": [
+            0.9,
+            1.1,
+            2.0
+          ],
+          "fault_types": [
+            "L1L2L3"
+          ],
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [
+        "NoTrip",
+        {
+          "Trip": {
+            "time_s": 0.059
+          }
+        },
+        {
+          "Trip": {
+            "time_s": 0.059
+          }
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "function": "F51",
+      "enabled": true,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Overcurrent": {
+          "basis": "Primary",
+          "pickup": 250.0,
+          "characteristic": {
+            "Inverse": {
+              "curve": "IecNormalInverse",
+              "multiplier": 0.1
+            }
+          },
+          "multiples": [
+            0.9,
+            1.5,
+            2.0,
+            5.0
+          ],
+          "fault_types": [
+            "L1L2L3"
+          ],
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [
+        "NoTrip",
+        {
+          "Trip": {
+            "time_s": 1.762
+          }
+        },
+        {
+          "Trip": {
+            "time_s": 1.031
+          }
+        },
+        {
+          "Trip": {
+            "time_s": 0.445
+          }
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "function": "F51N",
+      "enabled": true,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Overcurrent": {
+          "basis": "Primary",
+          "pickup": 2.0,
+          "characteristic": {
+            "DefiniteTime": {
+              "delay_s": 0.3
+            }
+          },
+          "multiples": [
+            0.9,
+            1.1,
+            2.0
+          ],
+          "fault_types": [
+            "L1L2L3"
+          ],
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [
+        "NoTrip",
+        {
+          "Trip": {
+            "time_s": 0.412
+          }
+        },
+        {
+          "Trip": {
+            "time_s": 0.314
+          }
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "function": "F67",
+      "enabled": false,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Directional": {
+          "basis": "Primary",
+          "pickup": 250.0,
+          "delay_s": 0.3,
+          "sector_from_deg": -25.0,
+          "sector_to_deg": 145.0,
+          "angle_margin_deg": 5.0,
+          "test_multiple": 2.0,
+          "pickup_multiples": [
+            0.9,
+            1.1
+          ],
+          "test_voltage": 30.0,
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [],
+      "notes": ""
+    },
+    {
+      "function": "F67N",
+      "enabled": true,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Directional": {
+          "basis": "Primary",
+          "pickup": 2.0,
+          "delay_s": 0.4,
+          "sector_from_deg": 60.0,
+          "sector_to_deg": 250.0,
+          "angle_margin_deg": 5.0,
+          "test_multiple": 2.0,
+          "pickup_multiples": [
+            0.9,
+            1.1
+          ],
+          "test_voltage": 20.0,
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [
+        "NoTrip",
+        {
+          "Trip": {
+            "time_s": 0.416
+          }
+        },
+        {
+          "Trip": {
+            "time_s": 0.416
+          }
+        },
+        "NoTrip",
+        {
+          "Trip": {
+            "time_s": 0.416
+          }
+        },
+        "NoTrip",
+        "NoTrip"
+      ],
+      "notes": ""
+    },
+    {
+      "function": "F46",
+      "enabled": false,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Overcurrent": {
+          "basis": "Primary",
+          "pickup": 60.0,
+          "characteristic": {
+            "DefiniteTime": {
+              "delay_s": 1.0
+            }
+          },
+          "multiples": [
+            0.9,
+            1.1,
+            2.0
+          ],
+          "fault_types": [
+            "L1L2L3"
+          ],
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [],
+      "notes": ""
+    },
+    {
+      "function": "F27",
+      "enabled": true,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Voltage": {
+          "basis": "Primary",
+          "pickup": 16000.0,
+          "measurement": "PhaseToPhase",
+          "delay_s": 0.5,
+          "multiples": [
+            1.1,
+            0.9,
+            0.5
+          ],
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [
+        "NoTrip",
+        {
+          "Trip": {
+            "time_s": 0.518
+          }
+        },
+        {
+          "Trip": {
+            "time_s": 0.518
+          }
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "function": "F59",
+      "enabled": true,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Voltage": {
+          "basis": "Primary",
+          "pickup": 24000.0,
+          "measurement": "PhaseToPhase",
+          "delay_s": 0.5,
+          "multiples": [
+            0.9,
+            1.1
+          ],
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [
+        "NoTrip",
+        {
+          "Trip": {
+            "time_s": 0.518
+          }
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "function": "F59N",
+      "enabled": false,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Voltage": {
+          "basis": "Primary",
+          "pickup": 1000.0,
+          "measurement": "PhaseToPhase",
+          "delay_s": 1.0,
+          "multiples": [
+            0.9,
+            1.1,
+            2.0
+          ],
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [],
+      "notes": ""
+    },
+    {
+      "function": "F81",
+      "enabled": true,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Frequency": {
+          "stages": [
+            {
+              "kind": "Under",
+              "pickup_hz": 47.5,
+              "delay_s": 4.0
+            },
+            {
+              "kind": "Over",
+              "pickup_hz": 51.5,
+              "delay_s": 1.0
+            }
+          ],
+          "test_offset_hz": 0.05,
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [
+        "NoTrip",
+        {
+          "Trip": {
+            "time_s": 4.088
+          }
+        },
+        null,
+        null
+      ],
+      "notes": ""
+    },
+    {
+      "function": "F21L",
+      "enabled": false,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Distance": {
+          "basis": "Primary",
+          "line_angle_deg": 75.0,
+          "zones": [
+            {
+              "name": "Z1",
+              "reach_ohm": 8.0,
+              "delay_s": 0.0,
+              "forward": true
+            },
+            {
+              "name": "Z2",
+              "reach_ohm": 12.0,
+              "delay_s": 0.4,
+              "forward": true
+            },
+            {
+              "name": "Z3",
+              "reach_ohm": 20.0,
+              "delay_s": 0.8,
+              "forward": true
+            }
+          ],
+          "k0_magnitude": 0.6,
+          "k0_angle_deg": 0.0,
+          "test_current_a": 2.0,
+          "loops": [
+            "L1E",
+            "L1L2",
+            "L1L2L3"
+          ],
+          "reach_margin_pct": 10.0,
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [],
+      "notes": ""
+    },
+    {
+      "function": "F87L",
+      "enabled": false,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Differential": {
+          "rated_power_mva": 25.0,
+          "voltage1_kv": 132.0,
+          "voltage2_kv": 20.0,
+          "clock_number": 11,
+          "rated_current_a": 300.0,
+          "ct2": {
+            "primary": 1000.0,
+            "secondary": 5.0
+          },
+          "pickup_pu": 0.2,
+          "knee1_pu": 0.5,
+          "slope1_pct": 25.0,
+          "knee2_pu": 2.5,
+          "slope2_pct": 50.0,
+          "delay_s": 0.03,
+          "bias_formula": "HalfSum",
+          "bias_points_pu": [
+            1.0,
+            2.0,
+            4.0
+          ],
+          "margin_pct": 10.0,
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [],
+      "notes": ""
+    },
+    {
+      "function": "F87T",
+      "enabled": false,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Differential": {
+          "rated_power_mva": 25.0,
+          "voltage1_kv": 132.0,
+          "voltage2_kv": 20.0,
+          "clock_number": 11,
+          "rated_current_a": 300.0,
+          "ct2": {
+            "primary": 1000.0,
+            "secondary": 5.0
+          },
+          "pickup_pu": 0.2,
+          "knee1_pu": 0.5,
+          "slope1_pct": 25.0,
+          "knee2_pu": 2.5,
+          "slope2_pct": 50.0,
+          "delay_s": 0.03,
+          "bias_formula": "HalfSum",
+          "bias_points_pu": [
+            1.0,
+            2.0,
+            4.0
+          ],
+          "margin_pct": 10.0,
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [],
+      "notes": ""
+    },
+    {
+      "function": "F87G",
+      "enabled": false,
+      "use_project_transformers": true,
+      "transformers": {
+        "ct": {
+          "primary": 300.0,
+          "secondary": 5.0
+        },
+        "ct_direction": "TowardLine",
+        "has_residual_ct": false,
+        "residual_ct": {
+          "primary": 100.0,
+          "secondary": 1.0
+        },
+        "vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        },
+        "residual_vt": {
+          "primary": 20000.0,
+          "secondary": 100.0
+        }
+      },
+      "settings": {
+        "Differential": {
+          "rated_power_mva": 25.0,
+          "voltage1_kv": 132.0,
+          "voltage2_kv": 20.0,
+          "clock_number": 11,
+          "rated_current_a": 300.0,
+          "ct2": {
+            "primary": 1000.0,
+            "secondary": 5.0
+          },
+          "pickup_pu": 0.2,
+          "knee1_pu": 0.5,
+          "slope1_pct": 25.0,
+          "knee2_pu": 2.5,
+          "slope2_pct": 50.0,
+          "delay_s": 0.03,
+          "bias_formula": "HalfSum",
+          "bias_points_pu": [
+            1.0,
+            2.0,
+            4.0
+          ],
+          "margin_pct": 10.0,
+          "tolerances": {
+            "quantity_pct": 5.0,
+            "time_pct": 5.0,
+            "time_abs_s": 0.04
+          }
+        }
+      },
+      "results": [],
+      "notes": ""
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+# Prova e compila ProvaRelè (Rust) su Windows; l'eseguibile resta scaricabile
+# dalla pagina dell'esecuzione, sotto "Artifacts".
+name: ProvaRelè
+
+on:
+  push:
+    paths:
+      - "Wiki_Progettazione/PROGRAMMAZIONE/Test_Universe_CMC356/implementazione/**"
+      - ".github/workflows/provarele.yml"
+  pull_request:
+    paths:
+      - "Wiki_Progettazione/PROGRAMMAZIONE/Test_Universe_CMC356/implementazione/**"
+  workflow_dispatch:
+
+jobs:
+  windows:
+    name: Test e programma per Windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: Wiki_Progettazione/PROGRAMMAZIONE/Test_Universe_CMC356/implementazione
+    steps:
+      - name: Recupero del codice
+        uses: actions/checkout@v4
+
+      - name: Cache delle dipendenze
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            Wiki_Progettazione/PROGRAMMAZIONE/Test_Universe_CMC356/implementazione/target
+          key: provarele-windows-${{ hashFiles('Wiki_Progettazione/PROGRAMMAZIONE/Test_Universe_CMC356/implementazione/Cargo.lock') }}
+
+      - name: Esecuzione dei test
+        run: cargo test --workspace --locked
+
+      - name: Compilazione del programma
+        run: cargo build --release --locked -p prova-rele
+
+      # i computer di GitHub non hanno scheda grafica: se la finestra resta
+      # aperta, il programma parte anche su un PC senza grafica dedicata
+      - name: Prova di avvio
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath target\release\prova-rele.exe -ArgumentList esempi\cabina_mt.json -PassThru
+          Start-Sleep -Seconds 15
+          if ($p.HasExited) { throw "Il programma si è chiuso da solo (codice $($p.ExitCode))" }
+          Stop-Process -Id $p.Id
+
+      - name: Pubblicazione dell'eseguibile
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProvaRele-windows
+          path: Wiki_Progettazione/PROGRAMMAZIONE/Test_Universe_CMC356/implementazione/target/release/prova-rele.exe
+          if-no-files-found: error
