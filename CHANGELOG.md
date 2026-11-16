@@ -7,6 +7,24 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-11-16
+
+#### Modificato
+
+- SolidCraft per macOS aggiornato da 0.41.0 a 0.43.0 (`scripts/setup-mac.sh`).
+  L'hash SHA-256 del dmg scaricato coincide con quello pubblicato nel file
+  `SHA256SUMS.txt` della release. Il formato dei progetti passa alla
+  versione 57: i progetti delle versioni precedenti si aprono nella 0.43.
+- Open CAD Studio per macOS aggiornato da v2026.45 a v2026.46
+  (`scripts/setup-mac.sh`, nuovo hash SHA-256 del dmg). Novità principali:
+  georeferenziazione (`GEOGRAPHICLOCATION`, GeoPDF), gestore dei tipi di
+  linea, `EATTEDIT`, `GROUPEDIT`, oggetti Civil 3D.
+
+#### Corretto
+
+- `README.md`: SolidCraft non risulta firmato né notarizzato da Apple (lo
+  dicono le note di rilascio del progetto); la nota indicava il contrario.
+
 ### 2026-11-13
 
 #### Aggiunto

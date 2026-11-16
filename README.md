@@ -153,8 +153,8 @@ o npm:
 | Strumento | Versione | Origine |
 | --- | --- | --- |
 | REA (`rea-agents`) + skill Claude Code | 6.9.0 | npm (sorgenti su `morluto/rea`) |
-| SolidCraft | 0.41.0 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` (hash SHA-256 verificato) → `/Applications` |
-| Open CAD Studio | v2026.45 | release GitHub `HakanSeven12/OpenCADStudio`, `OpenCADStudio-v<versione>-macos-arm64.dmg` (hash SHA-256 verificato) → `/Applications` |
+| SolidCraft | 0.43.0 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` (hash SHA-256 verificato) → `/Applications` |
+| Open CAD Studio | v2026.46 | release GitHub `HakanSeven12/OpenCADStudio`, `OpenCADStudio-v<versione>-macos-arm64.dmg` (hash SHA-256 verificato) → `/Applications` |
 | OpenSCAD | `openscad-2026.10-TEST4` | compilato dai sorgenti GitHub `openscad/openscad` (dipendenze Homebrew) → `/Applications` |
 | Ghidra (facoltativo) | 12.1.4 | release GitHub, hash SHA-256 verificato → `~/.local` |
 
@@ -164,12 +164,17 @@ Note:
   l'ultima versione stabile, la 2021.01, è del 2021; il tag
   `openscad-2026.10-TEST4` è una versione di prova della prossima release.
   La compilazione richiede parecchio tempo.
-- SolidCraft è firmato e notarizzato da Apple dalla 0.23; installa anche `solidcraft-cli` nel PATH.
+- SolidCraft installa anche `solidcraft-cli` nel PATH. Le note di rilascio
+  del progetto dicono che i pacchetti non sono ancora firmati: se macOS
+  blocca il primo avvio, fai clic destro su `SolidCraft.app` e scegli Apri.
+  La firma non è stata verificata su un Mac.
 - Open CAD Studio esce ogni domenica (versioni `anno.settimana`), solo per Mac
   con Apple Silicon; non è notarizzato: se macOS blocca il primo avvio,
   approvalo in Impostazioni di Sistema → Privacy e sicurezza.
 - Gli hash dei dmg sono stati calcolati sui file delle release al momento
-  dell'aggiornamento dello script (le release non pubblicano checksum).
+  dell'aggiornamento dello script. SolidCraft pubblica anche i propri
+  checksum (`SHA256SUMS.txt`), con cui l'hash è confrontato; Open CAD
+  Studio non ne pubblica.
 - Se Node manca o è più vecchio di quanto richiede REA, lo script installa `node@22` con Homebrew.
 - Ghidra 12.2 non è usato: REA 6.9.0 accetta solo Ghidra 12.1.x.
 - Le versioni installate sono riepilogate in
