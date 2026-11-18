@@ -7,6 +7,17 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-11-18
+
+#### Modificato
+
+- SolidCraft per macOS aggiornato da 0.43.0 a 0.44.1 (`scripts/setup-mac.sh`).
+  L'hash SHA-256 del dmg scaricato coincide con quello pubblicato nel file
+  `SHA256SUMS.txt` della release. Il formato dei progetti passa alla
+  versione 58: i progetti delle versioni precedenti si aprono nella 0.44.
+  Spariscono `solvecraft-cli`, le variabili `SOLVECRAFT_*` e l'associazione
+  ai file `.solvecraft`, che il repository non usa.
+
 ### 2026-11-16
 
 #### Modificato
