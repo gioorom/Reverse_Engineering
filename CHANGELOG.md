@@ -7,6 +7,23 @@ Il repository non ha ancora versioni rilasciate.
 
 ## Non rilasciato
 
+### 2026-11-20
+
+#### Modificato
+
+- REA aggiornato da `rea-agents@6.9.0` a `rea-agents@6.10.1` (`.mcp.json`,
+  `CLAUDE.md`, `README.md` e i tre script di installazione). Requisito di
+  Node invariato. REA 6.10 accetta solo Ghidra 12.2 o successivo con JDK 25:
+  Ghidra passa da 12.1.4 a 12.2 (`ghidra_12.2_PUBLIC_20261016.zip`, hash
+  SHA-256 calcolato sull'archivio scaricato) e il JDK da 21 a 25 (apt nel
+  cloud, `openjdk@25` di Homebrew sul Mac, Temurin 25 con winget su Windows).
+  REA legge il JDK da `JAVA_HOME`: gli script lo impostano o lo indicano.
+  Le evidenze e gli snapshot creati con REA 6.9 vanno rifatti (formato 2).
+- SolidCraft per macOS aggiornato da 0.44.1 a 0.45.0 (`scripts/setup-mac.sh`).
+  L'hash SHA-256 del dmg scaricato coincide con quello pubblicato nel file
+  `SHA256SUMS.txt` della release. Il formato dei progetti passa alla
+  versione 63.
+
 ### 2026-11-18
 
 #### Modificato

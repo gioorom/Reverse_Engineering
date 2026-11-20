@@ -70,8 +70,8 @@ convenzioni per chi contribuisce sono in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 | Strumento | Uso | Note |
 | --------- | --- | ---- |
-| [REA – Reverse Engineer Anything](https://github.com/morluto/rea) | Analisi di applicazioni JavaScript/Electron, .NET, siti web e binari nativi | Pacchetto npm `rea-agents@6.9.0`, registrato come server MCP in `.mcp.json` |
-| [Ghidra 12.1.4](https://github.com/NationalSecurityAgency/ghidra) | Motore per l'analisi dei binari nativi usato da REA | Richiede JDK 21 a 64 bit e la variabile `GHIDRA_INSTALL_DIR` |
+| [REA – Reverse Engineer Anything](https://github.com/morluto/rea) | Analisi di applicazioni JavaScript/Electron, .NET, siti web e binari nativi | Pacchetto npm `rea-agents@6.10.1`, registrato come server MCP in `.mcp.json` |
+| [Ghidra 12.2](https://github.com/NationalSecurityAgency/ghidra) | Motore per l'analisi dei binari nativi usato da REA | Richiede JDK 25 a 64 bit (REA lo cerca in `JAVA_HOME`) e la variabile `GHIDRA_INSTALL_DIR` |
 | Python 3.10+ | Implementazioni e test dei progetti (es. `iec60909`) | numpy; pytest e pandapower per i test |
 
 ## Setup sul PC Windows
@@ -87,7 +87,7 @@ git clone https://github.com/gioorom/Reverse_Engineering.git
 # copia eventuali file già presenti nella vecchia cartella PROGRAMMAZIONE in:
 #   Reverse_Engineering\Wiki_Progettazione\PROGRAMMAZIONE\
 
-npm install --global rea-agents@6.9.0
+npm install --global rea-agents@6.10.1
 rea setup --client claude_code   # registra REA e installa la skill
 rea doctor                       # verifica
 
@@ -96,22 +96,26 @@ claude
 ```
 
 In alternativa, dalla cartella del repository, uno script installa tutto
-(Git e Node 24 se mancano; un Node troppo vecchio viene aggiornato, REA con la skill, JDK 21 e Ghidra 12.1.4 con
-`GHIDRA_INSTALL_DIR`); richiede `winget` (provato su Windows x64 con un Node 24 già installato):
+(Git e Node 24 se mancano; un Node troppo vecchio viene aggiornato, REA con la skill, JDK 25 e Ghidra 12.2 con
+`JAVA_HOME` e `GHIDRA_INSTALL_DIR`); richiede `winget` (provato su Windows x64 con un Node 24 già installato):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup-windows.ps1
 ```
 
-A mano, per l'analisi di binari nativi serve Ghidra 12.1.4 (gratuito):
-scarica `ghidra_12.1.4_PUBLIC_20260921.zip` dalle
-[release ufficiali](https://github.com/NationalSecurityAgency/ghidra/releases/tag/Ghidra_12.1.4_build),
-estrailo (es. in `C:\tools\`), installa un JDK 21 a 64 bit e imposta la
-variabile d'ambiente utente:
+A mano, per l'analisi di binari nativi serve Ghidra 12.2 (gratuito):
+scarica `ghidra_12.2_PUBLIC_20261016.zip` dalle
+[release ufficiali](https://github.com/NationalSecurityAgency/ghidra/releases/tag/Ghidra_12.2_build),
+estrailo (es. in `C:\tools\`), installa un JDK 25 a 64 bit (ad esempio
+`winget install EclipseAdoptium.Temurin.25.JDK`) e imposta le variabili
+d'ambiente utente (il percorso del JDK dipende dalla versione installata):
 
 ```powershell
-setx GHIDRA_INSTALL_DIR "C:\tools\ghidra_12.1.4_PUBLIC"
+setx GHIDRA_INSTALL_DIR "C:\tools\ghidra_12.2_PUBLIC"
+setx JAVA_HOME "C:\Program Files\Eclipse Adoptium\jdk-25.x.x-hotspot"
 ```
+
+Ghidra 12.1.4 resta sul disco ma REA 6.10 non lo usa più: si può eliminare.
 
 Poi riapri il terminale e verifica con `rea doctor`. L'analisi di
 JavaScript/Electron, .NET e siti web non richiede motori esterni.
@@ -129,11 +133,14 @@ bash scripts/setup-cloud.sh
 ```
 
 Lo script è idempotente: se serve aggiorna Node alla 22.23.4 (release ufficiale,
-hash verificato), installa `rea-agents@6.9.0`, la skill di REA per
+hash verificato), installa `rea-agents@6.10.1`, la skill di REA per
 Claude Code (`~/.claude/skills/reverse-engineer-anything`, con
 `rea setup --skill-client claude_code`; il server MCP resta quello di
-`.mcp.json`) e Ghidra 12.1.4 in `/opt/ghidra_12.1.4_PUBLIC` (verificando
-l'hash SHA-256 dell'archivio) e salta i passi già fatti. Richiede un JDK 21+.
+`.mcp.json`), il JDK 25 con apt se manca (e lo rende predefinito per le
+nuove shell) e Ghidra 12.2 in `/opt/ghidra_12.2_PUBLIC` (verificando l'hash
+SHA-256 dell'archivio) e salta i passi già fatti. Il server MCP avviato con la
+sessione eredita il JDK 21 del container: per i binari nativi usa la CLI `rea`
+con `JAVA_HOME=/usr/lib/jvm/java-25-openjdk-amd64`.
 
 ## Mac
 
@@ -141,7 +148,7 @@ Sul Mac, dalla cartella del repository:
 
 ```bash
 bash scripts/setup-mac.sh              # REA, SolidCraft, Open CAD Studio, OpenSCAD
-bash scripts/setup-mac.sh --ghidra     # anche Ghidra 12.1.4 (con JDK 21)
+bash scripts/setup-mac.sh --ghidra     # anche Ghidra 12.2 (con JDK 25)
 bash scripts/setup-mac.sh --senza-openscad --senza-opencadstudio
 ```
 
@@ -152,11 +159,11 @@ o npm:
 
 | Strumento | Versione | Origine |
 | --- | --- | --- |
-| REA (`rea-agents`) + skill Claude Code | 6.9.0 | npm (sorgenti su `morluto/rea`) |
-| SolidCraft | 0.44.1 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` (hash SHA-256 verificato) → `/Applications` |
+| REA (`rea-agents`) + skill Claude Code | 6.10.1 | npm (sorgenti su `morluto/rea`) |
+| SolidCraft | 0.45.0 | release GitHub `tangency-labs/solidcraft`, `solidcraft-macos-universal.dmg` (hash SHA-256 verificato) → `/Applications` |
 | Open CAD Studio | v2026.46 | release GitHub `HakanSeven12/OpenCADStudio`, `OpenCADStudio-v<versione>-macos-arm64.dmg` (hash SHA-256 verificato) → `/Applications` |
 | OpenSCAD | `openscad-2026.10-TEST4` | compilato dai sorgenti GitHub `openscad/openscad` (dipendenze Homebrew) → `/Applications` |
-| Ghidra (facoltativo) | 12.1.4 | release GitHub, hash SHA-256 verificato → `~/.local` |
+| Ghidra (facoltativo) | 12.2 | release GitHub, hash SHA-256 verificato → `~/.local`, con `openjdk@25` di Homebrew |
 
 Note:
 
@@ -176,7 +183,10 @@ Note:
   checksum (`SHA256SUMS.txt`), con cui l'hash è confrontato; Open CAD
   Studio non ne pubblica.
 - Se Node manca o è più vecchio di quanto richiede REA, lo script installa `node@22` con Homebrew.
-- Ghidra 12.2 non è usato: REA 6.9.0 accetta solo Ghidra 12.1.x.
+- REA 6.10 accetta solo Ghidra 12.2 o successivo, con JDK 25: lo legge da
+  `JAVA_HOME`, che va impostata come indica lo script alla fine.
+- Ghidra 12.2 non pubblica checksum leggibili da qui: l'hash nello script è
+  calcolato sull'archivio scaricato dalla release ufficiale.
 - Le versioni installate sono riepilogate in
   `~/.config/reverse-engineering/versioni-installate.txt`.
 

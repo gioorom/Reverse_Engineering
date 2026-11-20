@@ -2,9 +2,9 @@
   "mcpServers": {
     "rea": {
       "command": "npx",
-      "args": ["-y", "rea-agents@6.9.0", "mcp"],
+      "args": ["-y", "rea-agents@6.10.1", "mcp"],
       "env": {
-        "GHIDRA_INSTALL_DIR": "${GHIDRA_INSTALL_DIR:-/opt/ghidra_12.1.4_PUBLIC}"
+        "GHIDRA_INSTALL_DIR": "${GHIDRA_INSTALL_DIR:-/opt/ghidra_12.2_PUBLIC}"
       }
     }
   }

@@ -6,7 +6,7 @@
 #     HakanSeven12/OpenCADStudio, solo Mac con Apple Silicon);
 #   - OpenSCAD (compilato dai sorgenti GitHub openscad/openscad: il progetto
 #     non pubblica eseguibili per macOS su GitHub);
-#   - Ghidra 12.1.4 (facoltativo, per i binari nativi con REA; richiede JDK 21).
+#   - Ghidra 12.2 (facoltativo, per i binari nativi con REA; richiede JDK 25).
 #
 # Uso:   bash scripts/setup-mac.sh [--senza-openscad] [--senza-opencadstudio] [--ghidra]
 # Idempotente: salta ciò che è già alla versione indicata qui sotto.
@@ -14,15 +14,15 @@
 # di Xcode (xcode-select --install); OpenSCAD richiede Xcode completo.
 set -euo pipefail
 
-REA_VERSION="6.9.0"
-SOLIDCRAFT_VERSION="0.44.1"
-SOLIDCRAFT_SHA256="e8916fc40135a38b4b7c15bbf4698e2b01c2f11402e9dbc32e84021cee400d43"
+REA_VERSION="6.10.1"
+SOLIDCRAFT_VERSION="0.45.0"
+SOLIDCRAFT_SHA256="59c2529d4d3af7e437e3682074d3b24d6c925d6d85b57b60d92d52c94d67c438"
 OPENCADSTUDIO_VERSION="2026.46"
 OPENCADSTUDIO_SHA256="ce5f6ba2ce330a75db2d9acc6283ef8f9af61357bdf5b34e0a324fd9cf4b52e0"
 OPENSCAD_REF="openscad-2026.10-TEST4"
-GHIDRA_VERSION="12.1.4"
-GHIDRA_BUILD_DATE="20260921"
-GHIDRA_SHA256="ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db"
+GHIDRA_VERSION="12.2"
+GHIDRA_BUILD_DATE="20261016"
+GHIDRA_SHA256="2c2cd776db3c1f6a097ba418922378ac3649cadd5e844a6f5f088ae628a7be67"
 
 CON_OPENSCAD=1
 CON_OPENCADSTUDIO=1
@@ -67,7 +67,7 @@ app_version() {  # versione di un'app in /Applications (vuota se assente)
 }
 
 # --- REA -------------------------------------------------------------------
-# REA 6.9.0 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
+# REA 6.10.1 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
 node_ok() {
   command -v node >/dev/null && node -e '
   const [a, b, c] = process.versions.node.split(".").map(Number);
@@ -89,8 +89,12 @@ fi
 
 # --- Ghidra (facoltativo) ----------------------------------------------------
 GHIDRA_DIR="$HOME/.local/ghidra_${GHIDRA_VERSION}_PUBLIC"
+if [ "$CON_GHIDRA" = 1 ]; then
+  # Ghidra 12.2 (e quindi REA 6.10) richiede JDK 25; REA lo cerca in JAVA_HOME
+  brew list openjdk@25 >/dev/null 2>&1 || brew install openjdk@25
+  JAVA_HOME="$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home"
+fi
 if [ "$CON_GHIDRA" = 1 ] && [ ! -x "$GHIDRA_DIR/support/analyzeHeadless" ]; then
-  brew install openjdk@21
   tmp="$(mktemp -d)"
   curl -fsSL -o "$tmp/ghidra.zip" \
     "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GHIDRA_VERSION}_build/ghidra_${GHIDRA_VERSION}_PUBLIC_${GHIDRA_BUILD_DATE}.zip"
@@ -154,5 +158,5 @@ mv "$STATE_FILE.new" "$STATE_FILE"
 echo "Versioni installate ($STATE_FILE):"
 cat "$STATE_FILE"
 if [ -x "$GHIDRA_DIR/support/analyzeHeadless" ]; then
-  echo "Per REA: export GHIDRA_INSTALL_DIR=$GHIDRA_DIR"
+  echo "Per REA: export GHIDRA_INSTALL_DIR=$GHIDRA_DIR JAVA_HOME=$(brew --prefix openjdk@25)/libexec/openjdk.jdk/Contents/Home"
 fi

@@ -1,13 +1,15 @@
 #!/bin/bash
 # Installa REA (con la skill per Claude Code) e Ghidra in un ambiente Linux (sessioni Claude Code nel cloud).
-# Idempotente: salta i passi già fatti. Richiede JDK 21+ (javac nel PATH).
+# Idempotente: salta i passi già fatti. Ghidra 12.2 richiede JDK 25: se manca
+# viene installato con apt (Ubuntu/Debian).
 set -euo pipefail
 
-REA_VERSION="6.9.0"
-NODE_VERSION="22.23.4"  # REA 6.9.0 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
-GHIDRA_VERSION="12.1.4"
-GHIDRA_BUILD_DATE="20260921"
-GHIDRA_SHA256="ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db"
+REA_VERSION="6.10.1"
+NODE_VERSION="22.23.4"  # REA 6.10.1 richiede Node ^22.23.4 || ^24.22.1 || >=26.12.1
+GHIDRA_VERSION="12.2"   # REA 6.10 richiede Ghidra 12.2 o successivo
+GHIDRA_BUILD_DATE="20261016"
+GHIDRA_SHA256="2c2cd776db3c1f6a097ba418922378ac3649cadd5e844a6f5f088ae628a7be67"
+JDK_MAJOR="25"         # richiesto da Ghidra 12.2
 GHIDRA_DIR="/opt/ghidra_${GHIDRA_VERSION}_PUBLIC"
 
 SKILL_DIR="$HOME/.claude/skills/reverse-engineer-anything"
@@ -40,6 +42,23 @@ if ! command -v rea >/dev/null || [ "$(rea --version)" != "$REA_VERSION" ]; then
   rm -rf "$SKILL_DIR"  # skill da reinstallare per la nuova versione
 fi
 
+# JDK richiesto da Ghidra: se javac manca o è più vecchio, si installa con apt
+jdk_major() { javac -version 2>&1 | sed -n 's/^javac \([0-9]*\).*/\1/p'; }
+if [ "$(jdk_major)" != "$JDK_MAJOR" ]; then
+  apt-get update -q >/dev/null
+  apt-get install -y -q "openjdk-${JDK_MAJOR}-jdk-headless" >/dev/null
+  jdk="/usr/lib/jvm/java-${JDK_MAJOR}-openjdk-$(dpkg --print-architecture)"
+  update-alternatives --set java "$jdk/bin/java" >/dev/null
+  update-alternatives --set javac "$jdk/bin/javac" >/dev/null
+  [ "$(jdk_major)" = "$JDK_MAJOR" ] || { echo "JDK ${JDK_MAJOR} non disponibile" >&2; exit 1; }
+fi
+# REA sceglie il JDK da JAVA_HOME: le nuove shell puntano al JDK richiesto
+JAVA_HOME="$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")"
+export JAVA_HOME
+if [ -f /etc/profile.d/java.sh ] && ! grep -q "JAVA_HOME=$JAVA_HOME\$" /etc/profile.d/java.sh; then
+  sed -i "s#^export JAVA_HOME=.*#export JAVA_HOME=$JAVA_HOME#" /etc/profile.d/java.sh
+fi
+
 if [ ! -x "$GHIDRA_DIR/support/analyzeHeadless" ]; then
   tmp="$(mktemp -d)"
   trap 'rm -rf "$tmp"' EXIT
@@ -55,4 +74,5 @@ export GHIDRA_INSTALL_DIR="$GHIDRA_DIR"
 if [ ! -f "$SKILL_DIR/SKILL.md" ]; then
   rea setup --skill-client claude_code --yes >/dev/null
 fi
-echo "REA $(rea --version), skill in $SKILL_DIR e Ghidra in $GHIDRA_INSTALL_DIR pronti."
+echo "REA $(rea --version), skill in $SKILL_DIR, Ghidra in $GHIDRA_INSTALL_DIR e JDK in $JAVA_HOME pronti."
+echo "Nelle shell già aperte: export JAVA_HOME=$JAVA_HOME GHIDRA_INSTALL_DIR=$GHIDRA_INSTALL_DIR"

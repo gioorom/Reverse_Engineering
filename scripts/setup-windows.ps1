@@ -3,7 +3,7 @@
 #     dell'utente; se c'e' ma e' troppo vecchio per REA, aggiornato con
 #     l'installer ufficiale;
 #   - REA (rea-agents, npm), registrato in Claude Code con la sua skill;
-#   - JDK 21 e Ghidra 12.1.4 (per i binari nativi), con GHIDRA_INSTALL_DIR.
+#   - JDK 25 e Ghidra 12.2 (per i binari nativi), con JAVA_HOME e GHIDRA_INSTALL_DIR.
 #
 # Uso (PowerShell, dalla cartella del repository):
 #   powershell -ExecutionPolicy Bypass -File scripts\setup-windows.ps1
@@ -14,10 +14,11 @@ param([switch]$SenzaGhidra)
 
 $ErrorActionPreference = 'Stop'
 
-$ReaVersion = '6.9.0'
-$GhidraVersion = '12.1.4'
-$GhidraBuildDate = '20260921'
-$GhidraSha256 = 'ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db'
+$ReaVersion = '6.10.1'
+$GhidraVersion = '12.2'
+$GhidraBuildDate = '20261016'
+$GhidraSha256 = '2c2cd776db3c1f6a097ba418922378ac3649cadd5e844a6f5f088ae628a7be67'
+$JdkMajor = 25  # richiesto da Ghidra 12.2
 $NodeVersion = '24.22.3'
 $NodeZipSha256 = 'e612af99f626ab415ea225af6bce5c971feb448cb5cae250bb1c3fa50c5f7d9f'
 $NodeMsiSha256 = '4a1ab5bdec5434bae58efae6c3e5077a011f6f1e76d2b47b7b10af043f7db545'
@@ -111,7 +112,17 @@ if (-not (Test-Node)) {
 
 # --- JDK e Ghidra (facoltativi) -------------------------------------------------
 if (-not $SenzaGhidra) {
-  if (-not (Test-Comando javac)) { Install-ConWinget 'EclipseAdoptium.Temurin.21.JDK' }
+  # JDK richiesto da Ghidra: Temurin con winget; REA lo cerca in JAVA_HOME
+  function Find-Jdk {
+    Get-ChildItem (Join-Path $env:ProgramFiles 'Eclipse Adoptium') -Directory -Filter "jdk-$JdkMajor*" -ErrorAction SilentlyContinue |
+      Where-Object { Test-Path (Join-Path $_.FullName 'bin\javac.exe') } |
+      Sort-Object Name -Descending | Select-Object -First 1
+  }
+  $jdk = Find-Jdk
+  if (-not $jdk) { Install-ConWinget "EclipseAdoptium.Temurin.$JdkMajor.JDK"; $jdk = Find-Jdk }
+  if (-not $jdk) { throw "JDK $JdkMajor non trovato dopo l'installazione." }
+  [Environment]::SetEnvironmentVariable('JAVA_HOME', $jdk.FullName, 'User')
+  $env:JAVA_HOME = $jdk.FullName
   if (-not (Test-Path (Join-Path $GhidraDir 'support\analyzeHeadless.bat'))) {
     $zip = Join-Path $env:TEMP "ghidra_${GhidraVersion}.zip"
     $url = "https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${GhidraVersion}_build/ghidra_${GhidraVersion}_PUBLIC_${GhidraBuildDate}.zip"
@@ -147,7 +158,7 @@ if (-not $setupRiuscito) {
 # --- riepilogo --------------------------------------------------------------------
 if ($setupRiuscito) { Write-Host "REA $(rea --version) installato e registrato in Claude Code." }
 else { Write-Host "REA $(rea --version) installato." }
-if (-not $SenzaGhidra) { Write-Host "Ghidra in $GhidraDir (GHIDRA_INSTALL_DIR impostata per l'utente)." }
+if (-not $SenzaGhidra) { Write-Host "Ghidra in $GhidraDir e JDK in $env:JAVA_HOME (GHIDRA_INSTALL_DIR e JAVA_HOME impostate per l'utente)." }
 if ($NodeAggiunto) {
   Write-Host "Node ${NodeVersion} in $NodeAggiunto (aggiunto al PATH dell'utente)."
 }
